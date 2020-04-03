@@ -19,7 +19,10 @@
 #include <stdbool.h>
 #include "apdu_codes.h"
 
-#define CLA                             0x55
+// Arbitrarily chosen `CLA`, irrelevant? Never used?
+// AA might be intepreted as: "Alex & Alex", the two
+// Radix employees working on the Ledger app.
+#define CLA                             0xAA 
 
 #define OFFSET_CLA                      0
 #define OFFSET_INS                      1  //< Instruction offset

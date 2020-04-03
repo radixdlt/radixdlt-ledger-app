@@ -7,7 +7,7 @@ The general structure of commands and responses is as follows:
 
 | Field   | Type     | Content                | Note |
 | :------ | :------- | :--------------------- | ---- |
-| CLA     | byte (1) | Application Identifier | 0x55 |
+| CLA     | byte (1) | Application Identifier | 0xAA |
 | INS     | byte (1) | Instruction ID         |      |
 | P1      | byte (1) | Parameter 1            |      |
 | P2      | byte (1) | Parameter 2            |      |
@@ -38,13 +38,13 @@ The general structure of commands and responses is as follows:
 
 ## Command definition
 
-### GET_VERSION
+### INS_GET_VERSION
 
 #### Command
 
 | Field | Type     | Content                | Expected |
 | ----- | -------- | ---------------------- | -------- |
-| CLA   | byte (1) | Application Identifier | 0x55     |
+| CLA   | byte (1) | Application Identifier | 0xAA     |
 | INS   | byte (1) | Instruction ID         | 0x00     |
 | P1    | byte (1) | Parameter 1            | ignored  |
 | P2    | byte (1) | Parameter 2            | ignored  |
@@ -63,19 +63,23 @@ The general structure of commands and responses is as follows:
 
 --------------
 
-### SIGN_SECP256K1
+### INS_SIGN_SECP256K1
 
 #### Command
 
-| Field | Type     | Content                | Expected  |
-| ----- | -------- | ---------------------- | --------- |
-| CLA   | byte (1) | Application Identifier | 0x55      |
-| INS   | byte (1) | Instruction ID         | 0x02      |
-| P1    | byte (1) | Payload desc           | 0 = init  |
-|       |          |                        | 1 = add   |
-|       |          |                        | 2 = last  |
-| P2    | byte (1) | ----                   | not used  |
-| L     | byte (1) | Bytes in payload       | (depends) |
+| Field | Type      | Content                            | Expected  |
+| ----- | --------- | ---------------------------------- | --------- |
+| CLA   | byte (1)  | Application Identifier             | 0xAA      |
+| INS   | byte (1)  | Instruction ID                     | 0x02      |
+| P1    | byte (1)  | Payload desc                       | 0 = init  |
+|       |           |                                    | 1 = add   |
+|       |           |                                    | 2 = last  |
+| P2    | byte (1)  | ----                               | not used  |
+| L     | byte (2*) | Length of "message" (2nd packet)   | (depends) |
+*L: N.B. not all of those 16 bits can be used, in fact, [this document](https://buildmedia.readthedocs.org/media/pdf/ledger/latest/ledger.pdf) (section 18.1) suggests,
+that the max size of an application is 4096 bytes. Those we ought to limit 
+max size of Message (DSON byte array) to max 2048 bytes, i.e. 11 bits.
+
 
 The first packet/chunk includes only the derivation path
 
@@ -86,16 +90,21 @@ All other packets/chunks should contain message to sign
 | Field      | Type     | Content                | Expected  |
 | ---------- | -------- | ---------------------- | --------- |
 | Path[0]    | byte (4) | Derivation Path Data   | 44        |
-| Path[1]    | byte (4) | Derivation Path Data   | 118       |
+| Path[1]    | byte (4) | Derivation Path Data   | 536       |
 | Path[2]    | byte (4) | Derivation Path Data   | ?         |
 | Path[3]    | byte (4) | Derivation Path Data   | ?         |
 | Path[4]    | byte (4) | Derivation Path Data   | ?         |
 
 *Other Chunks/Packets*
 
-| Field   | Type     | Content         | Expected |
-| ------- | -------- | --------------- | -------- |
-| Message | bytes... | Message to Sign |          |
+| Field   | Type     | Content                                              | Expected |
+| ------- | -------- | ---------------------------------------------------- | -------- |
+| Message | bytes... | L* number of bytes, a DSON* (CBOR*) serialized atom* |          |
+*L: Length of message, as an unsigned integer with 11 bits size, this value (field)
+is provided in initial `INS_SIGN_SECP256K1` command.
+*DSON: is Radix DLT's own binary format, based on CBOR
+*CBOR: Consice Binary Object Representation: http://cbor.io/
+*Atom: The name of the transaction container in the Radix DLT ecosystem.
 
 #### Response
 
@@ -112,16 +121,15 @@ All other packets/chunks should contain message to sign
 
 | Field      | Type           | Content                        | Expected       |
 | ---------- | -------------- | ------------------------------ | -------------- |
-| CLA        | byte (1)       | Application Identifier         | 0x55           |
+| CLA        | byte (1)       | Application Identifier         | 0xAA           |
 | INS        | byte (1)       | Instruction ID                 | 0x04           |
 | P1         | byte (1)       | Display address/path on device | 0x00 No        |
 |            |                |                                | 0x01 Yes       |
 | P2         | byte (1)       | Parameter 2                    | ignored        |
 | L          | byte (1)       | Bytes in payload               | (depends)      |
-| HRP_LEN    | byte(1)        | Bech32 HRP Length              | 1<=HRP_LEN<=83 |
-| HRP        | byte (HRP_LEN) | Bech32 HRP                     |                |
+| Magic      | byte (1)       | Radix Universe Magic Byte      | ?              |
 | Path[0]    | byte (4)       | Derivation Path Data           | 44             |
-| Path[1]    | byte (4)       | Derivation Path Data           | 118            |
+| Path[1]    | byte (4)       | Derivation Path Data           | 536            |
 | Path[2]    | byte (4)       | Derivation Path Data           | ?              |
 | Path[3]    | byte (4)       | Derivation Path Data           | ?              |
 | Path[4]    | byte (4)       | Derivation Path Data           | ?              |
@@ -130,8 +138,14 @@ First three items in the derivation path will be hardened automatically hardened
 
 #### Response
 
+Radix Address is `public key + magicByte + checksum`. Where the `magicByte` is the
+most significant byte of the `Int32` called "magic", identifying the "Radix Universe". 
+
+The address is 38 bytes: `1 (magic) + 33 (PKc) + 4 (Checksum)`. The checksum is the 4 most signigicant bytes of `SHA2-256bit` digest done _twice_, of `MagicByte | PKc`,
+where `|` denotes concantenation and `PKc` denotes compressed public key.
+
 | Field   | Type      | Content               | Note                     |
 | ------- | --------- | --------------------- | ------------------------ |
 | PK      | byte (33) | Compressed Public Key |                          |
-| ADDR    | byte (65) | Bech 32 addr          |                          |
+| ADDR    | byte (38) | Radix Address         |                          |
 | SW1-SW2 | byte (2)  | Return code           | see list of return codes |
