@@ -52,6 +52,18 @@ git submodule update --init --recursive
    ```bash
    pip install conan
    ```
+   
+- Before running the `make` commands below, run:
+
+  `pip install virtualenv`
+  
+  `virtualenv ledger`
+  
+  `source ledger/bin/activate`
+  
+  `pip install ledgerblue`
+  
+- If you want to build using docker, make sure you do -not- have `BOLOS_SDK` env variable set.
 
 > ⚠️ Some IDEs may not use the same python interpreter or virtual enviroment as the one you used when running `pip`.
 If you see conan is not found, check that you installed the package in the same interpreter as the one that launches `cmake`.

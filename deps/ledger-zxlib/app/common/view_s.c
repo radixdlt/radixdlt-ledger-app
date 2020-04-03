@@ -42,9 +42,36 @@ void os_exit(uint32_t id) {
 }
 
 const ux_menu_entry_t menu_main[] = {
-    {NULL, NULL, 0, &C_icon_app, MENU_MAIN_APP_LINE1, MENU_MAIN_APP_LINE2, 33, 12},
-    {NULL, NULL, 0, NULL, "v"APPVERSION, NULL, 0, 0},
-    {NULL, os_exit, 0, &C_icon_dashboard, "Quit", NULL, 50, 29},
+    {
+        .menu = NULL, 
+        .callback = NULL, 
+        .userid = 0, 
+        .icon = &C_icon_app, 
+        .line1 = MENU_MAIN_APP_LINE1, 
+        .line2 = MENU_MAIN_APP_LINE2, 
+        .text_x = 33, 
+        .icon_x = 12
+    },
+    {
+        .menu = NULL, 
+        .callback = NULL, 
+        .userid = 0, 
+        .icon = NULL, 
+        .line1 = "v"APPVERSION, 
+        .line2 = NULL, 
+        .text_x = 0, 
+        .icon_x = 0
+    },
+    {
+        .menu = NULL, 
+        .callback = os_exit, 
+        .userid = 0, 
+        .icon = &C_icon_dashboard, 
+        .line1 = "Quit", 
+        .line2 = NULL, 
+        .text_x = 50, 
+        .icon_x = 20
+    },
     UX_MENU_END
 };
 
