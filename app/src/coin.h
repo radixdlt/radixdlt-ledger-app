@@ -28,10 +28,10 @@ extern "C" {
 #define HDPATH_3_DEFAULT     (0)
 #define HDPATH_4_DEFAULT     (0)
 
-#define MENU_MAIN_APP_LINE1 "Cosmos"
+#define MENU_MAIN_APP_LINE1 "Radix"
 
 #ifdef TESTING_ENABLED
-#define MENU_MAIN_APP_LINE2 "Cosmos TEST!"
+#define MENU_MAIN_APP_LINE2 "Radix TEST!"
 #else
 #define MENU_MAIN_APP_LINE2 "App"
 #endif
