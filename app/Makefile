@@ -25,12 +25,16 @@ MY_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 include $(BOLOS_SDK)/Makefile.defines
 
 # Main app configuration
-APPNAME = "Cosmos"
-APPVERSION_M=2
-APPVERSION_N=10
-APPVERSION_P=0
+APPNAME = "Radix"
+APPVERSION_M=0
+APPVERSION_N=0
+APPVERSION_P=1
 
-APPPATH = "44'/118'"
+# Radix BIP44 coin type will MAYBE be `536`, used in variable `APPPATH`,
+# 536 = ASCII Dec value for r, a, d, i, x = 114+97+100+105+120 = 536.
+# Please observe that `536` is NOT yet registred here: https://github.com/satoshilabs/slips/blob/master/slip-0044.md
+# Can be registered when this Ledger app is done.
+APPPATH = "44'/536'"
 APP_LOAD_PARAMS = --appFlags 0x200 --delete $(COMMON_LOAD_PARAMS) --path $(APPPATH)
 
 ifeq ($(TARGET_NAME),TARGET_NANOS)
@@ -170,4 +174,4 @@ delete:
 	python -m ledgerblue.deleteApp $(COMMON_DELETE_PARAMS)
 
 listvariants:
-	@echo VARIANTS COIN cosmos
+	@echo VARIANTS COIN radix
