@@ -126,7 +126,6 @@ is provided in initial `INS_SIGN_SECP256K1` command.
 | P1         | byte (1)       | Display address/path on device | 0x00 No        |
 |            |                |                                | 0x01 Yes       |
 | P2         | byte (1)       | Parameter 2                    | ignored        |
-| L          | byte (1)       | Bytes in payload               | (depends)      |
 | Magic      | byte (1)       | Radix Universe Magic Byte      | ?              |
 | Path[0]    | byte (4)       | Derivation Path Data           | 44             |
 | Path[1]    | byte (4)       | Derivation Path Data           | 536            |
@@ -134,7 +133,7 @@ is provided in initial `INS_SIGN_SECP256K1` command.
 | Path[3]    | byte (4)       | Derivation Path Data           | ?              |
 | Path[4]    | byte (4)       | Derivation Path Data           | ?              |
 
-First three items in the derivation path will be hardened automatically hardened
+First three items in the derivation path will be automatically hardened
 
 #### Response
 
