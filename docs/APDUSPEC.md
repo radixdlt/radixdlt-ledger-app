@@ -184,21 +184,18 @@ is provided in initial `INS_SIGN_MESSAGE_SECP256K1` command.
 
 #### Command
 
-| Field      | Type           | Content                        | Expected       |
-| ---------- | -------------- | ------------------------------ | -------------- |
-| CLA        | byte (1)       | Application Identifier         | 0xAA           |
-| INS        | byte (1)       | Instruction ID                 | 0x10           |
-| P1         | byte (1)       | Display address/path on device | 0x00 No        |
-|            |                |                                | 0x01 Yes       |
-| P2         | byte (1)       | Parameter 2                    | ignored        |
-| Path[0]    | byte (4)       | Derivation Path Data           | 0x8000002c<sup id="x1">[1](#fx1)</sup>     |
-| Path[1]    | byte (4)       | Derivation Path Data           | 0x80000218<sup id="x2">[2](#fx2)</sup>     |
-| Path[2]    | byte (4)       | Derivation Path Data           | ?              |
-| Path[3]    | byte (4)       | Derivation Path Data           | ?              |
-| Path[4]    | byte (4)       | Derivation Path Data           | ?              |
-
-<b id="fx1">1:</b> Hex of (hardened) derivation path: `44'` ([BIP44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)).  
-<b id="fx2">2:</b> Hex of Radix cointype,  (hardened) derivation path: `536'`.  
+| Field     | Type          | Content                       | Expected      |
+| --------- | ------------- | ----------------------------- | ------------- |
+| CLA		| byte (1)   	| Application Identifier        | 0xAA      	|
+| INS		| byte (1)   	| Instruction ID                | 0x10      	|
+| P1 		| byte (1)   	| Display address/path on device| 0x00 No   	|
+|    		|            	|                               | 0x01 Yes  	|
+| P2 		| byte (1)   	| Parameter 2                   | ignored   	|
+| L         | byte (1)		| Number of bytes in Payload 	| 20<sup id="gpk1">[1](#gpk1)</sup>			|
+| Payload 	| byte (L)		| BIP32 derivation path 		| (depends)<sup id="gpk2">[2](#gpk1)</sup>		|
+	
+<b id="gpk1">1:</b> 5 derivation paths with 4 bytes each => 20 bytes.  
+<b id="gpk1">2:</b> We expect the first two paths to be: "44'/536'" 
 
 First three items in the derivation path will be automatically hardened
 
