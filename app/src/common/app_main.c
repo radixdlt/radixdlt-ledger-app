@@ -195,7 +195,7 @@ void handleApdu(volatile uint32_t *flags, volatile uint32_t *tx, uint32_t rx) {
                     break;
                 }
 
-                case INS_SIGN_SECP256K1: {
+                case INS_SIGN_MESSAGE_SECP256K1: {
                     if (!process_chunk(tx, rx))
                         THROW(APDU_CODE_OK);
 
@@ -211,6 +211,11 @@ void handleApdu(volatile uint32_t *flags, volatile uint32_t *tx, uint32_t rx) {
                     view_sign_show();
                     *flags |= IO_ASYNCH_REPLY;
                     break;
+                }
+
+                case INS_SIGN_HASH_SECP256K1: {
+                    // Implement this
+                    THROW(APDU_CODE_INS_NOT_SUPPORTED);
                 }
 
                 default:

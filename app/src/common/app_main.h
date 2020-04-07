@@ -36,8 +36,9 @@
 #define OFFSET_PAYLOAD_TYPE             OFFSET_P1
 
 #define INS_GET_VERSION                 0
-#define INS_SIGN_SECP256K1              2
-#define INS_GET_ADDR_SECP256K1          4
+#define INS_GET_ADDR_SECP256K1          2
+#define INS_SIGN_MESSAGE_SECP256K1      4
+#define INS_SIGN_HASH_SECP256K1         8
 
 void app_init();
 
