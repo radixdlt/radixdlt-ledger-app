@@ -218,6 +218,11 @@ void handleApdu(volatile uint32_t *flags, volatile uint32_t *tx, uint32_t rx) {
                     THROW(APDU_CODE_INS_NOT_SUPPORTED);
                 }
 
+                case INS_GET_PUB_KEY_SECP256K1: {
+                     // Implement this
+                    THROW(APDU_CODE_INS_NOT_SUPPORTED);
+                }
+
                 default:
                     THROW(APDU_CODE_INS_NOT_SUPPORTED);
             }

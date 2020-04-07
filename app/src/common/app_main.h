@@ -39,6 +39,7 @@
 #define INS_GET_ADDR_SECP256K1          2
 #define INS_SIGN_MESSAGE_SECP256K1      4
 #define INS_SIGN_HASH_SECP256K1         8
+#define INS_GET_PUB_KEY_SECP256K1       16
 
 void app_init();
 
