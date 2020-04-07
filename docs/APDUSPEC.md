@@ -177,3 +177,33 @@ is provided in initial `INS_SIGN_MESSAGE_SECP256K1` command.
 | SIG     | byte (64) | Signature   |                          |
 | SW1-SW2 | byte (2)  | Return code | see list of return codes |
 
+
+### INS_GET_PUB_KEY_SECP256K1
+(This command might be removed in the future in favour of `INS_GET_ADDR_SECP256K1`)
+
+
+#### Command
+
+| Field     | Type          | Content                       | Expected      |
+| --------- | ------------- | ----------------------------- | ------------- |
+| CLA		| byte (1)   	| Application Identifier        | 0xAA      	|
+| INS		| byte (1)   	| Instruction ID                | 0x10      	|
+| P1 		| byte (1)   	| Display address/path on device| 0x00 No   	|
+|    		|            	|                               | 0x01 Yes  	|
+| P2 		| byte (1)   	| Parameter 2                   | ignored   	|
+| L         | byte (1)		| Number of bytes in Payload 	| 20<sup id="gpk1">[1](#gpk1)</sup>			|
+| Payload 	| byte (L)		| BIP32 derivation path 		| (depends)<sup id="gpk2">[2](#gpk1)</sup>		|
+	
+<b id="gpk1">1:</b> 5 derivation paths with 4 bytes each => 20 bytes.  
+<b id="gpk1">2:</b> We expect the first two paths to be: "44'/536'" 
+
+First three items in the derivation path will be automatically hardened
+
+
+#### Response
+
+| Field   | Type      | Content     			| Note                     |
+| ------- | --------- | ----------------------- | ------------------------ |
+| PK      | byte (33) | Compressed Public Key 	|                		   |
+| SW1-SW2 | byte (2)  | Return code 			| see list of return codes |
+
