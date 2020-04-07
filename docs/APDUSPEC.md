@@ -76,11 +76,14 @@ Codes above should match [codes in implementation](https://github.com/radixdlt/r
 |            |                |                                | 0x01 Yes       |
 | P2         | byte (1)       | Parameter 2                    | ignored        |
 | Magic      | byte (1)       | Radix Universe Magic Byte      | ?              |
-| Path[0]    | byte (4)       | Derivation Path Data           | 44             |
-| Path[1]    | byte (4)       | Derivation Path Data           | 536            |
+| Path[0]    | byte (4)       | Derivation Path Data           | 0x8000002c<sup id="x1">[1](#fx1)</sup>     |
+| Path[1]    | byte (4)       | Derivation Path Data           | 0x80000218<sup id="x2">[2](#fx2)</sup>     |
 | Path[2]    | byte (4)       | Derivation Path Data           | ?              |
 | Path[3]    | byte (4)       | Derivation Path Data           | ?              |
 | Path[4]    | byte (4)       | Derivation Path Data           | ?              |
+
+<b id="fx1">1:</b> Hex of (hardened) derivation path: `44'` ([BIP44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)).  
+<b id="fx2">2:</b> Hex of Radix cointype,  (hardened) derivation path: `536'`.  
 
 First three items in the derivation path will be automatically hardened
 
@@ -111,11 +114,10 @@ where `|` denotes concantenation and `PKc` denotes compressed public key.
 |       |           |                                    | 1 = add   |
 |       |           |                                    | 2 = last  |
 | P2    | byte (1)  | ----                               | not used  |
-| L     | byte (2*) | Length of "message" (2nd packet)   | (depends) |
-*L: N.B. not all of those 16 bits can be used, in fact, [this document](https://buildmedia.readthedocs.org/media/pdf/ledger/latest/ledger.pdf) (section 18.1) suggests,
-that the max size of an application is 4096 bytes. Those we ought to limit 
-max size of Message (DSON byte array) to max 2048 bytes, i.e. 11 bits.
+| L     | byte (2<sup id="a1">[1](#fa1)</sup>) | Length of "message" (2nd packet)   | (depends) |
 
+
+<b id="fa1">1:</b> N.B. not all of those 16 bits can be used, in fact, [this document](https://buildmedia.readthedocs.org/media/pdf/ledger/latest/ledger.pdf) (section 18.1) suggests, that the max size of an application is 4096 bytes. Those we ought to limit max size of Message (DSON byte array) to max 2048 bytes, i.e. 11 bits.
 
 The first packet/chunk includes only the derivation path
 
@@ -135,12 +137,12 @@ All other packets/chunks should contain message to sign
 
 | Field   | Type     | Content                                              | Expected |
 | ------- | -------- | ---------------------------------------------------- | -------- |
-| Message | bytes... | L* number of bytes, a DSON* (CBOR*) serialized atom* |          |
-*L: Length of message, as an unsigned integer with 11 bits size, this value (field)
-is provided in initial `INS_SIGN_MESSAGE_SECP256K1` command.
-*DSON: is Radix DLT's own binary format, based on CBOR
-*CBOR: Consice Binary Object Representation: http://cbor.io/
-*Atom: The name of the transaction container in the Radix DLT ecosystem.
+| Message | bytes... | L<sup id="b1">[1](#fb1)</sup> number of bytes, a DSON<sup id="b2">[2](#fb2)</sup> serialized atom<sup id="b3">[3](#fb3)</sup> |          |
+
+<b id="fb1">1:</b> Length of message, as an unsigned integer with 11 bits size, this value (field).  
+is provided in initial `INS_SIGN_MESSAGE_SECP256K1` command.  
+<b id="fb2">2:</b> DSON: is Radix DLT's own binary format, based on [CBOR - Consice Binary Object Representation](http://cbor.io/).  
+<b id="fb3">3:</b> Atom: The name of the transaction container in the Radix DLT ecosystem.  
 
 #### Response
 
@@ -156,14 +158,17 @@ is provided in initial `INS_SIGN_MESSAGE_SECP256K1` command.
 
 #### Command
 
-| Field | Type      | Content                            | Expected  |
-| ----- | --------- | ---------------------------------- | --------- |
-| CLA   | byte (1)  | Application Identifier             | 0xAA      |
-| INS   | byte (1)  | Instruction ID                     | 0x08      |
-| P1    | byte (1)  | Length of BIP32 Path               | 5*4=20    |
-| P2    | byte (1)  | Length of Hash to sign             | 32        |
-| L     | byte (1)  | Length of Payload                  | P1 + P2   |
-| Payload| byte(L)  | BIP32 path + Hash to sign          | (depends) |
+| Field     | Type      | Content                    | Expected  |
+| --------- | --------- | -------------------------- | --------- |
+| CLA		| byte (1)  | Application Identifier     | 0xAA      |
+| INS		| byte (1)  | Instruction ID             | 0x08      |
+| P1 		| byte (1)  | Length of BIP32 Path       | 20<sup id="c1">[1](#fc1)</sup>    	 |
+| P2 		| byte (1)  | Length of Hash to sign     | 32<sup id="c2">[2](#fc2)</sup>        |
+| L  		| byte (1)  | Length of Payload          | P1 + P2   |
+| Payload 	| byte (L)  | BIP32 path + Hash to sign  | (depends) |
+
+<b id="fc1">1:</b> 5 derivation paths with 4 bytes each => 20 bytes.  
+<b id="fc2">2:</b> SHA256 hashing algorighm used => 32 bytes long hash.  
 
 #### Response
 
@@ -171,3 +176,4 @@ is provided in initial `INS_SIGN_MESSAGE_SECP256K1` command.
 | ------- | --------- | ----------- | ------------------------ |
 | SIG     | byte (64) | Signature   |                          |
 | SW1-SW2 | byte (2)  | Return code | see list of return codes |
+
