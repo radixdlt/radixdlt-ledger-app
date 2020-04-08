@@ -71,7 +71,7 @@ Codes above should match [codes in implementation](https://github.com/radixdlt/r
 | Field      | Type           | Content                        | Expected       |
 | ---------- | -------------- | ------------------------------ | -------------- |
 | CLA        | byte (1)       | Application Identifier         | 0xAA           |
-| INS        | byte (1)       | Instruction ID                 | 0x02           |
+| INS        | byte (1)       | Instruction ID                 | 0x01           |
 | P1         | byte (1)       | Display address/path on device | 0x00 No        |
 |            |                |                                | 0x01 Yes       |
 | P2         | byte (1)       | Parameter 2                    | ignored        |
@@ -109,7 +109,7 @@ where `|` denotes concantenation and `PKc` denotes compressed public key.
 | Field | Type      | Content                            | Expected  |
 | ----- | --------- | ---------------------------------- | --------- |
 | CLA   | byte (1)  | Application Identifier             | 0xAA      |
-| INS   | byte (1)  | Instruction ID                     | 0x04      |
+| INS   | byte (1)  | Instruction ID                     | 0x02      |
 | P1    | byte (1)  | Payload desc                       | 0 = init  |
 |       |           |                                    | 1 = add   |
 |       |           |                                    | 2 = last  |
@@ -161,7 +161,7 @@ is provided in initial `INS_SIGN_MESSAGE_SECP256K1` command.
 | Field     | Type      | Content                    | Expected  |
 | --------- | --------- | -------------------------- | --------- |
 | CLA		| byte (1)  | Application Identifier     | 0xAA      |
-| INS		| byte (1)  | Instruction ID             | 0x08      |
+| INS		| byte (1)  | Instruction ID             | 0x04      |
 | P1 		| byte (1)  | Length of BIP32 Path       | 20<sup id="c1">[1](#fc1)</sup>    	 |
 | P2 		| byte (1)  | Length of Hash to sign     | 32<sup id="c2">[2](#fc2)</sup>        |
 | L  		| byte (1)  | Length of Payload          | P1 + P2   |
@@ -187,17 +187,14 @@ is provided in initial `INS_SIGN_MESSAGE_SECP256K1` command.
 | Field     | Type          | Content                       | Expected      |
 | --------- | ------------- | ----------------------------- | ------------- |
 | CLA		| byte (1)   	| Application Identifier        | 0xAA      	|
-| INS		| byte (1)   	| Instruction ID                | 0x10      	|
-| P1 		| byte (1)   	| Display address/path on device| 0x00 No   	|
-|    		|            	|                               | 0x01 Yes  	|
+| INS		| byte (1)   	| Instruction ID                | 0x08      	|
+| P1 		| byte (1)   	| Display address/path on device| 0x00 Display Address |
+|    		|            	|                               | 0x01 Display PubKey  |
 | P2 		| byte (1)   	| Parameter 2                   | ignored   	|
-| L         | byte (1)		| Number of bytes in Payload 	| 20<sup id="gpk1">[1](#gpk1)</sup>			|
-| Payload 	| byte (L)		| BIP32 derivation path 		| (depends)<sup id="gpk2">[2](#gpk1)</sup>		|
+| L         | byte (1)		| Number of bytes in Payload 	| 12<sup id="gpk1">[1](#gpk1)</sup>			|
+| Payload 	| byte (L)		| BIP32 derivation path 		| (depends)	    |
 	
-<b id="gpk1">1:</b> 5 derivation paths with 4 bytes each => 20 bytes.  
-<b id="gpk1">2:</b> We expect the first two paths to be: "44'/536'" 
-
-First three items in the derivation path will be automatically hardened
+<b id="gpk1">1:</b> 3 derivation paths with 4 bytes each => 12 bytes. We omit the first two paths, and let them be hardcoded to: "44'/536'" 
 
 
 #### Response
