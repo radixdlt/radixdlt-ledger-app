@@ -33,14 +33,14 @@ file(GLOB_RECURSE JSMN_SRC
         deps/jsmn/src/jsmn.c
         )
 
-file(GLOB_RECURSE LIB_SRC
-        app/src/json/json_parser.c
-        app/src/tx_parser.c
-        app/src/tx_display.c
-        app/src/tx_validate.c
-        app/src/parser.c
-        app/src/parser_impl.c
-        )
+#file(GLOB_RECURSE LIB_SRC
+#        app/src/json/json_parser.c
+#        app/src/tx_parser.c
+#        app/src/tx_display.c
+#        app/src/tx_validate.c
+#        app/src/parser.c
+#        app/src/parser_impl.c
+#        )
 
 add_library(app_lib STATIC
         ${LIB_SRC}
@@ -48,7 +48,6 @@ add_library(app_lib STATIC
         )
 
 target_include_directories(app_lib PUBLIC
-        deps/ledger-zxlib/include
         deps/jsmn/src
         app/src
         )
@@ -77,17 +76,17 @@ target_link_libraries(unittests PRIVATE
 add_test(unittests ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unittests)
 set_tests_properties(unittests PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 
-file(GLOB_RECURSE FUZZING_SRC
-        ${CMAKE_CURRENT_SOURCE_DIR}/fuzzing/fuzzingMain.cpp
-        tests/util/common.cpp
-        )
+# file(GLOB_RECURSE FUZZING_SRC
+#         ${CMAKE_CURRENT_SOURCE_DIR}/fuzzing/fuzzingMain.cpp
+#         tests/util/common.cpp
+#         )
 
-add_executable(fuzzing_stub ${FUZZING_SRC})
-target_include_directories(fuzzing_stub PUBLIC
-        app/src
-        deps/jsmn/src
-        )
-target_link_libraries(fuzzing_stub app_lib)
+# add_executable(fuzzing_stub ${FUZZING_SRC})
+# target_include_directories(fuzzing_stub PUBLIC
+#         app/src
+#         deps/jsmn/src
+#         )
+# target_link_libraries(fuzzing_stub app_lib)
 
 ###############################################################
 # Force tests to depend from app compiling
