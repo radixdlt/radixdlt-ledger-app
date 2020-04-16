@@ -67,13 +67,16 @@ all: default
 # Platform
 
 DEFINES   += UNUSED\(x\)=\(void\)x
-DEFINES   += PRINTF\(...\)=
 
 APPVERSION=$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)
 DEFINES   += APPVERSION=\"$(APPVERSION)\"
 
 DEFINES += OS_IO_SEPROXYHAL
-DEFINES += HAVE_BAGL HAVE_SPRINTF
+DEFINES += HAVE_BAGL
+
+# DEFINES   += PRINTF\(...\)=
+DEFINES += HAVE_SPRINTF HAVE_PRINTF PRINTF=screen_printf
+
 DEFINES += HAVE_IO_USB HAVE_L4_USBLIB IO_USB_MAX_ENDPOINTS=7 IO_HID_EP_LENGTH=64 HAVE_USB_APDU
 
 DEFINES += LEDGER_MAJOR_VERSION=$(APPVERSION_M) LEDGER_MINOR_VERSION=$(APPVERSION_N) LEDGER_PATCH_VERSION=$(APPVERSION_P)
@@ -147,8 +150,8 @@ LDLIBS   += -lm -lgcc -lc
 include $(BOLOS_SDK)/Makefile.glyphs
 
 APP_SOURCE_PATH += $(MY_DIR)/src
-# APP_SOURCE_PATH += $(MY_DIR)/../deps/ledger-zxlib/include
-# APP_SOURCE_PATH += $(MY_DIR)/../deps/ledger-zxlib/src
+APP_SOURCE_PATH += $(MY_DIR)/../deps/ledger-zxlib/include
+APP_SOURCE_PATH += $(MY_DIR)/../deps/ledger-zxlib/src
 # APP_SOURCE_PATH += $(MY_DIR)/../deps/ledger-zxlib/app/common
 APP_SOURCE_PATH += $(MY_DIR)/../deps/jsmn/src
 

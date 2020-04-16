@@ -13,7 +13,7 @@ typedef enum {
 } genAddr_displayType_e;
 
 typedef struct {
-	uint8_t bip32Path[BIP32_PATH_FULL_BYTE_COUNT];
+	uint32_t bip32Path[BIP32_PATH_FULL_NUMBER_OF_COMPONENTS];
 	genAddr_displayType_e displayType;
 	uint8_t displayIndex;
 	// NUL-terminated strings for display
@@ -26,7 +26,7 @@ typedef struct {
 } getPublicKeyContext_t;
 
 // typedef struct {
-// 	uint8_t bip32Path[BIP32_PATH_FULL_BYTE_COUNT];
+	// uint32_t bip32Path[BIP32_PATH_FULL_NUMBER_OF_COMPONENTS];
 // 	uint8_t hash[ECDSA_SIGNATURE_INPUT_HASH_EXPECTED_BYTE_COUNT];
 // 	uint8_t hexHash[2 * ECDSA_SIGNATURE_INPUT_HASH_EXPECTED_BYTE_COUNT];
 // 	uint8_t displayIndex;

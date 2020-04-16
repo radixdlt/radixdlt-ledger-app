@@ -21,7 +21,12 @@
 #include "getPublicKey.h"
 #include "bip32.h"
 #include "ux.h"
+#include "zxmacros.h"
 #include "apdu_constants.h"
+#include "parse_input.h"
+#include <stdio.h> 
+#include <stdlib.h>
+#include "os_io_seproxyhal.h"
 
 // Get a pointer to getPublicKey's state variables.
 static getPublicKeyContext_t *ctx = &global.getPublicKeyContext;
@@ -122,17 +127,30 @@ static unsigned int ui_getPublicKey_approve_button(
 		break;
 
 	case BUTTON_EVT_RELEASED | BUTTON_RIGHT: // APPROVE
+
+		PRINTF("Before deriving publicKey variable:\n %.*H \n\n", 32, publicKey);
+		PRINTF("Before deriving publicKey variable, bip32 path is:\n %.*H \n\n", 20, ctx->bip32Path);
+
 		// Derive the public key and address and store them in the APDU
 		// buffer. Even though we know that tx starts at 0, it's best to
 		// always add it explicitly; this prevents a bug if we reorder the
 		// statements later.
 		deriveRadixKeypairFromBip32Path(
-			ctx->bip32Path, 
+			ctx->bip32Path,
+			5, 
 			NULL, // privateKey
 			&publicKey
 		);
+
+
+		PRINTF("After having derived publicKey variable:\n %.*H \n\n", 32, &publicKey);
+		
+		PRINTF("Before copied over publicKey to buffer:\n %.*H \n\n", 32, G_io_apdu_buffer);
 		
 		extractPubkeyBytes(G_io_apdu_buffer + tx, &publicKey);
+
+		PRINTF("After having copied over publicKey to buffer:\n %.*H \n\n", 32, G_io_apdu_buffer);
+
 
 		tx += 32;
 		// pubkeyToSiaAddress(G_io_apdu_buffer + tx, &publicKey);
@@ -144,20 +162,20 @@ static unsigned int ui_getPublicKey_approve_button(
 		// Prepare the comparison screen, filling in the header and body text.
 		os_memmove(ctx->typeStr, "Compare:", 9);
 
-		switch (ctx->displayType) {
-			case DISPLAY_PUBKEY: {
+		// switch (ctx->displayType) {
+		// 	case DISPLAY_PUBKEY: {
 				// The APDU buffer contains the raw bytes of the public key, so
 				// first we need to convert to a human-readable form.
 				bin2hex(ctx->fullStr, G_io_apdu_buffer, 32);
-			}
+		// 	}
 
-			case DISPLAY_ADDRESS: {}
-				// The APDU buffer already contains the hex-encoded address, so
-				// copy it directly.
-				// os_memmove(ctx->fullStr, G_io_apdu_buffer + 32, 76);
-				// ctx->fullStr[76] = '\0';
-				THROW(SW_INS_NOT_SUPPORTED);
-		}
+		// 	case DISPLAY_ADDRESS: {}
+		// 		// The APDU buffer already contains the hex-encoded address, so
+		// 		// copy it directly.
+		// 		// os_memmove(ctx->fullStr, G_io_apdu_buffer + 32, 76);
+		// 		// ctx->fullStr[76] = '\0';
+		// 		THROW(SW_INS_NOT_SUPPORTED);
+		// }
 		
 		os_memmove(ctx->partialStr, ctx->fullStr, 12);
 		ctx->partialStr[12] = '\0';
@@ -167,6 +185,84 @@ static unsigned int ui_getPublicKey_approve_button(
 		break;
 	}
 	return 0;
+}
+
+// https://stackoverflow.com/a/2182581/1311272
+void SwapBytes(void *pv, size_t n)
+{
+    char *p = pv;
+    size_t lo, hi;
+    for(lo=0, hi=n-1; hi>lo; lo++, hi--)
+    {
+        char tmp=p[lo];
+        p[lo] = p[hi];
+        p[hi] = tmp;
+    }
+}
+
+void byte_array_from_number(char *buffer, uint32_t number) {
+    int i;
+    for (i=0; i<sizeof(uint32_t); i++) {
+        buffer[i] = number & 0xFF; // place bottom 8 bits in char
+        number = number >> 8; // shift down remaining bits
+    }
+    return; // the long is now stored in the first few (2,4,or 8) bytes of buffer
+}
+
+
+
+int stringify_bip32_path_single_component(
+	uint32_t input_bip32_component,
+	char *output_bip32_component_string
+) {
+
+	// uint8_t most_significant_byte = input_bip32_component[0];
+	// PRINTF("string from bip uint32 component: %u\n", input_bip32_component);
+	uint8_t parsed[4];
+	// os_memcpy(parsed, input_bip32_component, 4);
+	byte_array_from_number(parsed, input_bip32_component);
+	SwapBytes(parsed, 4);
+	bool is_hardened = false;
+	if (parsed[0] >= 0x80) {
+		is_hardened = true;
+		parsed[0] -= 0x80;
+		PRINTF("Was hardened, now unhardened...\n");
+	}
+
+	uint32_t unhardened_bip32_path_component_uint32 = U4BE(parsed, 0);
+
+	char str[12];
+	SPRINTF(str, "%d", unhardened_bip32_path_component_uint32);
+
+	int length = strlen(str);
+	if (is_hardened) {
+		str[length] = '\'';
+		str[length + 1] = '\0';
+		length += 1;
+	}
+	os_memcpy(output_bip32_component_string, str, length);
+	PRINTF("output_bip32_component_string: %s\n", output_bip32_component_string);
+	return length;
+}
+
+int stringify_bip32_path(
+	uint32_t *input_bip32_bytes,
+	char *output_bip32_string
+) {
+	
+	int length_of_output_string = 0;
+	for (int i = 0; i < BIP32_PATH_FULL_NUMBER_OF_COMPONENTS; i++) {
+		char string_form_path_comp[20]; // will not need 20 chars, just placeholder...
+		int length_of_string_for_this_component = stringify_bip32_path_single_component(input_bip32_bytes[i], string_form_path_comp);
+		os_memcpy(output_bip32_string + length_of_output_string, string_form_path_comp, length_of_string_for_this_component);
+		length_of_output_string += length_of_string_for_this_component;
+
+		if (i < (BIP32_PATH_FULL_NUMBER_OF_COMPONENTS - 1)) {
+			os_memset(output_bip32_string + strlen(output_bip32_string), '/', 1);
+			length_of_output_string += 1;
+		}
+	}
+	return length_of_output_string;
 }
 
 void doGetPublicKey(
@@ -183,21 +279,30 @@ void doGetPublicKey(
 		bip32_path_account,
 		bip32_path_change,
 		bip32_path_addressIndex,
-		&ctx->bip32Path, // remove `&`??
-		sizeof(ctx->bip32Path)
+		ctx->bip32Path,
+		20
+		// sizeof(ctx->bip32Path)
 	);
+	PRINTF("After setting bip32Path variable:\n %.*H \n\n", 20, ctx->bip32Path);
 
 	// Prepare the approval screen, filling in the header and body text.
 	// switch (displayType) {
 	// 	case DISPLAY_PUBKEY: {
-			char title1[] = "Generate Public";
+			char title1[] = "Gen PubKey";
 			unsigned int title1_null_ended_length = strlen(title1) + 1; // +1 for null end
 			os_memmove(ctx->typeStr, title1, title1_null_ended_length);
-			char title2[] = "BIP32: ";
-			unsigned int title2_null_ended_length = strlen(title2) + 1; // +1 for null end
-			os_memmove(ctx->keyStr, title2, title2_null_ended_length);
-			int length_of_bip32_string_path = sizeof(ctx->bip32Path);
-			bin2hex(ctx->keyStr+title2_null_ended_length, ctx->bip32Path, sizeof(ctx->bip32Path));
+			// char title2[] = "B: "; // "Bip32 path: "
+			// unsigned int title2_null_ended_length = strlen(title2) + 1; // +1 for null end
+			unsigned int title2_null_ended_length = 0;
+			// os_memmove(ctx->keyStr, title2, title2_null_ended_length);
+			PRINTF("About to get string from bip32 path....\n");
+			char bip32String[100]; // 100 will not be needed....
+			int length_of_bip32_string_path = stringify_bip32_path(ctx->bip32Path, bip32String);
+
+			PRINTF("bip32String: %s\n", bip32String);
+			// PRINTF("bip32String: %s\n", length_of_bip32_string_path, bip32String);
+			os_memmove(ctx->keyStr + title2_null_ended_length, bip32String, length_of_bip32_string_path);
+			// bin2hex(ctx->keyStr+title2_null_ended_length, ctx->bip32Path, sizeof(ctx->bip32Path));
 			os_memmove(ctx->keyStr+title2_null_ended_length+length_of_bip32_string_path, "?", 2);
 	// 	}
 	// 	case DISPLAY_ADDRESS: {
@@ -224,6 +329,22 @@ void handleGetPublicKey(
 	volatile unsigned int *output_response_apdu_size_aka_tx
 ) {
 
+	if (dataLength != BIP32_PATH_COMPONENTS_INPUT_EXPECTED_BYTE_COUNT) { 
+		THROW(SW_INCORRECT_LENGTH);
+	}
+
+	PRINTF("'dataBuffer':\n %.*H \n\n", dataLength, dataBuffer);
+
+	uint32_t bip32_path_account = U4BE(dataBuffer, 0*4);
+	PRINTF("'bip32_path_account': %u\n", bip32_path_account);
+
+	uint32_t bip32_path_change = U4BE(dataBuffer, 1*4);
+	PRINTF("'bip32_path_change': %u\n", bip32_path_change);
+
+	uint32_t bip32_path_addressIndex = U4BE(dataBuffer, 2*4);
+	PRINTF("'bip32_path_addressIndex': %u\n", bip32_path_addressIndex);
+
+
 	// Sanity-check the command parameters.
 	if ((p1 != DISPLAY_ADDRESS) && (p1 != DISPLAY_PUBKEY)) {
 		// Although THROW is technically a general-purpose exception
@@ -239,10 +360,6 @@ void handleGetPublicKey(
 	int displayTypeRaw = (int) p1;
 	genAddr_displayType_e displayType;
 	displayType = ( genAddr_displayType_e ) displayTypeRaw;
-
-	uint32_t bip32_path_account = U4LE(dataBuffer, 0 * BIP32_PATH_COMPONENT_BYTE_COUNT);
-	uint32_t bip32_path_change = U4LE(dataBuffer, 1 * BIP32_PATH_COMPONENT_BYTE_COUNT);
-	uint32_t bip32_path_addressIndex = U4LE(dataBuffer, 2 * BIP32_PATH_COMPONENT_BYTE_COUNT);
 
 	doGetPublicKey(
 		displayType,

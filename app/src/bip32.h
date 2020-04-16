@@ -22,7 +22,8 @@ void deriveRadixKeypairFromThreeComponents(
 );
 
 void deriveRadixKeypairFromBip32Path(
-	const uint8_t *bip32Path, 
+    const uint32_t *bip32Path,
+    uint32_t pathLength,
 	cx_ecfp_private_key_t *privateKey, 
 	cx_ecfp_public_key_t *publicKey
 );
@@ -31,6 +32,6 @@ void bip32PathFromComponents(
 	uint32_t bip32_path_account, 
 	uint32_t bip32_path_change, 
 	uint32_t bip32_path_addressIndex,
-	const uint8_t *output_bip32_path, 
-	unsigned short output_bip32_path_byte_count
+	uint32_t *output_bip32_path, 
+	uint64_t output_bip32_path_byte_count
 );
