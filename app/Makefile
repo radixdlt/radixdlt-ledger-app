@@ -35,7 +35,11 @@ APPVERSION_P=1
 # Please observe that `536` is NOT yet registred here: https://github.com/satoshilabs/slips/blob/master/slip-0044.md
 # Can be registered when this Ledger app is done.
 APPPATH = "44'/536'"
-APP_LOAD_PARAMS = --appFlags 0x200 --delete $(COMMON_LOAD_PARAMS) --path $(APPPATH)
+APP_LOAD_PARAMS = --delete $(COMMON_LOAD_PARAMS)
+APP_LOAD_PARAMS += --appFlags 0x40 # 0x200 ? WHAT IS THIS?!
+APP_LOAD_PARAMS += --path $(APPPATH) 
+# APP_LOAD_PARAMS += --curve secp256k1
+
 
 ifeq ($(TARGET_NAME),TARGET_NANOS)
 SCRIPT_LD:=$(CURDIR)/script.ld

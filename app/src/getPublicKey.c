@@ -136,7 +136,7 @@ static unsigned int ui_getPublicKey_approve_button(
             deriveRadixPubKey(ctx->bip32Path, &publicKey);
             os_memmove(G_io_apdu_buffer + tx, publicKey.W, publicKey.W_len);
             tx += publicKey.W_len;
-            PRINTF("Public Key: %.*h\n", publicKey.W_len, G_io_apdu_buffer);
+            PRINTF("Public Key: %.*h\n", 33, G_io_apdu_buffer);
 
             // 2. Generate address from public key.
             // uint8_t bytesAddr[RADIX_ADDRESS_BYTE_COUNT];
@@ -213,8 +213,8 @@ void handleGetPublicKey(uint8_t p1,
     uint32_t purpose = 44 | 0x80000000; // BIP44 - hardened
     bip32Path[0] = purpose;
 
-    // BIP32 Purpose
-    uint32_t coin_type = 0 | 0x80000000; // BTC - hardened
+    // BIP32 coin_type
+    uint32_t coin_type = 536 | 0x80000000; // Radix - hardened
     bip32Path[1] = coin_type;
 
     uint32_t account = U4BE(dataBuffer, 0 * byte_count_bip_component) | 0x80000000; // hardened 
@@ -231,9 +231,12 @@ void handleGetPublicKey(uint8_t p1,
     uint32_t address_index = U4BE(dataBuffer, 2 * byte_count_bip_component);
     bip32Path[4] = address_index;
 
+
+    PRINTF("BIP32 path (uint32 array): %u,%u,%u,%u,%u\n", bip32Path[0], bip32Path[1], bip32Path[2], bip32Path[3], bip32Path[4]);
+
     os_memcpy(ctx->bip32Path, bip32Path, 20);
 
-    // PRINTF("'ctx->bip32Path': %.*h\n", 20, ctx->bip32Path);
+    PRINTF("'ctx->bip32Path': %.*h\n", 20, ctx->bip32Path);
     
     ctx->genAddr = (p1 == P2_DISPLAY_ADDRESS);
 
@@ -246,7 +249,7 @@ void handleGetPublicKey(uint8_t p1,
         os_memmove(ctx->typeStr, "Generate Public", 16);
     }
     char *bip32PathString = "44'/0'/0'/0/0";
-    // PRINTF("WARNING BIP32 Path string displayed is HARDCODED!!!\n");
+    PRINTF("WARNING BIP32 Path string displayed is HARDCODED!!!\n");
     os_memmove(ctx->bip32PathString, bip32PathString, strlen(bip32PathString));
 
     UX_DISPLAY(ui_getPublicKey_approve, NULL);
