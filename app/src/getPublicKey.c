@@ -137,7 +137,7 @@ static unsigned int ui_getPublicKey_approve_button(
             deriveRadixPubKey(ctx->bip32Path, &publicKey);
             os_memmove(G_io_apdu_buffer + tx, publicKey.W, publicKey.W_len);
             tx += publicKey.W_len;
-            PRINTF("Public Key: %.*h\n", 33, G_io_apdu_buffer);
+            PRINTF("Public Key compressed: %.*h\n", 33, G_io_apdu_buffer);
 
             // 2. Generate address from public key.
             // uint8_t bytesAddr[RADIX_ADDRESS_BYTE_COUNT];
@@ -218,10 +218,10 @@ void handleGetPublicKey(uint8_t p1,
     uint32_t coin_type = 536 | 0x80000000; // Radix - hardened
     bip32Path[1] = coin_type;
 
-    uint32_t account = U4BE(dataBuffer, 0 * byte_count_bip_component) | 0x80000000; // hardened 
+    uint32_t account = U4LE(dataBuffer, 0 * byte_count_bip_component) | 0x80000000; // hardened 
     bip32Path[2] = account;
 
-    uint32_t change = U4BE(dataBuffer, 1 * byte_count_bip_component);
+    uint32_t change = U4LE(dataBuffer, 1 * byte_count_bip_component);
     if ((change != 0) && (change != 1)) {
         PRINTF("BIP32 'change' must be 0 or 1, but was: %u\n", change);
         THROW(SW_INVALID_PARAM);
@@ -229,11 +229,8 @@ void handleGetPublicKey(uint8_t p1,
  
     bip32Path[3] = change;
 
-    uint32_t address_index = U4BE(dataBuffer, 2 * byte_count_bip_component);
+    uint32_t address_index = U4LE(dataBuffer, 2 * byte_count_bip_component);
     bip32Path[4] = address_index;
-
-
-    PRINTF("BIP32 path (uint32 array): %u,%u,%u,%u,%u\n", bip32Path[0], bip32Path[1], bip32Path[2], bip32Path[3], bip32Path[4]);
 
     os_memcpy(ctx->bip32Path, bip32Path, 20);
 
@@ -257,7 +254,6 @@ void handleGetPublicKey(uint8_t p1,
         bip32String
     );
 
-	PRINTF("bip32String: %.*s\n", length_of_bip32_string_path, bip32String);
 	os_memmove(ctx->bip32PathString, bip32String, length_of_bip32_string_path);
 
     UX_DISPLAY(ui_getPublicKey_approve, NULL);
