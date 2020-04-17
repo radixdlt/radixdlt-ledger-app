@@ -12,32 +12,14 @@ void getKeySeed(
     uint32_t *bip32path
 ) {
 
-    uint32_t bip32PathHardCoded[] = {
-        44 | 0x80000000,
-        0 | 0x80000000,
-        0 | 0x80000000,
-        0,
-        0
-    };
-
-
-    // PRINTF("getKeySeed - input: 'bip32path': %.*H \n\n", 20, bip32path);
-    // PRINTF("getKeySeed - hardcoded: 'bip32PathHardCoded': %.*H \n\n", 20, bip32PathHardCoded);
-
-    uint8_t LoCaL_keySeed[KEY_SEED_BYTE_COUNT];
-
-    // PRINTF("getKeySeed - before set 'LoCaL_keySeed': %.*H \n\n", KEY_SEED_BYTE_COUNT, LoCaL_keySeed);
-    bool SUCCESS = false;
     BEGIN_TRY {
         TRY {
-
-            // PRINTF("WARNING! Using HARDCODED bip32 path for key seed.\n");
             io_seproxyhal_io_heartbeat();
-            os_perso_derive_node_bip32(CX_CURVE_256K1, bip32PathHardCoded, 5, LoCaL_keySeed, NULL);
-            // io_seproxyhal_io_heartbeat();
-            SUCCESS = true;
+            os_perso_derive_node_bip32(CX_CURVE_256K1, bip32path, 5, keySeed, NULL);
+            io_seproxyhal_io_heartbeat();
         }
         CATCH_OTHER(e) {
+            os_memset(keySeed, 0, KEY_SEED_BYTE_COUNT);
             switch (e) {
                 case EXCEPTION_SECURITY: {
                     PRINTF("FAILED call 'os_perso_derive_node_bip32', error: 'EXCEPTION_SECURITY' (==%d)\n", e);
@@ -52,22 +34,10 @@ void getKeySeed(
             THROW(e);
         }
         FINALLY {
-            PRINTF("FAILED call 'os_perso_derive_node_bip32'\n");
-            PRINTF("WARNING! NOT SETTING SENSITIVE DATA TO ZERO!!\n");
-            // os_memset(LoCaL_keySeed, 0, KEY_SEED_BYTE_COUNT);
         }
     }
     END_TRY;
-    // PRINTF("getKeySeed - after set 'LoCaL_keySeed': %.*H \n\n", KEY_SEED_BYTE_COUNT, LoCaL_keySeed);
-
-    // PRINTF("After call, variable 'keySeed' has value: %.*H \n", KEY_SEED_BYTE_COUNT, keySeed);
-    if (SUCCESS) {
-        PRINTF("SUCCESS!\n");
-        os_memcpy(keySeed, LoCaL_keySeed, KEY_SEED_BYTE_COUNT);
-        os_memset(LoCaL_keySeed, 0, KEY_SEED_BYTE_COUNT);
-    } else {
-        PRINTF("FAIL!\n");
-    }
+    PRINTF("Successfully generated key seed from bip32 path: %.*H\n", 20, bip32path);
 }
 
 void compressPubKey(cx_ecfp_public_key_t *publicKey) {
@@ -98,7 +68,7 @@ void deriveRadixPubKey(
 
     uint8_t keySeed[KEY_SEED_BYTE_COUNT];
     getKeySeed(keySeed, bip32path);
-
+    PRINTF("Great! Generated HD seed, proceeding with private key generation...\n");
     cx_ecfp_init_private_key(CX_CURVE_SECP256K1, keySeed, 32, &pk);
 
     assert (publicKey);
