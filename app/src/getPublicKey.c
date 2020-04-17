@@ -24,6 +24,7 @@
 #include <os_io_seproxyhal.h>
 #include "radix.h"
 #include "ux.h"
+#include "stringify_bip32_path.h"
 
 // Get a pointer to getPublicKey's state variables.
 static getPublicKeyContext_t *ctx = &global.getPublicKeyContext;
@@ -248,12 +249,18 @@ void handleGetPublicKey(uint8_t p1,
     else {
         os_memmove(ctx->typeStr, "Generate Public", 16);
     }
-    char *bip32PathString = "44'/0'/0'/0/0";
-    PRINTF("WARNING BIP32 Path string displayed is HARDCODED!!!\n");
-    os_memmove(ctx->bip32PathString, bip32PathString, strlen(bip32PathString));
+
+    char bip32String[100]; // 100 will not be needed....
+	int length_of_bip32_string_path = stringify_bip32_path(
+        ctx->bip32Path, 
+        5,
+        bip32String
+    );
+
+	PRINTF("bip32String: %.*s\n", length_of_bip32_string_path, bip32String);
+	os_memmove(ctx->bip32PathString, bip32String, length_of_bip32_string_path);
 
     UX_DISPLAY(ui_getPublicKey_approve, NULL);
-
     *flags |= IO_ASYNCH_REPLY;
 }
 
