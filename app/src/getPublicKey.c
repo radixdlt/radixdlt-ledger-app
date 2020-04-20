@@ -218,10 +218,10 @@ void handleGetPublicKey(uint8_t p1,
     uint32_t coin_type = 536 | 0x80000000; // Radix - hardened
     bip32Path[1] = coin_type;
 
-    uint32_t account = U4LE(dataBuffer, 0 * byte_count_bip_component) | 0x80000000; // hardened 
+    uint32_t account = U4BE(dataBuffer, 0 * byte_count_bip_component) | 0x80000000; // hardened 
     bip32Path[2] = account;
 
-    uint32_t change = U4LE(dataBuffer, 1 * byte_count_bip_component);
+    uint32_t change = U4BE(dataBuffer, 1 * byte_count_bip_component);
     if ((change != 0) && (change != 1)) {
         PRINTF("BIP32 'change' must be 0 or 1, but was: %u\n", change);
         THROW(SW_INVALID_PARAM);
@@ -229,11 +229,16 @@ void handleGetPublicKey(uint8_t p1,
  
     bip32Path[3] = change;
 
-    uint32_t address_index = U4LE(dataBuffer, 2 * byte_count_bip_component);
+    uint32_t address_index = U4BE(dataBuffer, 2 * byte_count_bip_component);
     bip32Path[4] = address_index;
+
+
+    PRINTF("BIP32 path (uint32 array): %u,%u,%u,%u,%u\n", bip32Path[0], bip32Path[1], bip32Path[2], bip32Path[3], bip32Path[4]);
 
     os_memcpy(ctx->bip32Path, bip32Path, 20);
 
+    PRINTF("'ctx->bip32Path': %.*h\n", 20, ctx->bip32Path);
+    
     ctx->genAddr = (p1 == P2_DISPLAY_ADDRESS);
 
     // Prepare the approval screen, filling in the header and body text.

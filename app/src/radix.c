@@ -71,7 +71,7 @@ void deriveRadixPubKey(
     assert (publicKey);
     cx_ecfp_init_public_key(CX_CURVE_SECP256K1, NULL, 0, publicKey);
     cx_ecfp_generate_pair(CX_CURVE_SECP256K1, publicKey, &pk, 1);
-    PRINTF("Uncompressed public key:\n %.*H \n\n", publicKey->W_len, publicKey->W);
+    PRINTF("Uncompressed PublicKey:\n %.*H \n\n", publicKey->W_len, publicKey->W);
 
     compressPubKey(publicKey);
 
