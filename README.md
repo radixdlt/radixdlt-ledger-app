@@ -7,14 +7,14 @@ This repository contains:
 - Specs / Documentation
 - C++ unit tests
 
-# We use Little Endian
+# We use Big Endian
 Example of generation of public key (`INS_GET_PUB_KEY_SECP256K1`), you can use CLI and send a command to the ledger useing
 
 ```sh
-echo 'AA0801000C020000800100000003000000' | python -m ledgerblue.runScript --targetId 0x31100004 --apdu
+echo 'AA0801000C800000020000000100000003' | python -m ledgerblue.runScript --targetId 0x31100004 --apdu
 ```
 
-The APDU command above (little endian byte order), ought to result in this BIP path: `44'/536'/2'/1/3`. And using the mnemonic mentioned below (`equip will roof....`), ought to result in this compressed public key `026d5e07cfde5df84b5ef884b629d28d15b0f6c66be229680699767cd57c618288`.
+The APDU command above (big endian byte order), ought to result in this BIP path: `44'/536'/2'/1/3`. And using the mnemonic mentioned below (`equip will roof....`), ought to result in this compressed public key `026d5e07cfde5df84b5ef884b629d28d15b0f6c66be229680699767cd57c618288`.
 
 # Building
 
