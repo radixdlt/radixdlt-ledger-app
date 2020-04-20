@@ -182,8 +182,8 @@ static unsigned int ui_getPublicKey_approve_button(
 
 // These are APDU parameters that control the behavior of the getPublicKey
 // command.
-#define P2_DISPLAY_ADDRESS 0x00
-#define P2_DISPLAY_PUBKEY  0x01
+#define P1_DISPLAY_ADDRESS 0x00
+#define P1_DISPLAY_PUBKEY  0x01
 
 // handleGetPublicKey is the entry point for the getPublicKey command. It
 // reads the command parameters, prepares and displays the approval screen,
@@ -198,7 +198,7 @@ void handleGetPublicKey(uint8_t p1,
     PRINTF("Received APDU of length: %u\n", dataLength);
     PRINTF("Received APDU hex: %.*H\n", dataLength, dataBuffer);
 
-    if ((p1 != P2_DISPLAY_ADDRESS) && (p1 != P2_DISPLAY_PUBKEY)) {
+    if ((p1 != P1_DISPLAY_ADDRESS) && (p1 != P1_DISPLAY_PUBKEY)) {
         PRINTF("p1 must be 0 or 1, but was: %u\n", p1);
         THROW(SW_INVALID_PARAM);
     }
@@ -243,7 +243,7 @@ void handleGetPublicKey(uint8_t p1,
 
     PRINTF("'ctx->bip32Path': %.*h\n", 20, ctx->bip32Path);
     
-    ctx->genAddr = (p1 == P2_DISPLAY_ADDRESS);
+    ctx->genAddr = (p1 == P1_DISPLAY_ADDRESS);
 
     // Prepare the approval screen, filling in the header and body text.
     if (ctx->genAddr) {
