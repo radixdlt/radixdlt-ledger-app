@@ -182,8 +182,8 @@ static unsigned int ui_getPublicKey_approve_button(
 
 // These are APDU parameters that control the behavior of the getPublicKey
 // command.
-#define P2_DISPLAY_ADDRESS 0x00
-#define P2_DISPLAY_PUBKEY  0x01
+#define P1_DISPLAY_ADDRESS 0x00
+#define P1_DISPLAY_PUBKEY  0x01
 
 // handleGetPublicKey is the entry point for the getPublicKey command. It
 // reads the command parameters, prepares and displays the approval screen,
@@ -194,7 +194,11 @@ void handleGetPublicKey(uint8_t p1,
                         uint16_t dataLength,
                         volatile unsigned int *flags,
                         volatile unsigned int *tx) {
-    if ((p1 != P2_DISPLAY_ADDRESS) && (p1 != P2_DISPLAY_PUBKEY)) {
+
+    PRINTF("Received APDU of length: %u\n", dataLength);
+    PRINTF("Received APDU hex: %.*H\n", dataLength, dataBuffer);
+
+    if ((p1 != P1_DISPLAY_ADDRESS) && (p1 != P1_DISPLAY_PUBKEY)) {
         PRINTF("p1 must be 0 or 1, but was: %u\n", p1);
         THROW(SW_INVALID_PARAM);
     }
@@ -218,10 +222,10 @@ void handleGetPublicKey(uint8_t p1,
     uint32_t coin_type = 536 | 0x80000000; // Radix - hardened
     bip32Path[1] = coin_type;
 
-    uint32_t account = U4LE(dataBuffer, 0 * byte_count_bip_component) | 0x80000000; // hardened 
+    uint32_t account = U4BE(dataBuffer, 0 * byte_count_bip_component) | 0x80000000; // hardened 
     bip32Path[2] = account;
 
-    uint32_t change = U4LE(dataBuffer, 1 * byte_count_bip_component);
+    uint32_t change = U4BE(dataBuffer, 1 * byte_count_bip_component);
     if ((change != 0) && (change != 1)) {
         PRINTF("BIP32 'change' must be 0 or 1, but was: %u\n", change);
         THROW(SW_INVALID_PARAM);
@@ -229,12 +233,17 @@ void handleGetPublicKey(uint8_t p1,
  
     bip32Path[3] = change;
 
-    uint32_t address_index = U4LE(dataBuffer, 2 * byte_count_bip_component);
+    uint32_t address_index = U4BE(dataBuffer, 2 * byte_count_bip_component);
     bip32Path[4] = address_index;
+
+
+    PRINTF("BIP32 path (uint32 array): %u,%u,%u,%u,%u\n", bip32Path[0], bip32Path[1], bip32Path[2], bip32Path[3], bip32Path[4]);
 
     os_memcpy(ctx->bip32Path, bip32Path, 20);
 
-    ctx->genAddr = (p1 == P2_DISPLAY_ADDRESS);
+    PRINTF("'ctx->bip32Path': %.*h\n", 20, ctx->bip32Path);
+    
+    ctx->genAddr = (p1 == P1_DISPLAY_ADDRESS);
 
     // Prepare the approval screen, filling in the header and body text.
     if (ctx->genAddr) {
