@@ -244,16 +244,17 @@ void handleGetPublicKey(uint8_t p1,
         THROW(0x9100);
     }
     else {
-        os_memmove(ctx->typeStr, "Generate Public", 16);
+        os_memmove(ctx->typeStr, "Gen.PubKey", 16);
     }
 
-    char bip32String[100]; // 100 will not be needed....
+    char bip32String[BIP39_PATH_STRING_MAX_LENGTH]; 
 	int length_of_bip32_string_path = stringify_bip32_path(
         ctx->bip32Path, 
         5,
         bip32String
     );
 
+    os_memset(ctx->bip32PathString, 0, BIP39_PATH_STRING_MAX_LENGTH);
 	os_memmove(ctx->bip32PathString, bip32String, length_of_bip32_string_path);
 
     UX_DISPLAY(ui_getPublicKey_approve, NULL);
