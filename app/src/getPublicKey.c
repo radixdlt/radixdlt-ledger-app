@@ -234,17 +234,15 @@ void handleGetPublicKey(uint8_t p1,
 
     os_memcpy(ctx->bip32Path, bip32Path, 20);
 
-    PRINTF("'ctx->bip32Path': %.*h\n", 20, ctx->bip32Path);
-    
     ctx->genAddr = (p1 == P2_DISPLAY_ADDRESS);
 
     // Prepare the approval screen, filling in the header and body text.
     if (ctx->genAddr) {
         // os_memmove(ctx->typeStr, "Generate Address", 17);
-        THROW(0x9100);
+        THROW(0x9123); // not yet impl
     }
     else {
-        os_memmove(ctx->typeStr, "Gen.PubKey", 16);
+        os_memmove(ctx->typeStr, "Generate PubKey", 16);
     }
 
     char bip32String[BIP39_PATH_STRING_MAX_LENGTH]; 
@@ -255,12 +253,9 @@ void handleGetPublicKey(uint8_t p1,
     );
 
     os_memset(ctx->bip32PathString, 0, BIP39_PATH_STRING_MAX_LENGTH);
+    PRINTF("BIP 32 Path used for PublicKey generation: %s\n", bip32String);
 	os_memmove(ctx->bip32PathString, bip32String, length_of_bip32_string_path);
 
     UX_DISPLAY(ui_getPublicKey_approve, NULL);
     *flags |= IO_ASYNCH_REPLY;
 }
-
-// Having previously read through signHash.c, getPublicKey.c shouldn't be too
-// difficult to make sense of. We'll move on to the last (and most complex)
-// command file in the walkthrough, calcTxnHash.c. Hold onto your hat!
