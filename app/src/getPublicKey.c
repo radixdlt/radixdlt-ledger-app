@@ -194,6 +194,10 @@ void handleGetPublicKey(uint8_t p1,
                         uint16_t dataLength,
                         volatile unsigned int *flags,
                         volatile unsigned int *tx) {
+
+    PRINTF("Received APDU of length: %u\n", dataLength);
+    PRINTF("Received APDU hex: %.*H\n", dataLength, dataBuffer);
+
     if ((p1 != P2_DISPLAY_ADDRESS) && (p1 != P2_DISPLAY_PUBKEY)) {
         PRINTF("p1 must be 0 or 1, but was: %u\n", p1);
         THROW(SW_INVALID_PARAM);
