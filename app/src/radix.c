@@ -4,8 +4,66 @@
 #include <cx.h>
 #include "radix.h"
 #include "os_io_seproxyhal.h"
+#include "stringify_bip32_path.h"
+#include "deserialize_DER_signature.h"
 
 #define KEY_SEED_BYTE_COUNT 32
+
+
+void parse_bip32_path_from_apdu_command(
+    uint8_t *dataBuffer,
+    uint32_t *output_bip32path,
+    uint8_t *output_bip32String, // might be null
+    unsigned short output_bip32PathString_length
+) {
+    // uint16_t expected_number_of_bip32_compents = 3;
+    uint16_t byte_count_bip_component = 4;
+    // uint16_t expected_data_length = expected_number_of_bip32_compents * byte_count_bip_component;
+    
+    uint32_t bip32Path[5];
+
+    // BIP32 Purpose
+    uint32_t purpose = 44 | 0x80000000; // BIP44 - hardened
+    bip32Path[0] = purpose;
+
+    // BIP32 coin_type
+    uint32_t coin_type = 536 | 0x80000000; // Radix - hardened
+    bip32Path[1] = coin_type;
+
+    uint32_t account = U4BE(dataBuffer, 0 * byte_count_bip_component) | 0x80000000; // hardened 
+    bip32Path[2] = account;
+
+    uint32_t change = U4BE(dataBuffer, 1 * byte_count_bip_component);
+    if ((change != 0) && (change != 1)) {
+        PRINTF("BIP32 'change' must be 0 or 1, but was: %u\n", change);
+        THROW(SW_INVALID_PARAM);
+    }
+ 
+    bip32Path[3] = change;
+
+    uint32_t address_index = U4BE(dataBuffer, 2 * byte_count_bip_component);
+    bip32Path[4] = address_index;
+
+    PRINTF("BIP32 path (uint32 array): %u,%u,%u,%u,%u\n", bip32Path[0], bip32Path[1], bip32Path[2], bip32Path[3], bip32Path[4]);
+
+    os_memcpy(output_bip32path, bip32Path, 20);
+
+    if (output_bip32String) {
+        if (output_bip32PathString_length != BIP32_PATH_STRING_MAX_LENGTH) {
+            PRINTF("Wrong length of output_bip32PathString_length, is: %d, but expected: %d\n", output_bip32PathString_length, BIP32_PATH_STRING_MAX_LENGTH);
+            THROW(0x9320);
+        }
+        char bip32PathString_null_terminated[BIP32_PATH_STRING_MAX_LENGTH];
+    	int length_of_bip32_string_path = stringify_bip32_path(
+            output_bip32path,
+            5,
+            bip32PathString_null_terminated
+        );
+
+        os_memset(output_bip32String, 0, BIP32_PATH_STRING_MAX_LENGTH);
+    	os_memmove(output_bip32String, bip32PathString_null_terminated, length_of_bip32_string_path);
+    }
+}
 
 void getKeySeed(
     uint8_t* keySeed, 
@@ -58,94 +116,120 @@ void compressPubKey(cx_ecfp_public_key_t *publicKey) {
     publicKey->W_len = PUBLIC_KEY_COMPRESSEED_BYTE_COUNT;
 }
 
-void deriveRadixPubKey(
+void deriveRadixKeyPair(
     uint32_t *bip32path, 
-    cx_ecfp_public_key_t *publicKey
+    cx_ecfp_public_key_t *publicKey,
+    cx_ecfp_private_key_t *privateKey_nullable
 ) {
-    cx_ecfp_private_key_t pk;
+    cx_ecfp_private_key_t privateKeyLocal;
 
     uint8_t keySeed[KEY_SEED_BYTE_COUNT];
     getKeySeed(keySeed, bip32path);
-    cx_ecfp_init_private_key(CX_CURVE_SECP256K1, keySeed, 32, &pk);
+    cx_ecfp_init_private_key(CX_CURVE_SECP256K1, keySeed, 32, &privateKeyLocal);
 
     assert (publicKey);
     cx_ecfp_init_public_key(CX_CURVE_SECP256K1, NULL, 0, publicKey);
-    cx_ecfp_generate_pair(CX_CURVE_SECP256K1, publicKey, &pk, 1);
-    PRINTF("Uncompressed PublicKey:\n %.*H \n\n", publicKey->W_len, publicKey->W);
+    cx_ecfp_generate_pair(CX_CURVE_SECP256K1, publicKey, &privateKeyLocal, 1);
+    PRINTF("Uncompressed public key:\n %.*H \n\n", publicKey->W_len, publicKey->W);
 
     compressPubKey(publicKey);
 
     os_memset(keySeed, 0, sizeof(keySeed));
-    os_memset(&pk, 0, sizeof(pk));
+    if (privateKey_nullable) { 
+        // copy over local private key to passed in pointer, if not null
+        os_memcpy(privateKey_nullable, &privateKeyLocal, sizeof(privateKeyLocal));
+    }
+    os_memset(&privateKeyLocal, 0, sizeof(privateKeyLocal));
 }
 
-// void deriveAndSign(uint8_t *dst, uint32_t dst_len, uint32_t index, const uint8_t *msg, unsigned int msg_len) {
-//     PRINTF("deriveAndSign: index: %d\n", index);
-//     PRINTF("deriveAndSign: msg: %.*H \n", msg_len, msg);
 
-//     uint8_t keySeed[KEY_SEED_BYTE_COUNT];
-//     getKeySeed(keySeed, index);
 
-//     cx_ecfp_private_key_t privateKey;
-//     cx_ecfp_init_private_key(CX_CURVE_SECP256K1, keySeed, 32, &privateKey);
-//     PRINTF("deriveAndSign: privateKey: %.*H \n", privateKey.d_len, privateKey.d);
+static void ecdsa_sign_or_verify_hash(
+        cx_ecfp_private_key_t *privateKey, // might be NULL if you do 'verify'
+        cx_ecfp_public_key_t *publicKey, // might be NULL if you do 'sign' instead of 'verify'
+        unsigned char sign_one_verify_zero,
+        const unsigned char *in, unsigned short inlen,
+        unsigned char *out, unsigned short outlen,
+        unsigned char use_rfc6979_deterministic_signing
+    ) {
+    io_seproxyhal_io_heartbeat();
+    if (sign_one_verify_zero) {
+        unsigned int result_info = 0;
+        cx_ecdsa_sign(
+            privateKey,
+            CX_LAST | (use_rfc6979_deterministic_signing ? CX_RND_RFC6979 : CX_RND_TRNG),
+            CX_SHA256, 
+            in, inlen, 
+            out, outlen, 
+            &result_info
+        );
+        if (result_info & CX_ECCINFO_PARITY_ODD) {
+            out[0] |= 0x01;
+        }
+    } else {
+        cx_ecdsa_verify(
+            publicKey, 
+            CX_LAST,
+            CX_SHA256, 
+            in, inlen, 
+            out, outlen
+        );
+    }
+    io_seproxyhal_io_heartbeat();
+}
 
-//     if (dst_len != ECDSA_SIGNATURE_BYTE_COUNT)
-//         THROW (INVALID_PARAMETER);
 
-//     zil_ecschnorr_sign(&privateKey, msg, msg_len, dst, dst_len);
-//     PRINTF("deriveAndSign: signature: %.*H\n", ECDSA_SIGNATURE_BYTE_COUNT, dst);
 
-//     // Erase private keys for better security.
-//     os_memset(keySeed, 0, sizeof(keySeed));
-//     os_memset(&privateKey, 0, sizeof(privateKey));
-// }
+void deriveAndSign(
+    uint32_t *bip32path, 
+    const uint8_t *hash,
+    uint8_t *output_signature_R_S
+) {
 
-// void deriveAndSignInit(zil_ecschnorr_t *T, uint32_t index)
-// {
-//     PRINTF("deriveAndSignInit: index: %d\n", index);
+	cx_ecfp_public_key_t publicKey;
+	cx_ecfp_private_key_t privateKey;
+	deriveRadixKeyPair(bip32path, &publicKey, &privateKey);
 
-//     uint8_t keySeed[KEY_SEED_BYTE_COUNT];
-//     getKeySeed(keySeed, index);
-//     cx_ecfp_private_key_t privateKey;
-//     cx_ecfp_init_private_key(CX_CURVE_SECP256K1, keySeed, 32, &privateKey);
-//     PRINTF("deriveAndSignInit: privateKey: %.*H \n", privateKey.d_len, privateKey.d);
-//     zil_ecschnorr_sign_init (T, &privateKey);
+    // If BIP62 - Low `S` in signature is not used, then max length is 73
+    // https://github.com/bitcoin/bips/blob/master/bip-0062.mediawiki#Low_S_values_in_signatures
+    // and
+    // https://github.com/bitcoin/bips/blob/master/bip-0062.mediawiki#der-encoding
+    int max_length_DER_sig = 72; // min length is 70. 
+    uint8_t der_sig[max_length_DER_sig];
 
-//     // Erase private keys for better security.
-//     os_memset(keySeed, 0, sizeof(keySeed));
-//     os_memset(&privateKey, 0, sizeof(privateKey));
-// }
+	BEGIN_TRY {
+        TRY {
+            PRINTF("About to sign hash\n");
+            ecdsa_sign_or_verify_hash(
+                &privateKey, 
+                NULL, // pubkey not needed for sign
+                1, // sign, not verify
+                hash,
+                32,
+                der_sig,
+                max_length_DER_sig,
+                1 // use deterministic signing
+            );
+            PRINTF("Successfully signed hash, DER encoded signature is: %.*H\n", max_length_DER_sig, der_sig);
+        }
+        CATCH_OTHER(e) {
+            PRINTF("Failed to sign, got some error: %d\n, e");
+        } 
+        FINALLY {
+        	os_memset(&privateKey, 0, sizeof(privateKey));
+        }
+    }
+    END_TRY;
 
-// void deriveAndSignContinue(zil_ecschnorr_t *T, const uint8_t *msg, unsigned int msg_len)
-// {
-//     PRINTF("deriveAndSignContinue: msg: %.*H \n", msg_len, msg);
+    int derSignatureLength = der_sig[1] + 2;
+    bool successful = parse_der(der_sig, derSignatureLength, output_signature_R_S, 64);
+    if (!successful) {
+        PRINTF("Failed to DER decode signature??\n");
+    }
 
-//     zil_ecschnorr_sign_continue(T, msg, msg_len);
-// }
+    PRINTF("Signature RS: %.*H\n", 64, output_signature_R_S);
+}
 
-// int deriveAndSignFinish(zil_ecschnorr_t *T, uint32_t index, unsigned char *dst, unsigned int dst_len)
-// {
-//     PRINTF("deriveAndSignFinish: index: %d\n", index);
-
-//     uint8_t keySeed[KEY_SEED_BYTE_COUNT];
-//     getKeySeed(keySeed, index);
-//     cx_ecfp_private_key_t privateKey;
-//     cx_ecfp_init_private_key(CX_CURVE_SECP256K1, keySeed, 32, &privateKey);
-//     PRINTF("deriveAndSignFinish: privateKey: %.*H \n", privateKey.d_len, privateKey.d);
-
-//     if (dst_len != ECDSA_SIGNATURE_BYTE_COUNT)
-//         THROW (INVALID_PARAMETER);
-
-//     uint32_t s = zil_ecschnorr_sign_finish(T, &privateKey, dst, dst_len);
-//     PRINTF("deriveAndSignFinish: signature: %.*H\n", ECDSA_SIGNATURE_BYTE_COUNT, dst);
-
-//     // Erase private keys for better security.
-//     os_memset(keySeed, 0, sizeof(keySeed));
-//     os_memset(&privateKey, 0, sizeof(privateKey));
-
-//     return s;
-// }
 
 void pubkeyToRadixAddress(uint8_t *dst, cx_ecfp_public_key_t *publicKey) {
     // // 3. Apply SHA2-256 to the pub key
