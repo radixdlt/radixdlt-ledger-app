@@ -4,7 +4,6 @@
 #include <os.h>
 #include <os_io_seproxyhal.h>
 #include "stringify_bip32_path.h"
-#include "radix.h"
 
 static int stringify_bip32_path_single_component(
 	uint32_t input_bip32_component,
@@ -36,7 +35,7 @@ int stringify_bip32_path(
 ) {
 	
 	int length_of_output_string = 0;
-	for (int i = 0; i < number_of_bip32_components; i++) {
+	for (unsigned int i = 0; i < number_of_bip32_components; i++) {
 		char string_from_path_comp[20]; // will not need 20 chars, just placeholder...
 		int length_of_string_for_this_component = stringify_bip32_path_single_component(
 			input_bip32_bytes[i], 

@@ -13,6 +13,8 @@
 // (this shouldn't have any functional impact).
 #define DER_DECODE_RADIX 0
 
+#define BIP32_PATH_STRING_MAX_LENGTH 20 // assumed 
+
 // MACROS
 #define PLOC() PRINTF("\n%s - %s:%d \n", __FILE__, __func__, __LINE__);
 #define assert(x) \
@@ -44,32 +46,35 @@
 
 // FUNCTIONS
 
+void parse_bip32_path_from_apdu_command(
+    uint8_t *dataBuffer,
+    uint32_t *output_bip32path,
+    uint8_t *output_bip32String, // might be null
+    unsigned short output_bip32PathString_length
+);
+
 // Convert un-compressed zilliqa public key to a compressed form.
 void compressPubKey(cx_ecfp_public_key_t *publicKey);
 
 // pubkeyToRadixAddress converts a Ledger pubkey to a Radix wallet address.
 void pubkeyToRadixAddress(uint8_t *dst, cx_ecfp_public_key_t *publicKey);
 
-// deriveRadixPubKey derives a key pair from a BIP32 path and the Ledger
-// seed. Returns the public key (private key is not needed).
-void deriveRadixPubKey(uint32_t *bip32path, cx_ecfp_public_key_t *publicKey);
+// deriveRadixKeyPair derives a key pair from a BIP32 path and the Ledger
+// seed. Returns the public key and private key if not NULL.
+void deriveRadixKeyPair(
+    uint32_t *bip32path, 
+    cx_ecfp_public_key_t *publicKey,
+    cx_ecfp_private_key_t *privateKey_nullable
+);
 
-// // Three functions to stream the signature process. See deriveAndSign to do in a single operation.
-// void deriveAndSignInit(zil_ecschnorr_t *T, uint32_t index);
-// void deriveAndSignContinue(zil_ecschnorr_t *T, const uint8_t *msg, unsigned int msg_len);
-// int deriveAndSignFinish(zil_ecschnorr_t *T, uint32_t index, unsigned char *dst, unsigned int dst_len);
-
-// // deriveAndSign derives an ECFP private key from an user specified index and the Ledger seed,
-// // and uses it to produce a ECDSA_SIGNATURE_BYTE_COUNT length signature of the provided message
-// // The key is cleared from memory after signing.
-// void deriveAndSign(uint8_t *dst, uint32_t dst_len, uint32_t index, const uint8_t *msg, unsigned int msg_len);
-
-// Converts a null-terminated buffer containing Qa to Radix / Li
-// assert (zil/li_buf_len >= RADIX_TOKEN_UINT128_BUF_LEN);
-// void qa_to_zil(const char* qa, char* zil_buf, int zil_buf_len);
-// void qa_to_li(const char* qa, char* li_buf, int li_buf_len);
-
-// BYTE UTILS
+// deriveAndSign derives a secp256k1 private key from a BIP32 path and the
+// Ledger seed, and uses it to produce a 64-byte ECDSA signature (DER decoded)
+// of the provided 32-byte hash. The key is cleared from memory after signing.
+void deriveAndSign(
+    uint32_t *bip32path, 
+    const uint8_t *hash,
+    uint8_t *output_signature_R_S
+);
 
 // bin2hex converts binary to hex and appends a final NUL byte.
 void bin2hex(uint8_t *dst, uint64_t dstlen, uint8_t *data, uint64_t inlen);

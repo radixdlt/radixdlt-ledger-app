@@ -134,7 +134,12 @@ static unsigned int ui_getPublicKey_approve_button(
             // statements later.
 
             // 1. Generate public key
-            deriveRadixPubKey(ctx->bip32Path, &publicKey);
+            deriveRadixKeyPair(
+                ctx->bip32Path, 
+                &publicKey, 
+                NULL // dont write private key
+            );
+
             os_memmove(G_io_apdu_buffer + tx, publicKey.W, publicKey.W_len);
             tx += publicKey.W_len;
             PRINTF("Public Key compressed: %.*h\n", 33, G_io_apdu_buffer);
@@ -198,11 +203,6 @@ void handleGetPublicKey(uint8_t p1,
     PRINTF("Received APDU of length: %u\n", dataLength);
     PRINTF("Received APDU hex: %.*H\n", dataLength, dataBuffer);
 
-    if ((p1 != P1_DISPLAY_ADDRESS) && (p1 != P1_DISPLAY_PUBKEY)) {
-        PRINTF("p1 must be 0 or 1, but was: %u\n", p1);
-        THROW(SW_INVALID_PARAM);
-    }
-
     uint16_t expected_number_of_bip32_compents = 3;
     uint16_t byte_count_bip_component = 4;
     uint16_t expected_data_length = expected_number_of_bip32_compents * byte_count_bip_component;
@@ -211,38 +211,14 @@ void handleGetPublicKey(uint8_t p1,
         PRINTF("'dataLength' must be: %u, but was: %d\n", expected_data_length, dataLength);
         THROW(SW_INVALID_PARAM);
     }
-    
-    uint32_t bip32Path[5];
 
-    // BIP32 Purpose
-    uint32_t purpose = 44 | 0x80000000; // BIP44 - hardened
-    bip32Path[0] = purpose;
-
-    // BIP32 coin_type
-    uint32_t coin_type = 536 | 0x80000000; // Radix - hardened
-    bip32Path[1] = coin_type;
-
-    uint32_t account = U4BE(dataBuffer, 0 * byte_count_bip_component) | 0x80000000; // hardened 
-    bip32Path[2] = account;
-
-    uint32_t change = U4BE(dataBuffer, 1 * byte_count_bip_component);
-    if ((change != 0) && (change != 1)) {
-        PRINTF("BIP32 'change' must be 0 or 1, but was: %u\n", change);
+    if ((p1 != P1_DISPLAY_ADDRESS) && (p1 != P1_DISPLAY_PUBKEY)) {
+        PRINTF("p1 must be 0 or 1, but was: %u\n", p1);
         THROW(SW_INVALID_PARAM);
     }
- 
-    bip32Path[3] = change;
+    parse_bip32_path_from_apdu_command(dataBuffer, ctx->bip32Path, ctx->bip32PathString, sizeof(ctx->bip32PathString));
+    PRINTF("BIP 32 Path used for PublicKey generation: %s\n", ctx->bip32PathString);
 
-    uint32_t address_index = U4BE(dataBuffer, 2 * byte_count_bip_component);
-    bip32Path[4] = address_index;
-
-
-    PRINTF("BIP32 path (uint32 array): %u,%u,%u,%u,%u\n", bip32Path[0], bip32Path[1], bip32Path[2], bip32Path[3], bip32Path[4]);
-
-    os_memcpy(ctx->bip32Path, bip32Path, 20);
-
-    PRINTF("'ctx->bip32Path': %.*h\n", 20, ctx->bip32Path);
-    
     ctx->genAddr = (p1 == P1_DISPLAY_ADDRESS);
 
     // Prepare the approval screen, filling in the header and body text.
@@ -254,16 +230,15 @@ void handleGetPublicKey(uint8_t p1,
         os_memmove(ctx->typeStr, "Generate PubKey", 16);
     }
 
-    char bip32String[BIP39_PATH_STRING_MAX_LENGTH]; 
-	int length_of_bip32_string_path = stringify_bip32_path(
-        ctx->bip32Path, 
-        5,
-        bip32String
-    );
+    // char bip32String[BIP39_PATH_STRING_MAX_LENGTH]; 
+	// int length_of_bip32_string_path = stringify_bip32_path(
+    //     ctx->bip32Path, 
+    //     5,
+    //     bip32String
+    // );
 
-    os_memset(ctx->bip32PathString, 0, BIP39_PATH_STRING_MAX_LENGTH);
-    PRINTF("BIP 32 Path used for PublicKey generation: %s\n", bip32String);
-	os_memmove(ctx->bip32PathString, bip32String, length_of_bip32_string_path);
+    // os_memset(ctx->bip32PathString, 0, BIP39_PATH_STRING_MAX_LENGTH);
+	// os_memmove(ctx->bip32PathString, bip32String, length_of_bip32_string_path);
 
     UX_DISPLAY(ui_getPublicKey_approve, NULL);
     *flags |= IO_ASYNCH_REPLY;

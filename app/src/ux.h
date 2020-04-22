@@ -5,15 +5,13 @@
 
 #define TXN_BUF_SIZE 256
 
-#define BIP39_PATH_STRING_MAX_LENGTH 20 // assumed 
-
 typedef struct {
 	uint32_t bip32Path[5];
 	bool genAddr;
 	uint8_t displayIndex;
 	// NUL-terminated strings for display
 	uint8_t typeStr[40]; // variable-length
-	uint8_t bip32PathString[BIP39_PATH_STRING_MAX_LENGTH]; // variable-length
+	uint8_t bip32PathString[BIP32_PATH_STRING_MAX_LENGTH]; // variable-length
 	uint8_t fullStr[77]; // variable length
 	// partialStr contains 12 characters of a longer string. This allows text
 	// to be scrolled.
@@ -26,7 +24,7 @@ typedef struct {
 	uint8_t hexHash[65]; // 2*sizeof(hash) + 1 for '\0'
 	uint8_t displayIndex;
 	// NUL-terminated strings for display
-	uint8_t indexStr[40]; // variable-length
+	uint8_t bip32PathString[BIP32_PATH_STRING_MAX_LENGTH]; // variable-length
 	uint8_t partialHashStr[13];
 } signHashContext_t;
 

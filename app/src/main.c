@@ -178,7 +178,7 @@ void io_exchange_with_code(uint16_t code, uint16_t tx) {
 // which command should be executed. We'll use this code to dispatch on a
 // table of function pointers.
 #define INS_GET_VERSION    	0x01
-#define INS_SIGN_TXN  		0x04
+#define INS_SIGN_HASH  		0x04
 #define INS_GET_PUBLIC_KEY 	0x08
 
 // This is the function signature for a command handler. 'flags' and 'tx' are
@@ -189,13 +189,13 @@ typedef void handler_fn_t(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t 
 
 handler_fn_t handleGetVersion;
 handler_fn_t handleGetPublicKey;
-// handler_fn_t handleSignTxn;
+handler_fn_t handleSignHash;
 
 static handler_fn_t* lookupHandler(uint8_t ins) {
 	switch (ins) {
 		case INS_GET_VERSION:    return handleGetVersion;
 		case INS_GET_PUBLIC_KEY: return handleGetPublicKey;
-		// case INS_SIGN_TXN:  return handleSignTxn;
+		case INS_SIGN_HASH:  	return handleSignHash;
 		default:                 return NULL;
 	}
 }
