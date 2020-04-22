@@ -7,7 +7,18 @@
 
 typedef struct {
 	uint32_t bip32Path[5];
-	bool genAddr;
+	
+	// If set to `true` the Ledger will not generate a public key until user has confirmed on her Ledger
+	// after confirmation the Ledger emits the pubkey in an APDU *response*. UX flow is now done iff
+	// `requireConfirmationOfDisplayedPubKey` is set to `false`, otherwise a second confirmation is needed,
+	bool requireConfirmationBeforeGeneration;
+
+	// Disregarding of this value, a Public Key should already have been generated and sent back
+	// via an APDU response, but if this bool is set to `true`, then said public key is displayed
+	// on the Ledger and user needs to confirm on the Ledger that she acknowledges that she sees
+	// the same public key in her wallet.
+	bool requireConfirmationOfDisplayedPubKey;
+
 	uint8_t displayIndex;
 	// NUL-terminated strings for display
 	uint8_t typeStr[40]; // variable-length

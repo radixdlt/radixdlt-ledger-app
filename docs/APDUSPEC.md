@@ -188,9 +188,10 @@ is provided in initial `INS_SIGN_MESSAGE_SECP256K1` command.
 | --------- | ------------- | ----------------------------- | ------------- |
 | CLA		| byte (1)   	| Application Identifier        | 0xAA      	|
 | INS		| byte (1)   	| Instruction ID                | 0x08      	|
-| P1 		| byte (1)   	| Display address/path on device| 0x00 Display Address |
-|    		|            	|                               | 0x01 Display PubKey  |
-| P2 		| byte (1)   	| Parameter 2                   | ignored   	|
+| P1 		| byte (1)   	| Confirm before generation     | 0x00 No confirmation needed |
+|    		|            	|                               | 0x01 Confirmation needed before generation of pub key  |
+| P2 		| byte (1)   	| Confirm after displayed PubKey| 0x00 No confirmation needed |
+|    		|            	|                               | 0x01 Confirmation needed before UX flow is done  |
 | L         | byte (1)		| Number of bytes in Payload 	| 12<sup id="gpk1">[1](#gpk1)</sup>			|
 | Payload 	| byte (L)		| BIP32 derivation path 		| (depends)	    |
 	
