@@ -1,4 +1,5 @@
 #*******************************************************************************
+#*******************************************************************************
 #   Ledger App
 #   (c) 2018-2020 Zondax GmbH
 #   (c) 2017 Ledger
@@ -158,6 +159,7 @@ APP_SOURCE_PATH += $(MY_DIR)/../deps/ledger-zxlib/include
 APP_SOURCE_PATH += $(MY_DIR)/../deps/ledger-zxlib/src
 # APP_SOURCE_PATH += $(MY_DIR)/../deps/ledger-zxlib/app/common
 APP_SOURCE_PATH += $(MY_DIR)/../deps/jsmn/src
+APP_SOURCE_PATH += $(MY_DIR)/../deps/tinycbor/src
 
 SDK_SOURCE_PATH += lib_stusb lib_u2f lib_stusb_impl
 
