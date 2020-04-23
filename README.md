@@ -41,6 +41,21 @@ echo 'AA02000006655261646978' | python -m ledgerblue.runScript --targetId 0x3110
 
 Which should decode to the string `"Radix"`.
 
+#### 253 chars long string is max
+Since we need 2 bytes to CBOR encode a string, resulting in 253+2 = 255 bytes, which is `FF` in hex, which is max value that fit in the single byte, parameter `L` according to APDU spec, describing the lenght of the payload, that is the max string we can send. 
+
+##### 249 bytes
+This long Lorem ipsum text works.
+
+`"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam sollicitudin porttitor odio eu laoreet. Ut dui lacus, accumsan a orci a, pretium suscipit velit. Sed quis dignissim arcu. In a magna sit amet quam malesuada consectetur vel vitae tortor non."` 
+(253 chars)
+
+Resulting in APDU:
+
+```sh
+echo 'AA020000ff78FD4C6F72656D20697073756D20646F6C6F722073697420616D65742C20636F6E73656374657475722061646970697363696E6720656C69742E20457469616D20736F6C6C696369747564696E20706F72747469746F72206F64696F206575206C616F726565742E20557420647569206C616375732C20616363756D73616E2061206F72636920612C207072657469756D2073757363697069742076656C69742E205365642071756973206469676E697373696D20617263752E20496E2061206D61676E612073697420616D6574207175616D206D616C65737561646120636F6E73656374657475722076656C20766974616520746F72746F72206E6F6E2E' | python -m ledgerblue.runScript --targetId 0x31100004 --apdu
+```
+
 # Building
 
 **Please only use a TEST DEVICE!**
