@@ -102,7 +102,7 @@ where `|` denotes concantenation and `PKc` denotes compressed public key.
 | SW1-SW2 | byte (2)  | Return code           | see list of return codes |
 
 
-### INS_SIGN_MESSAGE_SECP256K1
+### INS_SIGN_ATOM_SECP256K1
 
 #### Command
 
@@ -140,7 +140,7 @@ All other packets/chunks should contain message to sign
 | Message | bytes... | L<sup id="b1">[1](#fb1)</sup> number of bytes, a DSON<sup id="b2">[2](#fb2)</sup> serialized atom<sup id="b3">[3](#fb3)</sup> |          |
 
 <b id="fb1">1:</b> Length of message, as an unsigned integer with 11 bits size, this value (field).  
-is provided in initial `INS_SIGN_MESSAGE_SECP256K1` command.  
+is provided in initial `INS_SIGN_ATOM_SECP256K1` command.  
 <b id="fb2">2:</b> DSON: is Radix DLT's own binary format, based on [CBOR - Consice Binary Object Representation](http://cbor.io/).  
 <b id="fb3">3:</b> Atom: The name of the transaction container in the Radix DLT ecosystem.  
 
@@ -154,7 +154,7 @@ is provided in initial `INS_SIGN_MESSAGE_SECP256K1` command.
 --------------
 
 ### INS_SIGN_HASH_SECP256K1
-(This command might be removed in the future in favour of `INS_SIGN_MESSAGE_SECP256K1`)
+(This command might be removed in the future in favour of `INS_SIGN_ATOM_SECP256K1`)
 
 #### Command
 
