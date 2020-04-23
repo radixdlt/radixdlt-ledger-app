@@ -60,8 +60,7 @@ static bool decode_cbor_string(
 // `dataBuffer`: CBOR encode atom bytes
 // 
 void handleSignAtom(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLength, volatile unsigned int *flags, volatile unsigned int *tx) {
-    PRINTF("Doing CBOR decoding\n");
-
+    PRINTF("Doing CBOR decoding, received %u bytes\n", dataLength);
 
     bool successfullyDecodedCbor = decode_cbor_string(
         dataBuffer,
