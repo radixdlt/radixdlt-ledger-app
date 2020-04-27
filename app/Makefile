@@ -160,6 +160,7 @@ APP_SOURCE_PATH += $(MY_DIR)/../deps/ledger-zxlib/src
 # APP_SOURCE_PATH += $(MY_DIR)/../deps/ledger-zxlib/app/common
 APP_SOURCE_PATH += $(MY_DIR)/../deps/jsmn/src
 APP_SOURCE_PATH += $(MY_DIR)/../deps/tinycbor/src
+APP_SOURCE_PATH += $(MY_DIR)/../deps/base58
 
 SDK_SOURCE_PATH += lib_stusb lib_u2f lib_stusb_impl
 
