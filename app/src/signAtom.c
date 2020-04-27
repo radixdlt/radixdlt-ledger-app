@@ -54,29 +54,29 @@ static bool sha256_hash(
     return true;
 }
 
-static char* create_deadbeef_n_times(const unsigned int times) {
-    // char deadbeef_string[times*8 + 1]; // +1 for null
-    // for (unsigned int i = 0; i < times; ++i) {
-    //     *deadbeef_string = "deadbeef";
-    //     deadbeef_string = deadbeef_string + 8;
-    // }
-    // return deadbeef_string;
-    unsigned int count = times;
-    if (count == 0) return NULL;
-    int substr_length = 8;
-    char *str = "deadbeef";//\0";
-    // char *ret = malloc(strlen(str) * count + count);
-    char ret[times*substr_length + 1];
-    if (ret == NULL) return NULL;
-    strcpy(ret, str);
-    int str_length = 0;
-    while (--count > 0) {
-        // strcat (ret, " ");
-        strcat(ret, str);
-        str_length += substr_length;
+static int create_deadbeef_n_times(const unsigned int times, char *output_string) {
+
+    unsigned int count;
+    memcpy(&count, &times, sizeof(times));
+    
+    if (count == 0) { 
+        return NULL; 
     }
-    ret[times*substr_length] = '\0';
-    return ret;
+    
+    char *deadbeefOnce = "deadbeef";
+    
+    if (output_string == NULL) { 
+        return NULL; 
+    }
+    
+    int str_length = 0;
+    while (count > 0) {
+        memcpy(output_string + str_length, deadbeefOnce, 8);
+        str_length += 8;
+        count -= 1;
+    }
+
+    return str_length;
 }
 
 // p1, p2 not used
@@ -92,17 +92,19 @@ void handleSignAtom(
     volatile unsigned int *flags, 
     volatile unsigned int *tx
 ) {
-    PRINTF("handleSignAtom, received %u bytes\n, p1=%u, p2=%u\n", dataLength, p1, p2);
-    char *string = create_deadbeef_n_times(16);
-    size_t string_size = strlen(string);
-    PRINTF("\nGenerated string:\n%s\nstring_size: %d\nNow hashing it...\n", string, string_size);
+    PRINTF("\n'handleSignAtom': received %u bytes,\np1=%u, p2=%u\n", dataLength, p1, p2);
+    unsigned int deadbeef_count;
+    memcpy(&deadbeef_count, &p1, sizeof(uint8_t));
+    char string[8 * deadbeef_count];
+    int string_size = create_deadbeef_n_times(deadbeef_count, string);
+    PRINTF("\ndeadbeefstring length: %d\n", string_size);
     uint8_t hashed[32];
     if(!sha256_hash(string, string_size, hashed)) {
         PRINTF("Failed to hash string\n");
     } else {
         PRINTF("Hashed results in hex: %.*h\nDONE! Bye bye!\n", 32, hashed);
     }
-
-    io_exchange_with_code(SW_OK, 0);
+    os_memmove(G_io_apdu_buffer, hashed, 32);
+    io_exchange_with_code(SW_OK, 32);
 }
 	
