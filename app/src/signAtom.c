@@ -7,22 +7,11 @@
 #include "ux.h"
 #include "cbor.h"
 
-// static char *repeatStr(char *str, size_t count) {
-//     if (count == 0) return NULL;
-//     char *ret = malloc (strlen (str) * count + count);
-//     if (ret == NULL) return NULL;
-//     strcpy (ret, str);
-//     while (--count > 0) {
-//         strcat (ret, " ");
-//         strcat (ret, str);
-//     }
-//     return ret;
-// }
-
-
-cx_sha256_t sha2;
 static bool sha256_hash(
+    cx_sha256_t *hash_context,
     const uint8_t *bytes_to_hash, size_t byte_count, // INPUT
+
+    bool should_finalize_else_update, // If this is set to FALSE, the `output_hash_digest` is not use
     uint8_t *output_hash_digest // OUTPUT length 32 bytes
 ) {
     if (!bytes_to_hash) {
@@ -41,42 +30,15 @@ static bool sha256_hash(
         return false;
     }
 
-    cx_sha256_init(&sha2);
-
     cx_hash(
-        &sha2.header, 
-        CX_LAST, 
+        (cx_hash_t *)hash_context,
+        should_finalize_else_update ? CX_LAST : 0, 
         bytes_to_hash, byte_count, 
-        output_hash_digest, 
-        32
+        should_finalize_else_update ? output_hash_digest : NULL, 
+        should_finalize_else_update ? 32 : 0
     );
 
     return true;
-}
-
-static int create_deadbeef_n_times(const unsigned int times, char *output_string) {
-
-    unsigned int count;
-    memcpy(&count, &times, sizeof(times));
-    
-    if (count == 0) { 
-        return NULL; 
-    }
-    
-    char *deadbeefOnce = "deadbeef";
-    
-    if (output_string == NULL) { 
-        return NULL; 
-    }
-    
-    int str_length = 0;
-    while (count > 0) {
-        memcpy(output_string + str_length, deadbeefOnce, 8);
-        str_length += 8;
-        count -= 1;
-    }
-
-    return str_length;
 }
 
 // p1, p2 not used
@@ -92,18 +54,29 @@ void handleSignAtom(
     volatile unsigned int *flags, 
     volatile unsigned int *tx
 ) {
-    PRINTF("\n'handleSignAtom': received %u bytes,\np1=%u, p2=%u\n", dataLength, p1, p2);
-    unsigned int deadbeef_count;
-    memcpy(&deadbeef_count, &p1, sizeof(uint8_t));
-    char string[8 * deadbeef_count];
-    int string_size = create_deadbeef_n_times(deadbeef_count, string);
-    PRINTF("\ndeadbeefstring length: %d\n", string_size);
-    uint8_t hashed[32];
-    if(!sha256_hash(string, string_size, hashed)) {
-        PRINTF("Failed to hash string\n");
-    } else {
-        PRINTF("Hashed results in hex: %.*h\nDONE! Bye bye!\n", 32, hashed);
+    if (dataLength != 4) {
+        PRINTF("Expected 4 bytes of data buffer\n");
+        THROW(0x9101);
     }
+    uint32_t deadbeef_count = U4BE(dataBuffer, 0);
+    PRINTF("deadbeef_count: %u\nNow performing SHA256 hash on it in chuncks", deadbeef_count);
+
+    cx_sha256_t sha2;
+    cx_sha256_init(&sha2);
+    uint8_t hashed[32];
+    for (uint32_t i = 0; i < deadbeef_count; ++i) {
+        size_t byte_count_deadbeef = 4;
+        const uint8_t oneBeef[] = { 0xde, 0xad, 0xbe, 0xef};
+        bool should_finalize_digest = (i == deadbeef_count-1);
+        if (should_finalize_digest) {
+            PRINTF("Finalizing Hash digest now\n");
+        }
+        if (!sha256_hash(&sha2, oneBeef, byte_count_deadbeef, should_finalize_digest, hashed)) {
+            PRINTF("FAILED TO HASH, iteration: %d\n", i);
+            break;
+        }
+    }
+
     os_memmove(G_io_apdu_buffer, hashed, 32);
     io_exchange_with_code(SW_OK, 32);
 }
