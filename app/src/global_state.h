@@ -32,6 +32,7 @@ typedef struct {
 	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
 	uint8_t bip32PathString[BIP32_PATH_STRING_MAX_LENGTH]; // variable-length
 	uint8_t hash[HASH256_BYTE_COUNT];
+
 	uint8_t hexHash[65]; // 2*sizeof(hash) + 1 for '\0'
 
 	uint8_t displayIndex;
@@ -44,16 +45,13 @@ typedef struct {
 	uint16_t byteCount;
 } OffsetInAtom;
 
-#define MAX_CHUNK_SIZE 256
-
-typedef struct {
-	uint8_t buf[MAX_CHUNK_SIZE]; // the buffer, the chunk of bytes
-	uint32_t nextIdx, len; // next read into buf and len of buf.
-	int hostBytesLeft;     // How many more bytes to be streamed from host.
-} StreamData;
-
+#define MAX_CHUNK_SIZE 255 // or should it be 256? then it wont fit in UInt8 which is inconvenient
 
 #define MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP 60
+
+// The biggest of a value split across chunks might be the `rri` which might be 68 bytes for the value
+// and for key ("rri") is 3 bytes, lets take some security margin up to 80 bytes.
+#define MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS 80
 
 typedef struct {
 	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
@@ -61,6 +59,12 @@ typedef struct {
 	
     uint16_t atomByteCount;
     uint16_t atomByteCountParsed;
+
+	cx_sha256_t hasher;
+
+	// Only written to when the digest is finalized, after having received the
+	// last byte of the atom
+	uint8_t hash[HASH256_BYTE_COUNT];
 
 	// Array of memory offsets from start of Atom to particles with spin up,
 	// and the byte count per particle, total 4 bytes, with max length of 60
@@ -70,8 +74,15 @@ typedef struct {
     // The de-facto length of the array `offsetsOfParticlesWithSpinUp`, read from APDU instr
     uint8_t numberOfParticlesWithSpinUp;
 
-	StreamData streamData;
-	uint8_t hash[HASH256_BYTE_COUNT];
+	// Sometimes a particle might span across multiple chunks and thus some relevant
+	// info, such as `serializer` (type of Particle), `amount`, `recepientAddress`,
+	// `rri` (RadixResourceIdentifier - which toke type) etc might get split.
+	uint8_t cachedSmallBuffer[MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS];
+	
+	// Contains the number of cached bytes in the `cachedSmallBuffer`
+	uint8_t numberOfCachedBytes;
+
+	uint8_t chunkBuffer[MAX_CHUNK_SIZE];
 
 } signAtomContext_t;
 
