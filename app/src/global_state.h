@@ -1,13 +1,14 @@
 #include "radix.h"
+#include "Transfer.h"
 
 #define NUMBER_OF_BIP32_COMPONENTS_IN_PATH 5
 
 typedef enum {
-    AddressByteIntervalField = 0,
-    AmountByteIntervalField,
-    SerializerByteIntervalField,
-    TokenDefinitionReferenceByteIntervalField
-} ByteIntervalField;
+    AddressField = 0,
+    AmountField,
+    SerializerField,
+    TokenDefinitionReferenceField
+} ParticleField;
 
 typedef enum {
     NoParticleTypeParsedYet = 0,
@@ -92,7 +93,7 @@ typedef struct {
 #define MAX_CHUNK_SIZE 255 
 
 // 
-#define MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP 15
+#define MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP 10
 
 // The biggest of a value split across chunks might be the `rri` which might be 68 bytes for the value
 // and for key ("rri") is 3 bytes, lets take some security margin up to 80 bytes.
@@ -117,7 +118,7 @@ typedef struct {
 	ParticleMetaData metaDataAboutParticles[MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP]; // variable-length
 
     uint8_t numberOfParticlesParsed;
-	ByteIntervalField nextFieldInParticleToParse;
+	ParticleField nextFieldInParticleToParse;
 
     // The de-facto length of the array `offsetsOfParticlesWithSpinUp`, read from APDU instr
     uint8_t numberOfParticlesWithSpinUp;
@@ -135,8 +136,25 @@ typedef struct {
 	// `numberOfCachedBytes`
    	uint8_t atomSlice[MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS + MAX_CHUNK_SIZE];
 
-	// We have just read `address`, `amount`, `tokenDefinitionReference`
-	bool needsToConfirmThatNextSerializerIsTransferrableTokensParticle;
+	// // A temporary value that starts as NULL and will only be set until
+	// // `parsedAmountInTransfer` and a the tokenDefinitionReference also
+	// // has been parsed, then a `Transfer` can be initiated and appended to
+	// // `transfers` and this field can be NULLed again.
+	// RadixAddress parsedAddressInTransfer;
+
+	// // A temporary value that starts as NULL and will only be set until
+	// // a the tokenDefinitionReference also
+	// // has been parsed, then a `Transfer` can be initiated and appended to
+	// // `transfers` and this field can be NULLed again. Note that
+	// // this field should always be NULL when `parsedAddressInTransfer` is
+	// // NULL. I.e. we expecte to first have parsed `address`, since it comes
+	// // before `amount` alphabetically and thus in CBOR bytes.
+	// TokenAmount parsedAmountInTransfer;
+
+	// At max all particles with spin up are transferrableTokensParticles that we
+	// need to parse into transfers.
+	Transfer transfers[MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP];
+
 } signAtomContext_t;
 
 // To save memory, we store all the context types in a single global union,
