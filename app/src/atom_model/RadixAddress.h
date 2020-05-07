@@ -1,7 +1,8 @@
 #include <stdlib.h>
 #include "RadixAddressFromCborError.h"
 
-#define RADIX_ADDRESS_BYTE_COUNT 39
+#define RADIX_ADDRESS_BYTE_COUNT 39 // MagicByte(1) + PubKeyCompr(33) + Checksum(4) + What is the last byte?
+#define RADIX_ADDRESS_BASE58_CHAR_COUNT 51
 
 typedef struct {
     char bytes[RADIX_ADDRESS_BYTE_COUNT];

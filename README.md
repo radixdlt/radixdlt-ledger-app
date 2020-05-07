@@ -20,7 +20,7 @@ Example of generation of public key (`INS_GET_PUB_KEY_SECP256K1`), you can use C
 echo 'AA0801010C800000020000000100000003' | python -m ledgerblue.runScript --targetId 0x31100004 --apdu
 ```
 
-Should result in this BIP path: `44'/536'/2'/1/3`. And using the mnemonic mentioned below (`equip will roof....`), ought to result in this compressed public key `026d5e07cfde5df84b5ef884b629d28d15b0f6c66be229680699767cd57c618288`.
+Should result in this BIP path: `44'/536'/2'/1/3`. And using the mnemonic mentioned below (`equip will roof....`), ought to result in this compressed public key `026d5e07cfde5df84b5ef884b629d28d15b0f6c66be229680699767cd57c618288` and private key: `f423ae3097703022b86b87c15424367ce827d11676fae5c7fe768de52d9cce2e`
 
 ### SIGN HASH
 
