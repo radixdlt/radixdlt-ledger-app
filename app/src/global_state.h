@@ -2,6 +2,27 @@
 
 #define NUMBER_OF_BIP32_COMPONENTS_IN_PATH 5
 
+typedef enum {
+    AddressByteIntervalField = 0,
+    AmountByteIntervalField,
+    SerializerByteIntervalField,
+    TokenDefinitionReferenceByteIntervalField
+} ByteIntervalField;
+
+typedef enum {
+    NoParticleTypeParsedYet = 0,
+    MessageParticleType = 1,
+    RRIParticleType,
+    FixedSupplyTokenDefinitionParticleType,
+    MutableSupplyTokenDefinitionParticleType,
+    UnallocatedTokensParticleType,
+    TransferrableTokensParticleType,
+    UniqueParticleType,
+
+    ParticleType_is_unknown
+} RadixParticleTypes;
+
+
 typedef struct {
 	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
 	
@@ -43,11 +64,35 @@ typedef struct {
 typedef struct {
 	uint16_t startsAt;
 	uint16_t byteCount;
-} OffsetInAtom;
+} ByteInterval;
 
-#define MAX_CHUNK_SIZE 255 // or should it be 256? then it wont fit in UInt8 which is inconvenient
+// A 16 byte struct, containing byte intervals (offset + count) to 
+// fields (values) of interest inside of a Particle. The byte offsets are
+// measured from the start of the Atom (that the particle is part of).
+// In case of a Non-TransferrableTokensParticle the byte interval tuple
+// will have value (0, 0), thus we can distinquish between this ParticleMetaData
+// being meta data for a `TransferrableTokensParticle` of other particle type
+// by looking at `[addressOfRecipientByteInterval, amountByteInterval,
+// tokenDefinitionReferenceByteInterval]` and check if all zero or not.
+typedef struct {
 
-#define MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP 60
+	// In case of Non-TransferrableTokensParticle this will have value (0, 0)
+	ByteInterval addressOfRecipientByteInterval;
+
+	// In case of Non-TransferrableTokensParticle this will have value (0, 0)
+	ByteInterval amountByteInterval;
+
+	// Always present, disregarding of particle type
+	ByteInterval serializerValueByteInterval;
+
+	// In case of Non-TransferrableTokensParticle this will have value (0, 0)
+	ByteInterval tokenDefinitionReferenceByteInterval;
+} ParticleMetaData;
+
+#define MAX_CHUNK_SIZE 255 
+
+// 
+#define MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP 15
 
 // The biggest of a value split across chunks might be the `rri` which might be 68 bytes for the value
 // and for key ("rri") is 3 bytes, lets take some security margin up to 80 bytes.
@@ -67,23 +112,31 @@ typedef struct {
 	uint8_t hash[HASH256_BYTE_COUNT];
 
 	// Array of memory offsets from start of Atom to particles with spin up,
-	// and the byte count per particle, total 4 bytes, with max length of 60
+	// and the byte count per particle, total 16 bytes, with max length of 15
 	// particles => 240 bytes.
-	OffsetInAtom offsetsOfParticlesWithSpinUp[MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP]; // variable-length
+	ParticleMetaData metaDataAboutParticles[MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP]; // variable-length
+
     uint8_t numberOfParticlesParsed;
+	ByteIntervalField nextFieldInParticleToParse;
+
     // The de-facto length of the array `offsetsOfParticlesWithSpinUp`, read from APDU instr
     uint8_t numberOfParticlesWithSpinUp;
 
-	// Sometimes a particle might span across multiple chunks and thus some relevant
-	// info, such as `serializer` (type of Particle), `amount`, `recepientAddress`,
-	// `rri` (RadixResourceIdentifier - which toke type) etc might get split.
-	uint8_t cachedSmallBuffer[MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS];
-	
-	// Contains the number of cached bytes in the `cachedSmallBuffer`
+	RadixParticleTypes identifiedParticleTypesInAtom[MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP];
+
+	// The number of cached bytes from last chunk, bound by `MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS`
 	uint8_t numberOfCachedBytes;
 
-	uint8_t chunkBuffer[MAX_CHUNK_SIZE];
+	// Sometimes a particle might span across multiple chunks and thus some relevant
+	// info, such as `serializer` (type of Particle), `amount`, `recepientAddress`,
+	// `rri` (RadixResourceIdentifier - which toke type) etc might get split. This will
+	// be "cached"/"carried over" to the next chunk, and should be copied over to
+	// the beginning of this atomSlice buffer in between chunk parsing. We must also set
+	// `numberOfCachedBytes`
+   	uint8_t atomSlice[MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS + MAX_CHUNK_SIZE];
 
+	// We have just read `address`, `amount`, `tokenDefinitionReference`
+	bool needsToConfirmThatNextSerializerIsTransferrableTokensParticle;
 } signAtomContext_t;
 
 // To save memory, we store all the context types in a single global union,
