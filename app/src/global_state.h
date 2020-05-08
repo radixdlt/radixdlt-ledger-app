@@ -118,7 +118,6 @@ typedef struct {
 	ParticleMetaData metaDataAboutParticles[MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP]; // variable-length
 
     uint8_t numberOfParticlesParsed;
-	ParticleField nextFieldInParticleToParse;
 
     // The de-facto length of the array `offsetsOfParticlesWithSpinUp`, read from APDU instr
     uint8_t numberOfParticlesWithSpinUp;
