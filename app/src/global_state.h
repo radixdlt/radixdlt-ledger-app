@@ -92,7 +92,11 @@ typedef struct {
 
 #define MAX_CHUNK_SIZE 255 
 
-#define MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP 4
+#define MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP 7
+
+#define MAX_AMOUNT_OF_OTHER_PARTICLES_WITH_SPIN_UP 3 // arbitrarily chosen
+
+#define MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP (MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP + MAX_AMOUNT_OF_OTHER_PARTICLES_WITH_SPIN_UP)
 
 // The biggest of a value split across chunks might be the `rri`
 #define MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS (RADIX_RRI_MAX_BYTE_COUNT - 1)
@@ -115,12 +119,13 @@ typedef struct {
 	// particles => 240 bytes.
 	ParticleMetaData metaDataAboutParticles[MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP]; // variable-length
 
-    uint8_t numberOfParticlesParsed;
+    uint8_t numberOfNonTransferrableTokensParticlesIdentified;
+    uint8_t numberOfTransferrableTokensParticlesParsed;
 
     // The de-facto length of the array `offsetsOfParticlesWithSpinUp`, read from APDU instr
     uint8_t numberOfParticlesWithSpinUp;
 
-	RadixParticleTypes identifiedParticleTypesInAtom[MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP];
+	RadixParticleTypes nonTransferrableTokensParticlesIdentified[MAX_AMOUNT_OF_OTHER_PARTICLES_WITH_SPIN_UP];
 
 	// The number of cached bytes from last chunk, bound by `MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS`
 	uint8_t numberOfCachedBytes;
@@ -139,9 +144,12 @@ typedef struct {
 	// A temporary value helping construction of a Transfer
 	TokenAmount parsedAmountInTransfer;
 
+	// A temporary value helping construction of a Transfer
+	bool hasConfirmedSerializerOfTransferrableTokensParticle;
+
 	// At max all particles with spin up are transferrableTokensParticles that we
 	// need to parse into transfers.
-	Transfer transfers[MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP];
+	Transfer transfers[MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP];
 
 } signAtomContext_t;
 
