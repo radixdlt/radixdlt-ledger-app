@@ -386,7 +386,6 @@ static void parseParticleField(
 
     os_memcpy(
         output_buffer,
-
         byteString + 1, // Drop first CBOR prefix byte
         valueByteCount);
 }
@@ -396,7 +395,7 @@ static RadixParticleTypes parseSerializer(
     CborValue *cborValue)
 {
     size_t numberOfBytesReadByCBORParser;
-    char textString[80]; // byte=>2hex char, +1 for NULL
+    char textString[48]; // len("radix.particles.mutable_supply_token_definition") + 1 for Null.
     CborError cborError = cbor_value_copy_text_string(
         cborValue,
         textString,
