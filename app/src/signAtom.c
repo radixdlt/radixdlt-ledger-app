@@ -126,7 +126,7 @@ static void readNextChunkFromHostMachineAndUpdateHash(
         ctx->hash);
 
     if (shouldFinalizeHash) {
-        PRINTF("Hashing the hash once again, since we do SHA256-SHA256 in Radix...\n");
+        PRINTF("Hashing the hash once again, since we at Radix do SHA256-SHA256...\n");
         // In Radix we take the hash of the hash
 
         // re-initiate hasher
@@ -266,24 +266,21 @@ static ParticleField getNextFieldToParse() {
 static void finishedParsingAWholeTransfer(
     RadixResourceIdentifier *tokenDefinitionReferenceJustParsed
 ) {
-
     assert(!isAddressEmpty());
     assert(!isAmountEmpty());
     assert(tokenDefinitionReferenceJustParsed);
 
     uint8_t *transferByteStart = ctx->transfers[ctx->numberOfTransferrableTokensParticlesParsed].address.bytes;
-
-    ByteInterval fieldByteInterval = intervalOfTransferStructField(AddressField);
-
+    ByteInterval fieldByteInterval;
 
     // SET ADDRESS
+    fieldByteInterval = intervalOfTransferStructField(AddressField);
     os_memcpy(
         transferByteStart + fieldByteInterval.startsAt,
         ctx->parsedAddressInTransfer.bytes,
-        fieldByteInterval.byteCount);
-
+        fieldByteInterval.byteCount
+    );
     zeroOutAddress();
-    assert(isAddressEmpty());
 
     // SET AMOUNT
     fieldByteInterval = intervalOfTransferStructField(AmountField);
@@ -292,13 +289,10 @@ static void finishedParsingAWholeTransfer(
         ctx->parsedAmountInTransfer.bytes,
         fieldByteInterval.byteCount
     );
-
     zeroOutAmount();
-    assert(isAmountEmpty());
 
-    // SET TokenDefReg
+    // SET TokenDefRef
     fieldByteInterval = intervalOfTransferStructField(TokenDefinitionReferenceField);
-
     os_memcpy(
         transferByteStart + fieldByteInterval.startsAt,
         (*tokenDefinitionReferenceJustParsed).bytes,
@@ -325,16 +319,12 @@ static ByteInterval getNextByteInterval()
     switch (getNextFieldToParse())
     {
     case AddressField:
-        // PRINTF("Next field is 'Address', with byteInterval: @%u, #%u bytes\n", particleMetaData.addressOfRecipientByteInterval.startsAt, particleMetaData.addressOfRecipientByteInterval.byteCount);
         return particleMetaData.addressOfRecipientByteInterval;
     case AmountField:
-        // PRINTF("Next field is 'Amount', with byteInterval: @%u, #%u bytes\n", particleMetaData.amountByteInterval.startsAt, particleMetaData.amountByteInterval.byteCount);
         return particleMetaData.amountByteInterval;
     case SerializerField:
-        // PRINTF("Next field is 'Serializer', with byteInterval: @%u, #%u bytes\n", particleMetaData.serializerValueByteInterval.startsAt, particleMetaData.serializerValueByteInterval.byteCount);
         return particleMetaData.serializerValueByteInterval;
     case TokenDefinitionReferenceField:
-        // PRINTF("Next field is 'TokenDefRef', with byteInterval: @%u, #%u bytes\n", particleMetaData.tokenDefinitionReferenceByteInterval.startsAt, particleMetaData.tokenDefinitionReferenceByteInterval.byteCount);
         return particleMetaData.tokenDefinitionReferenceByteInterval;
     default:
         FATAL_ERROR("Unknown identifier of field: %d", getNextFieldToParse());
@@ -367,8 +357,6 @@ static CBORBytePrefixForByteArray cborBytePrefixForParticleField(ParticleField f
     }
 }
 
-// TODO improvement, remove `valueByteCount`, since it SHOULD
-// always be `sizeof(ResultingStruct)+1`
 static void parseParticleField(
     const size_t valueByteCount,
     CborValue *cborValue,
@@ -393,7 +381,7 @@ static void parseParticleField(
     }
 
     // Sanity check
-    // assert(numberOfBytesReadByCBORParser == valueByteCount);
+    assert(numberOfBytesReadByCBORParser == valueByteCount);
     assert(byteString[0] == cborBytePrefix);
 
     os_memcpy(
@@ -417,12 +405,10 @@ static RadixParticleTypes parseSerializer(
 
     if (cborError)
     {
-        FATAL_ERROR("Error parsing 'serializer' field in atomSlice, CBOR eror: '%s'\n", cbor_error_string(cborError)); // will terminate app
+        FATAL_ERROR("Error parsing 'serializer' field in atomSlice, CBOR eror: '%s'\n", cbor_error_string(cborError));
     }
 
-    // PRINTF("numberOfBytesReadByCBORParser: %u, valueByteCount: %u\n", numberOfBytesReadByCBORParser, valueByteCount);
     assert(numberOfBytesReadByCBORParser == valueByteCount);
-    // PRINTF("Successfully CBOR decoded textstring: %.*s\n", numberOfBytesReadByCBORParser, textString);
     RadixParticleTypes particleType = particleTypeFromUTF8String(textString, valueByteCount);
 
     // if `Address` or `Amount` is parsed, means that we expect this particle to be a TransferrableTokensParticle (since "serializer" comes before "tokenDefinitionReference" alphabetically and thus also in CBOR it is not set yet)
@@ -478,8 +464,6 @@ static void parseParticleFieldFromAtomSlice(
     case AddressField:
         assert(type == CborByteStringType);
 
-        assert(isAddressEmpty());
-
         parseParticleField(
             readLength, 
             &cborValue, 
@@ -487,15 +471,9 @@ static void parseParticleFieldFromAtomSlice(
             ctx->parsedAddressInTransfer.bytes
         );
 
-        assert(!isAddressEmpty());
-
-        // PRINTF("Successfully parsed address: %.*H\n", sizeof(RadixAddress), ctx->parsedAddressInTransfer->bytes);
-
         break;
     case AmountField:
         assert(type == CborByteStringType);
-
-        assert(isAmountEmpty());
 
         parseParticleField(
             readLength, 
@@ -503,10 +481,7 @@ static void parseParticleFieldFromAtomSlice(
             AmountField, 
             ctx->parsedAmountInTransfer.bytes
         );
-        
-        assert(!isAmountEmpty());
 
-        // PRINTF("Successfully parsed amount: %.*H\n", sizeof(TokenAmount), ctx->parsedAmountInTransfer->bytes);
         break;
     case SerializerField:
         assert(type == CborTextStringType);
@@ -559,11 +534,6 @@ static void cacheBytesToNextChunk(
     ctx->numberOfCachedBytes = numberOfBytesToCache;
 }
 
-static void printAtomSliceContents()
-{
-    PRINTF("AtomSlice contents:\n%.*H\n\n", MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS + MAX_CHUNK_SIZE, ctx->atomSlice);
-}
-
 // Returns true if `doneWithCurrentSlice`, i.e. all fields that can be parsed in current atom slice has been parsed
 static bool tryParseParticleFieldFromAtomSlice(
     const size_t chunkStartPositionInAtom, // chunk, not slice, i.e. possibly cached bytes from last chunk not used to offset byte start position
@@ -605,7 +575,6 @@ static bool parseParticlesAndUpdateHash()
     uint16_t chunkSize = MIN(MAX_CHUNK_SIZE, bytesLeftToRead);
 
     readNextChunkFromHostMachineAndUpdateHash((size_t)chunkSize);
-    // printAtomSliceContents();
     
     size_t numberOfCachedBytes = ctx->numberOfCachedBytes;
     ctx->numberOfCachedBytes = 0;
@@ -644,7 +613,7 @@ static void parseAtom()
     // TODO sign!
     os_memcpy(G_io_apdu_buffer, ctx->hash, HASH256_BYTE_COUNT);
     io_exchange_with_code(SW_OK, HASH256_BYTE_COUNT);
-    PRINTF("\nTODO sign hash and present transfers on display...\n");
+    PRINTF("\nTODO sign hash and present transfers on display...\nLEDGER IS READY FOR MORE COMMANDS\n");
 }
 
 // p1 = #particlesWithSpinUp
@@ -697,22 +666,15 @@ void handleSignAtom(
     PRINTF("Recived meta data about: #%u particles\n", ctx->numberOfParticlesWithSpinUp);
     PRINTF("Received particle meta data hex string\n%.*H\n", (16) * ctx->numberOfParticlesWithSpinUp, dataBuffer, dataOffset);
 
-    ctx->numberOfNonTransferrableTokensParticlesIdentified = 0;
-    ctx->numberOfTransferrableTokensParticlesParsed = 0;
-
     uint8_t numberOfTransferrableTokensParticlesToParse = 0;
     for (uint8_t particleIndex = 0; particleIndex < ctx->numberOfParticlesWithSpinUp; ++particleIndex)
     {
         // In this (alphabetical) order: [address, amount, serializer, tokenDefRef]
         // read the values.
-        // PRINTF("Decoding meta data about particle at index: %u\n", particleIndex);
-        // PRINTF("Decoding meta data about particle, with hex: %.*H\n", 16, (dataBuffer + dataOffset));
 
         uint16_t addressOfRecipientByteIntervalStart = U2BE(dataBuffer, dataOffset);
         dataOffset += 2;
-        // PRINTF("Address startAt: %u\n", addressOfRecipientByteIntervalStart);
         uint16_t addressOfRecipientByteIntervalCount = U2BE(dataBuffer, dataOffset);
-        // PRINTF("Address byteCount: %u\n", addressOfRecipientByteIntervalCount);
         dataOffset += 2;
 
         ByteInterval addressOfRecipientByteInterval = {
@@ -721,10 +683,8 @@ void handleSignAtom(
 
         uint16_t amountByteIntervalStart = U2BE(dataBuffer, dataOffset);
         dataOffset += 2;
-        // PRINTF("Amount startAt: %u\n", amountByteIntervalStart);
         uint16_t amountByteIntervalCount = U2BE(dataBuffer, dataOffset);
         dataOffset += 2;
-        // PRINTF("Amount byteCount: %u\n", amountByteIntervalCount);
 
         ByteInterval amountByteInterval = {
             .startsAt = amountByteIntervalStart,
@@ -732,11 +692,8 @@ void handleSignAtom(
 
         uint16_t serializerByteIntervalStart = U2BE(dataBuffer, dataOffset);
         dataOffset += 2;
-        // PRINTF("Serializer startAt: %u\n", serializerByteIntervalStart);
         uint16_t serializerByteIntervalCount = U2BE(dataBuffer, dataOffset);
         dataOffset += 2;
-        // assert(serializerByteIntervalCount > 0);
-        // PRINTF("Serializer byteCount: %u\n", serializerByteIntervalCount);
 
         ByteInterval serializerValueByteInterval = {
             .startsAt = serializerByteIntervalStart,
@@ -744,10 +701,8 @@ void handleSignAtom(
 
         uint16_t tokenDefinitionReferenceByteIntervalStart = U2BE(dataBuffer, dataOffset);
         dataOffset += 2;
-        // PRINTF("RRI startAt: %u\n", tokenDefinitionReferenceByteIntervalStart);
         uint16_t tokenDefinitionReferenceByteIntervalCount = U2BE(dataBuffer, dataOffset);
         dataOffset += 2;
-        // PRINTF("RRI byteCount: %u\n", tokenDefinitionReferenceByteIntervalCount);
 
         ByteInterval tokenDefinitionReferenceByteInterval = {
             .startsAt = tokenDefinitionReferenceByteIntervalStart,
@@ -786,6 +741,8 @@ void handleSignAtom(
     zeroOutAddress();
     zeroOutAmount();
     ctx->hasConfirmedSerializerOfTransferrableTokensParticle = false;
+    ctx->numberOfNonTransferrableTokensParticlesIdentified = 0;
+    ctx->numberOfTransferrableTokensParticlesParsed = 0;
 
     // INSTRUCTIONS ON HOW TO PARSE PARTICLES FROM ATOM RECEIVED => start parsing
     // This will be done in `ctx->atomByteCount / CHUNK_SIZE` number of chunks
