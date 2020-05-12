@@ -119,11 +119,11 @@ typedef struct {
 	// particles => 240 bytes.
 	ParticleMetaData metaDataAboutParticles[MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP]; // variable-length
 
-    uint8_t numberOfNonTransferrableTokensParticlesIdentified;
-    uint8_t numberOfTransferrableTokensParticlesParsed;
-
     // The de-facto length of the array `offsetsOfParticlesWithSpinUp`, read from APDU instr
     uint8_t numberOfParticlesWithSpinUp;
+
+	uint8_t numberOfNonTransferrableTokensParticlesIdentified;
+    uint8_t numberOfTransferrableTokensParticlesParsed;
 
 	RadixParticleTypes nonTransferrableTokensParticlesIdentified[MAX_AMOUNT_OF_OTHER_PARTICLES_WITH_SPIN_UP];
 
