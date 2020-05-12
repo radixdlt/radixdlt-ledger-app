@@ -92,11 +92,10 @@ typedef struct {
 
 #define MAX_CHUNK_SIZE 255 
 
-// 
-#define MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP 10
+#define MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP 4
 
-// The biggest of a value split across chunks might be the `rri` which might be 68 bytes for the value, lets take some security margin up to 70 bytes.
-#define MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS 70
+// The biggest of a value split across chunks might be the `rri`
+#define MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS (RADIX_RRI_MAX_BYTE_COUNT - 1)
 
 typedef struct {
 	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
@@ -134,20 +133,11 @@ typedef struct {
 	// `numberOfCachedBytes`
    	uint8_t atomSlice[MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS + MAX_CHUNK_SIZE];
 
-	// // A temporary value that starts as NULL and will only be set until
-	// // `parsedAmountInTransfer` and a the tokenDefinitionReference also
-	// // has been parsed, then a `Transfer` can be initiated and appended to
-	// // `transfers` and this field can be NULLed again.
-	RadixAddress *parsedAddressInTransfer;
+	// A temporary value helping construction of a Transfer
+	RadixAddress parsedAddressInTransfer;
 
-	// // A temporary value that starts as NULL and will only be set until
-	// // a the tokenDefinitionReference also
-	// // has been parsed, then a `Transfer` can be initiated and appended to
-	// // `transfers` and this field can be NULLed again. Note that
-	// // this field should always be NULL when `parsedAddressInTransfer` is
-	// // NULL. I.e. we expecte to first have parsed `address`, since it comes
-	// // before `amount` alphabetically and thus in CBOR bytes.
-	TokenAmount *parsedAmountInTransfer;
+	// A temporary value helping construction of a Transfer
+	TokenAmount parsedAmountInTransfer;
 
 	// At max all particles with spin up are transferrableTokensParticles that we
 	// need to parse into transfers.
