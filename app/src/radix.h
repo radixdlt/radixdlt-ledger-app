@@ -26,7 +26,12 @@
         THROW(EXCEPTION); \
     }
 
-#define FATAL_ERROR(...) { PRINTF(__VA_ARGS__); THROW(0x9876); }
+#define FATAL_ERROR(...)     \
+    {                        \
+        PLOC();              \
+        PRINTF(__VA_ARGS__); \
+        THROW(0x9876);       \
+    }
 
 // Constants
 #define SHA256_HASH_DIGEST_BYTE_COUNT 32

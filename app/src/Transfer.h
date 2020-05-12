@@ -7,9 +7,6 @@
 
 typedef struct {
     RadixAddress address;
-    RadixResourceIdentifier tokenDefinitionReference;
     TokenAmount amount;
-    // Granularity granularity;
-    // Planck planck;
-    // Nonce nonce;
+    RadixResourceIdentifier tokenDefinitionReference;
 } Transfer;
