@@ -5,6 +5,8 @@ from ledgerblue.commException import CommException
 import argparse
 import struct
 import math
+from hashlib import sha256
+
 
 def bip32_path_big_endian_encoded():
 	# return b"\x80000002" + struct.pack(">I", 1, 3)
@@ -40,6 +42,7 @@ def apduPrefix():
 
 
 def send_large_atom_to_ledger_in_many_chunks():
+
 	STREAM_LEN = 255 # Stream in batches of STREAM_LEN bytes each.
 	bip32Bytes = bip32_path_big_endian_encoded()
 	particlesMetaDataBytes = bytearray.fromhex(particle_meta_data())
@@ -74,7 +77,7 @@ def send_large_atom_to_ledger_in_many_chunks():
 
 	# Keep streaming data into the device till we run out of it.
 	while numberOfBytesThatHaveBeenSentToLedger < atomByteCount:
-		print(f"Sending chunk {chunkIndex}/{numberOfChunksToSend}")
+		print(f"Sending chunk {chunkIndex+1}/{numberOfChunksToSend}")
 		numberOfBytesLeftToSend = atomByteCount - numberOfBytesThatHaveBeenSentToLedger
 
 		chunk = bytearray(0)
@@ -86,7 +89,9 @@ def send_large_atom_to_ledger_in_many_chunks():
 			atomBytesChunked = bytearray(0)
 
 		chunkSize = len(chunk)
-		print(f"Chunk {chunkIndex} has size: {chunkSize}, bytes: {chunk.hex()}")
+		print(f"Chunk {chunkIndex+1}: [{numberOfBytesThatHaveBeenSentToLedger}-{numberOfBytesThatHaveBeenSentToLedger+chunkSize}]") # has size: {chunkSize}, bytes: {chunk.hex()}")
+		# hasher.update(chunk)
+		# print(f"Expected hasher state after chunk {chunkIndex+1}: {hasher.hexdigest()}")
 		L_c = bytes([chunkSize])
 		numberOfBytesThatHaveBeenSentToLedger += chunkSize
 		apdu = prefix + L_c + chunk
@@ -94,8 +99,20 @@ def send_large_atom_to_ledger_in_many_chunks():
 		chunkIndex += 1
 		print(f"numberOfBytesThatHaveBeenSentToLedger: {numberOfBytesThatHaveBeenSentToLedger}, atomByteCount: {atomByteCount}")
 
-	print("Response: " + result.hex())
-	print("Length: " + str(len(result)))
+	firstHasher = sha256()
+	firstHasher.update(atomBytes)
+	secondHasher = sha256()
+	secondHasher.update(firstHasher.digest())
+	expectedSha256TwiceHashOfAtom = secondHasher.hexdigest()
+	hashFromLedger = result.hex()
+
+	print(f"Response: {hashFromLedger}")
+	print(f"Expected hash: {expectedSha256TwiceHashOfAtom}")
+	if expectedSha256TwiceHashOfAtom == hashFromLedger:
+		print("Awesome! Hash from ledger matches expected hash")
+	else:
+		print("Bah! Something is wrong with the hash")
+	# print("Length: " + str(len(result)))
 
 if __name__ == "__main__":
 	# parser = argparse.ArgumentParser()
