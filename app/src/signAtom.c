@@ -9,6 +9,7 @@
 #include "ux.h"
 #include "sha256_hash.h"
 #include "cbor.h"
+#include "libbase58.h"
 
 // Get a pointer to signHash's state variables. This is purely for
 // convenience, so that we can refer to these variables concisely from any
@@ -263,6 +264,20 @@ static ParticleField getNextFieldToParse() {
     return TokenDefinitionReferenceField;
 }
 
+static void printRadixAddress(RadixAddress *address) {
+    const size_t max_length = RADIX_ADDRESS_BASE58_CHAR_COUNT_MAX + 1;  // +1 for null terminator
+    char address_b58[max_length];
+    size_t address_b58_length = to_string_radix_address(address, address_b58, max_length);
+    PRINTF("%s", address_b58);
+}
+
+static void printRRI(RadixResourceIdentifier *rri) {
+    const size_t max_length = RADIX_RRI_STRING_LENGTH_MAX;
+    char rri_utf8_string[max_length];
+    size_t de_facto_length = to_string_rri(rri, rri_utf8_string, max_length);
+    PRINTF("%s", rri_utf8_string);
+}
+
 static void finishedParsingAWholeTransfer(
     RadixResourceIdentifier *tokenDefinitionReferenceJustParsed
 ) {
@@ -305,9 +320,11 @@ static void finishedParsingAWholeTransfer(
     PRINTF("\n\n\n**************************************\n\n");
     PRINTF("Finished parsing a transfer with index %u\n", ctx->numberOfTransferrableTokensParticlesParsed);
     Transfer transfer = ctx->transfers[ctx->numberOfTransferrableTokensParticlesParsed];
-    PRINTF("    Address (hex): %.*H\n", sizeof(RadixAddress), transfer.address.bytes);
+    // PRINTF("    Address (hex): %.*H\n", sizeof(RadixAddress), transfer.address.bytes);
+    PRINTF("    Address b58: "); printRadixAddress(&transfer.address); PRINTF("\n");
     PRINTF("    Amount (hex): %.*H\n", sizeof(TokenAmount), transfer.amount.bytes);
-    PRINTF("    Token rri (hex): %.*H\n", sizeof(RadixResourceIdentifier), transfer.tokenDefinitionReference.bytes);
+    PRINTF("    Token rri utf8: "); printRRI(&transfer.tokenDefinitionReference); PRINTF("\n");
+    
     PRINTF("\n**************************************\n\n\n");
 
     ctx->numberOfTransferrableTokensParticlesParsed++;

@@ -7,7 +7,7 @@
 
 #define RADIX_ADDRESS_BYTE_COUNT 38 // MagicByte(1) + PubKeyCompr(33) + Checksum(4)
 // #define RADIX_ADDRESS_BASE58_CHAR_COUNT_MIN 51
-// #define RADIX_ADDRESS_BASE58_CHAR_COUNT_MAX 52
+#define RADIX_ADDRESS_BASE58_CHAR_COUNT_MAX 52
 
 typedef struct {
     uint8_t bytes[RADIX_ADDRESS_BYTE_COUNT];
@@ -20,8 +20,7 @@ typedef struct {
 //     RadixAddress *output_radixAddress
 // );
 
-// size_t to_string_radix_address(
-//     RadixAddress *address,
-//     char *output_buffer,
-//     const size_t max_length
-// );
+size_t to_string_radix_address(
+    RadixAddress *address,
+    char *output_buffer,
+    const size_t size_of_buffer);
