@@ -10,6 +10,7 @@
 #include "sha256_hash.h"
 #include "cbor.h"
 #include "libbase58.h"
+#include "base_conversion.h"
 
 // Get a pointer to signHash's state variables. This is purely for
 // convenience, so that we can refer to these variables concisely from any
@@ -278,6 +279,15 @@ static void printRRI(RadixResourceIdentifier *rri) {
     PRINTF("%s", rri_utf8_string);
 }
 
+static void printTokenAmount(TokenAmount *tokenAmount) {
+    const size_t max_length = (UINT256_DEC_STRING_MAX_LENGTH + 1); // +1 for null
+    char dec_string[max_length];
+    // size_t de_facto_length = convertDecimalInto(tokenAmount->bytes, 32, dec_string);
+    to_string_uint256(tokenAmount, dec_string, max_length);
+    // dec_string[de_facto_length] = '\0';
+    PRINTF("%s", dec_string);
+}
+
 static void finishedParsingAWholeTransfer(
     RadixResourceIdentifier *tokenDefinitionReferenceJustParsed
 ) {
@@ -320,11 +330,9 @@ static void finishedParsingAWholeTransfer(
     PRINTF("\n\n\n**************************************\n\n");
     PRINTF("Finished parsing a transfer with index %u\n", ctx->numberOfTransferrableTokensParticlesParsed);
     Transfer transfer = ctx->transfers[ctx->numberOfTransferrableTokensParticlesParsed];
-    // PRINTF("    Address (hex): %.*H\n", sizeof(RadixAddress), transfer.address.bytes);
     PRINTF("    Address b58: "); printRadixAddress(&transfer.address); PRINTF("\n");
-    PRINTF("    Amount (hex): %.*H\n", sizeof(TokenAmount), transfer.amount.bytes);
+    PRINTF("    Amount (dec): "), printTokenAmount(&transfer.amount); PRINTF(" E-18\n");
     PRINTF("    Token rri utf8: "); printRRI(&transfer.tokenDefinitionReference); PRINTF("\n");
-    
     PRINTF("\n**************************************\n\n\n");
 
     ctx->numberOfTransferrableTokensParticlesParsed++;
