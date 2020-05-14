@@ -10,7 +10,5 @@ size_t to_string_uint256(
     const size_t outstr_length
 ) {
     assert(outstr_length == UINT256_DEC_STRING_MAX_LENGTH + 1); // +1 for null
-    size_t de_facto_length = convertByteBufferIntoDigitsWithBase(uint256->bytes, 32, outstr, 10);
-	outstr[de_facto_length] = '\0'; // NULL terminate
-    return de_facto_length;
+    return convertByteBufferIntoDecimal(uint256->bytes, 32, outstr);
 }

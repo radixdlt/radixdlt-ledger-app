@@ -31,7 +31,7 @@ size_t to_string_rri(
     uint8_t length_of_symbol = 0;
     if (skip_address)
     {
-        unsigned int index_from_start_of_slash;
+        unsigned int index_from_start_of_slash = 0;
         // First seek from back until we hit '/', and save the index (counting from start, not back)
         for (unsigned int i = length - 1; (length - i) < RADIX_RRI_MAX_LENGTH_SYMBOL; --i) {
             if (output_buffer[i] == '/') {
