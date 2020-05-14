@@ -38,11 +38,6 @@ file(GLOB_RECURSE TINYCBOR_SRC
         deps/tinycbor/src/*.h
         )
 
-file(GLOB_RECURSE BASE58_SRC
-        deps/base58/*.c
-        deps/base58/*.h
-        )
-
 #file(GLOB_RECURSE LIB_SRC
 #        app/src/json/json_parser.c
 #        app/src/tx_parser.c
@@ -55,7 +50,6 @@ file(GLOB_RECURSE BASE58_SRC
 add_library(app_lib STATIC
         ${LIB_SRC}
         ${TINYCBOR_SRC}
-        ${BASE58_SRC}
         ${JSMN_SRC}
         )
 
@@ -63,7 +57,6 @@ target_include_directories(app_lib PUBLIC
         deps/ledger-zxlib/include
         deps/jsmn/src
         deps/tinycbor/src
-        deps/base58
         app/src
         )
 

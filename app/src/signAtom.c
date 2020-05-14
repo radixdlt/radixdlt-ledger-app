@@ -9,7 +9,6 @@
 #include "ux.h"
 #include "sha256_hash.h"
 #include "cbor.h"
-#include "libbase58.h"
 #include "base_conversion.h"
 
 // Get a pointer to signHash's state variables. This is purely for
@@ -275,7 +274,8 @@ static void printRadixAddress(RadixAddress *address) {
 static void printRRI(RadixResourceIdentifier *rri) {
     const size_t max_length = RADIX_RRI_STRING_LENGTH_MAX;
     char rri_utf8_string[max_length];
-    size_t de_facto_length = to_string_rri(rri, rri_utf8_string, max_length);
+    // size_t de_facto_length = to_string_rri(rri, rri_utf8_string, max_length);
+    size_t de_facto_length = to_string_rri(rri, rri_utf8_string, max_length, true);
     PRINTF("%s", rri_utf8_string);
 }
 
@@ -332,7 +332,7 @@ static void finishedParsingAWholeTransfer(
     Transfer transfer = ctx->transfers[ctx->numberOfTransferrableTokensParticlesParsed];
     PRINTF("    Address b58: "); printRadixAddress(&transfer.address); PRINTF("\n");
     PRINTF("    Amount (dec): "), printTokenAmount(&transfer.amount); PRINTF(" E-18\n");
-    PRINTF("    Token rri utf8: "); printRRI(&transfer.tokenDefinitionReference); PRINTF("\n");
+    PRINTF("    Token symbol: "); printRRI(&transfer.tokenDefinitionReference); PRINTF("\n");
     PRINTF("\n**************************************\n\n\n");
 
     ctx->numberOfTransferrableTokensParticlesParsed++;

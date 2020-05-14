@@ -8,6 +8,50 @@ import math
 from hashlib import sha256
 
 
+def expected_printed_output():
+	return """
+Transfer at index: 0
+Address b58: JEyoKNEYawJkNTiinQh1hR9c3F57ANixyBRi9fsSEfGedumiffR
+Amount (dec): 999 E-18
+Token symbol: ZELDA
+
+
+Transfer at index: 1
+Address b58: JFeqmatdMyjxNce38w3pEfDeJ9CV6NCkygDt3kXtivHLsP3p846
+Amount (dec): 1 E-18
+Token symbol: ZELDA
+
+
+Transfer at index: 2
+Address b58: JEyoKNEYawJkNTiinQh1hR9c3F57ANixyBRi9fsSEfGedumiffR
+Amount (dec): 997 E-18
+Token symbol: ZELDA
+
+
+Transfer at index: 3
+Address b58: JG3Ntbhj144hpz2ZooKsQG3Hq7UkCMwmFMwXfaYQgKFzNXAQvo5
+Amount (dec): 2 E-18
+Token symbol: ZELDA
+
+
+Transfer at index: 4
+Address b58: JEyoKNEYawJkNTiinQh1hR9c3F57ANixyBRi9fsSEfGedumiffR
+Amount (dec): 995 E-18
+Token symbol: ZELDA
+
+
+Transfer at index: 5
+Address b58: JFtJPDGvw4NDQyqCk7P5pWudNMeT8TFGCSvY9pTEqiyVhUGM9R9
+Amount (dec): 1 E-18
+Token symbol: ZELDA
+
+
+Transfer at index: 6
+Address b58: JFtJPDGvw4NDQyqCk7P5pWudNMeT8TFGCSvY9pTEqiyVhUGM9R9
+Amount (dec): 2 E-18
+Token symbol: ZELDA
+	"""
+
 def bip32_path_big_endian_encoded():
 	# return b"\x80000002" + struct.pack(">I", 1, 3)
 	return bytes.fromhex("800000020000000100000003")
@@ -113,6 +157,9 @@ def send_large_atom_to_ledger_in_many_chunks():
 	else:
 		print("Bah! Something is wrong with the hash")
 	# print("Length: " + str(len(result)))
+
+	print("Expected to to parse these transfers:\n")
+	print(expected_printed_output())
 
 if __name__ == "__main__":
 	# parser = argparse.ArgumentParser()
