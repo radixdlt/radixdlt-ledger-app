@@ -37,22 +37,12 @@ void reverse(char *array, int length) {
 	}
 }
 
-// Convert "bytes" of length "length" into decimal digits in "buffer", returning the length
-uint16_t convertDecimalInto(uint8_t *bytes, int length, char *buffer) {
-	uint16_t decimalIndex = 0;
+// Convert "bytes" of length "length" into digits of base "base" in "buffer", returning the length
+uint16_t convertByteBufferIntoDigitsWithBase(uint8_t *bytes, int length, char *buffer, uint8_t base) {
+	uint16_t de_facto_length = 0;
 	while (!allZero(bytes, length)) {
-		buffer[decimalIndex++] = '0' + divmod(bytes, length, 10);
+		buffer[de_facto_length++] = '0' + divmod(bytes, length, base);
 	}
-	reverse(buffer, decimalIndex);
-	return decimalIndex;
-}
-
-// Convert "bytes" of length "length" into base58 digits in "buffer", returning the length
-uint16_t convertBase58Into(uint8_t *bytes, int length, char *buffer) {
-	uint16_t index = 0;
-	while (!allZero(bytes, length)) {
-		buffer[index++] = '0' + divmod(bytes, length, 58);
-	}
-	reverse(buffer, index);
-	return index;
+	reverse(buffer, de_facto_length);
+	return de_facto_length;
 }
