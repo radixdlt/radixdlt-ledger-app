@@ -267,24 +267,27 @@ static ParticleField getNextFieldToParse() {
 static void printRadixAddress(RadixAddress *address) {
     const size_t max_length = RADIX_ADDRESS_BASE58_CHAR_COUNT_MAX + 1;  // +1 for null terminator
     char address_b58[max_length];
-    size_t address_b58_length = to_string_radix_address(address, address_b58, max_length);
+    
+    to_string_radix_address(address, address_b58, max_length);
+
     PRINTF("%s", address_b58);
 }
 
 static void printRRI(RadixResourceIdentifier *rri) {
     const size_t max_length = RADIX_RRI_STRING_LENGTH_MAX;
     char rri_utf8_string[max_length];
-    // size_t de_facto_length = to_string_rri(rri, rri_utf8_string, max_length);
-    size_t de_facto_length = to_string_rri(rri, rri_utf8_string, max_length, true);
+
+    to_string_rri(rri, rri_utf8_string, max_length, true);
+
     PRINTF("%s", rri_utf8_string);
 }
 
 static void printTokenAmount(TokenAmount *tokenAmount) {
     const size_t max_length = (UINT256_DEC_STRING_MAX_LENGTH + 1); // +1 for null
     char dec_string[max_length];
-    // size_t de_facto_length = convertDecimalInto(tokenAmount->bytes, 32, dec_string);
+
     to_string_uint256(tokenAmount, dec_string, max_length);
-    // dec_string[de_facto_length] = '\0';
+
     PRINTF("%s", dec_string);
 }
 
