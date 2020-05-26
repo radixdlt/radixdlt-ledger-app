@@ -595,7 +595,8 @@ static bool tryParseParticleFieldFromAtomSlice(
     return doneWithCurrentSlice;
 }
 
-// Returns a boolean value indicating whether or all particles have been parsed
+// Returns a boolean value indicating whether the whole atom has been received so that 
+// the we can hash the content and parse out all particles
 static bool parseParticlesAndUpdateHash()
 {
     uint16_t bytesLeftToRead = ctx->atomByteCount - ctx->atomByteCountParsed;
@@ -610,7 +611,13 @@ static bool parseParticlesAndUpdateHash()
 
     PRINTF("\nParsing atom chunk: [%u-%u]\n\n", chunkPositionInAtom, (chunkPositionInAtom+chunkSize));
 
-    while (!doneWithCurrentSlice) {
+
+    while (
+        !doneWithCurrentSlice 
+        && 
+        // Not finished parsing all particles
+        totalNumberOfParticlesParsed() < ctx->numberOfParticlesWithSpinUp
+        ) {
         doneWithCurrentSlice = tryParseParticleFieldFromAtomSlice(
             chunkPositionInAtom, 
             chunkSize, 
@@ -619,18 +626,20 @@ static bool parseParticlesAndUpdateHash()
     }
 
     ctx->atomByteCountParsed += chunkSize;
-    return totalNumberOfParticlesParsed() >= ctx->numberOfParticlesWithSpinUp;
+    return ctx->atomByteCountParsed == ctx->atomByteCount && totalNumberOfParticlesParsed() == ctx->numberOfParticlesWithSpinUp;
 }
 
 static void parseAtom()
 {
-
-    while (!parseParticlesAndUpdateHash())
+    bool finishedParsingWholeAtomAndAllParticles = false;
+    while (!finishedParsingWholeAtomAndAllParticles)
     {
+        finishedParsingWholeAtomAndAllParticles = parseParticlesAndUpdateHash();
         PRINTF("Finished parsing %u/%u particles\n", totalNumberOfParticlesParsed(), ctx->numberOfParticlesWithSpinUp);
         PRINTF("Finished parsing %u/%u bytes of the Atom\n", ctx->atomByteCountParsed, ctx->atomByteCount);
     }
-    assert(ctx->atomByteCountParsed == ctx->atomByteCount)
+    assert(ctx->atomByteCountParsed == ctx->atomByteCount);
+    assert(totalNumberOfParticlesParsed() == ctx->numberOfParticlesWithSpinUp);
 
     PRINTF("\n\n.-~=*#^^^ FINISHED PARSING _all_ PARTICLES ^^^#*=~-.\n\n");
 
