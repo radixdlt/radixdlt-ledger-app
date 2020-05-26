@@ -1,5 +1,8 @@
 .vscode/
 
+# Ledger debugging tool
+usbtool
+
 # Created by .ignore support plugin (hsz.mobi)
 ### C template
 # Prerequisites

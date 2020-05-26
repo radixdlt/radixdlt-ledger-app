@@ -33,6 +33,11 @@ file(GLOB_RECURSE JSMN_SRC
         deps/jsmn/src/jsmn.c
         )
 
+file(GLOB_RECURSE TINYCBOR_SRC
+        deps/tinycbor/src/*.c
+        deps/tinycbor/src/*.h
+        )
+
 #file(GLOB_RECURSE LIB_SRC
 #        app/src/json/json_parser.c
 #        app/src/tx_parser.c
@@ -44,12 +49,14 @@ file(GLOB_RECURSE JSMN_SRC
 
 add_library(app_lib STATIC
         ${LIB_SRC}
+        ${TINYCBOR_SRC}
         ${JSMN_SRC}
         )
 
 target_include_directories(app_lib PUBLIC
         deps/ledger-zxlib/include
         deps/jsmn/src
+        deps/tinycbor/src
         app/src
         )
 

@@ -2,71 +2,7 @@
 #define RADIX_TOKEN_NANOS_UX_H
 
 #include "radix.h"
-
-#define TXN_BUF_SIZE 256
-
-typedef struct {
-	uint32_t bip32Path[5];
-	
-	// If set to `true` the Ledger will not generate a public key until user has confirmed on her Ledger
-	// after confirmation the Ledger emits the pubkey in an APDU *response*. UX flow is now done iff
-	// `requireConfirmationOfDisplayedPubKey` is set to `false`, otherwise a second confirmation is needed,
-	bool requireConfirmationBeforeGeneration;
-
-	// Disregarding of this value, a Public Key should already have been generated and sent back
-	// via an APDU response, but if this bool is set to `true`, then said public key is displayed
-	// on the Ledger and user needs to confirm on the Ledger that she acknowledges that she sees
-	// the same public key in her wallet.
-	bool requireConfirmationOfDisplayedPubKey;
-
-	uint8_t displayIndex;
-	// NUL-terminated strings for display
-	uint8_t typeStr[40]; // variable-length
-	uint8_t bip32PathString[BIP32_PATH_STRING_MAX_LENGTH]; // variable-length
-	uint8_t fullStr[77]; // variable length
-	// partialStr contains 12 characters of a longer string. This allows text
-	// to be scrolled.
-	uint8_t partialStr[13];
-} getPublicKeyContext_t;
-
-typedef struct {
-	uint32_t bip32Path[5];
-	uint8_t hash[32];
-	uint8_t hexHash[65]; // 2*sizeof(hash) + 1 for '\0'
-	uint8_t displayIndex;
-	// NUL-terminated strings for display
-	uint8_t bip32PathString[BIP32_PATH_STRING_MAX_LENGTH]; // variable-length
-	uint8_t partialHashStr[13];
-} signHashContext_t;
-
-typedef struct {
-	uint8_t buf[TXN_BUF_SIZE];
-	uint32_t nextIdx, len; // next read into buf and len of buf.
-	int hostBytesLeft;     // How many more bytes to be streamed from host.
-} StreamData;
-
-// typedef struct {
-// 	uint32_t keyIndex;
-// 	zil_ecschnorr_t ecs;
-// 	uint8_t signature[ECDSA_SIGNATURE_BYTE_COUNT];
-//   StreamData sd;
-
-// 	// Used for display
-// 	uint8_t msg[512];
-// 	unsigned int msgLen;
-// 	uint32_t displayIndex;
-// 	uint8_t indexStr[40]; // variable-length
-// 	uint8_t partialMsg[13];
-// } signTxnContext_t;
-
-// To save memory, we store all the context types in a single global union,
-// taking advantage of the fact that only one command is executed at a time.
-typedef union {
-	getPublicKeyContext_t getPublicKeyContext;
-	signHashContext_t signHashContext;
-	// signTxnContext_t signTxnContext;
-} commandContext;
-extern commandContext global;
+#include "global_state.h"
 
 // ux is a magic global variable implicitly referenced by the UX_ macros. Apps
 // should never need to reference it directly.

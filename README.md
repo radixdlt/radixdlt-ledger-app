@@ -7,14 +7,54 @@ This repository contains:
 - Specs / Documentation
 - C++ unit tests
 
-# We use Big Endian
+# Test APDU commands
+Using [Python program 'ledgerblue'](https://github.com/LedgerHQ/blue-loader-python). you can send APDU commands from your host machine to the Ledger in order to test this app. Send APDU commands as a byte array (hex), with big endian byte order. Use `AA` as first prefix since that is our APDU CLA. Check [the APDU specification](docs/APDUSPEC.md) for the INS byte of the instruction wou wanna invoke.
+
+## Examples
+
+
+### Generate Public Key
 Example of generation of public key (`INS_GET_PUB_KEY_SECP256K1`), you can use CLI and send a command to the ledger useing
 
 ```sh
-echo 'AA0801000C800000020000000100000003' | python -m ledgerblue.runScript --targetId 0x31100004 --apdu
+echo 'AA0801010C800000020000000100000003' | python -m ledgerblue.runScript --targetId 0x31100004 --apdu
 ```
 
-The APDU command above (big endian byte order), ought to result in this BIP path: `44'/536'/2'/1/3`. And using the mnemonic mentioned below (`equip will roof....`), ought to result in this compressed public key `026d5e07cfde5df84b5ef884b629d28d15b0f6c66be229680699767cd57c618288`.
+Should result in this BIP path: `44'/536'/2'/1/3`. And using the mnemonic mentioned below (`equip will roof....`), ought to result in this compressed public key `026d5e07cfde5df84b5ef884b629d28d15b0f6c66be229680699767cd57c618288` and private key: `f423ae3097703022b86b87c15424367ce827d11676fae5c7fe768de52d9cce2e`
+
+### SIGN HASH
+
+```sh
+echo 'AA0400002C800000020000000100000003deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef' | python -m ledgerblue.runScript --targetId 0x31100004 --apdu
+```
+
+Should result in this BIP path: `44'/536'/2'/1/3`. And using the mnemonic mentioned below (`equip will roof....`), ought to result in the ECDSA signature (DER decoded to just `R | S`): 
+
+`098c1526d623f61a1adc1d42b818e668fdb3c6b99a0055435731221211b1cd11324b979a56c9ded9f5b645389e575dc7fc3c9b3aa180bc379fa6cb3d912503e1`
+
+### SIGN ATOM (in progress)
+Currently just supporting some CBOR decoding.
+
+```sh
+echo 'AA02000006655261646978' | python -m ledgerblue.runScript --targetId 0x31100004 --apdu
+```
+
+Which should decode to the string `"Radix"`.
+
+#### 253 chars long string is max
+Since we need 2 bytes to CBOR encode a string, resulting in 253+2 = 255 bytes, which is `FF` in hex, which is max value that fit in the single byte, parameter `L` according to APDU spec, describing the lenght of the payload, that is the max string we can send. 
+
+##### 249 bytes
+This long Lorem ipsum text works.
+
+`"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam sollicitudin porttitor odio eu laoreet. Ut dui lacus, accumsan a orci a, pretium suscipit velit. Sed quis dignissim arcu. In a magna sit amet quam malesuada consectetur vel vitae tortor non."` 
+(253 chars)
+
+Resulting in APDU:
+
+```sh
+echo 'AA020000ff78FD4C6F72656D20697073756D20646F6C6F722073697420616D65742C20636F6E73656374657475722061646970697363696E6720656C69742E20457469616D20736F6C6C696369747564696E20706F72747469746F72206F64696F206575206C616F726565742E20557420647569206C616375732C20616363756D73616E2061206F72636920612C207072657469756D2073757363697069742076656C69742E205365642071756973206469676E697373696D20617263752E20496E2061206D61676E612073697420616D6574207175616D206D616C65737561646120636F6E73656374657475722076656C20766974616520746F72746F72206E6F6E2E' | python -m ledgerblue.runScript --targetId 0x31100004 --apdu
+```
 
 # Building
 
