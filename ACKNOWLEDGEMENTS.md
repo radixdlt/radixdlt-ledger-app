@@ -5,7 +5,6 @@ The Radix Ledger App uses code from the following libraries:
 
 * [Ledger's 'Nano S Secure SDK'](https://github.com/LedgerHQ/nanos-secure-sdk), Apache License Version 2.0
 * [Intel's 'tinycbor'](https://github.com/intel/tinycbor), MIT License
-* [ZSerge's 'JSMN'](https://github.com/zserge/jsmn), MIT License
 * [Zondax 'ledger zxlib']( https://github.com/Zondax/ledger-zxlib/), Apache License Version 2.0
 
 And copy pasted some files in their entirety, and/or heavily based our solution on, and/or been heavily influenced by the following

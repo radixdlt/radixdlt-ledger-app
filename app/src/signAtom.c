@@ -264,15 +264,6 @@ static ParticleField getNextFieldToParse() {
     return TokenDefinitionReferenceField;
 }
 
-static void printRadixAddress(RadixAddress *address) {
-    const size_t max_length = RADIX_ADDRESS_BASE58_CHAR_COUNT_MAX + 1;  // +1 for null terminator
-    char address_b58[max_length];
-    
-    to_string_radix_address(address, address_b58, max_length);
-
-    PRINTF("%s", address_b58);
-}
-
 static void printRRI(RadixResourceIdentifier *rri) {
     const size_t max_length = RADIX_RRI_STRING_LENGTH_MAX;
     char rri_utf8_string[max_length];
@@ -328,16 +319,6 @@ static void finishedParsingAWholeTransfer(
     );
 
     ctx->hasConfirmedSerializerOfTransferrableTokensParticle = false;
-
-    // DEBUG PRINT NEWLY PARSED TRANSFER
-    PRINTF("\n\n\n**************************************\n\n");
-    PRINTF("Finished parsing a transfer with index %u\n", ctx->numberOfTransferrableTokensParticlesParsed);
-    Transfer transfer = ctx->transfers[ctx->numberOfTransferrableTokensParticlesParsed];
-    PRINTF("    Address b58: "); printRadixAddress(&transfer.address); PRINTF("\n");
-    PRINTF("    Amount (dec): "), printTokenAmount(&transfer.amount); PRINTF(" E-18\n");
-    PRINTF("    Token symbol: "); printRRI(&transfer.tokenDefinitionReference); PRINTF("\n");
-    PRINTF("\n**************************************\n\n\n");
-
     ctx->numberOfTransferrableTokensParticlesParsed++;
 }
 
@@ -629,6 +610,37 @@ static bool parseParticlesAndUpdateHash()
     return ctx->atomByteCountParsed == ctx->atomByteCount && totalNumberOfParticlesParsed() == ctx->numberOfParticlesWithSpinUp;
 }
 
+static void debugPrintParsedTransfers() {
+    // DEBUG PRINT ALL PARSED TransferrableTokensParticles
+    PRINTF("\n\n\n**************************************\n\n");
+
+    cx_ecfp_public_key_t myPublicKeyCompressed;
+    
+    deriveRadixKeyPair(
+        ctx->bip32Path, 
+        &myPublicKeyCompressed, 
+        NULL // dont write private key
+    );
+
+    int transferNumber = 0;
+    for (int i = 0; i < ctx->numberOfTransferrableTokensParticlesParsed; ++i)
+    {
+        Transfer transfer = ctx->transfers[i];
+
+        if (matchesPublicKey(&transfer.address, &myPublicKeyCompressed)) {
+            continue; // dont display "change" (money back) to you (i.e. transfers to your own address.)
+        }
+
+        PRINTF("Transfer %u\n", transferNumber);
+        transferNumber++;
+        PRINTF("    recipient address: "); printRadixAddress(&transfer.address); PRINTF("\n");
+        PRINTF("    amount: "), printTokenAmount(&transfer.amount); PRINTF(" E-18\n");
+        PRINTF("    token (RRI): "); printRRI(&transfer.tokenDefinitionReference); PRINTF("\n");
+        PRINTF("\n");
+    }
+    PRINTF("\n**************************************\n\n\n");
+}
+
 static void parseAtom()
 {
     bool finishedParsingWholeAtomAndAllParticles = false;
@@ -642,6 +654,8 @@ static void parseAtom()
     assert(totalNumberOfParticlesParsed() == ctx->numberOfParticlesWithSpinUp);
 
     PRINTF("\n\n.-~=*#^^^ FINISHED PARSING _all_ PARTICLES ^^^#*=~-.\n\n");
+
+    debugPrintParsedTransfers();
 
     PRINTF("\n\nhash: %.*H\n", HASH256_BYTE_COUNT, ctx->hash);
 

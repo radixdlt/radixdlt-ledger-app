@@ -155,9 +155,6 @@ LDLIBS   += -lm -lgcc -lc
 include $(BOLOS_SDK)/Makefile.glyphs
 
 APP_SOURCE_PATH += $(MY_DIR)/src
-APP_SOURCE_PATH += $(MY_DIR)/../deps/ledger-zxlib/include
-APP_SOURCE_PATH += $(MY_DIR)/../deps/ledger-zxlib/src
-APP_SOURCE_PATH += $(MY_DIR)/../deps/jsmn/src
 APP_SOURCE_PATH += $(MY_DIR)/../deps/tinycbor/src
 
 SDK_SOURCE_PATH += lib_stusb lib_u2f lib_stusb_impl
