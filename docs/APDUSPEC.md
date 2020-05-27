@@ -1,4 +1,4 @@
-# Cosmos App - Ledger Nano S
+# Radix DLT App - Ledger Nano S
 ## General structure
 
 The general structure of commands and responses is as follows:
@@ -34,8 +34,6 @@ The general structure of commands and responses is as follows:
 | 0x6E00        | CLA not supported       |
 | 0x6F00        | Unknown                 |
 | 0x9000        | Success                 |
-
-Codes above should match [codes in implementation](https://github.com/radixdlt/radixdlt-ledger-app/blob/improve/change_cosmos_to_radix/deps/ledger-zxlib/include/apdu_codes.h)
 
 ## Command definition
 
@@ -75,17 +73,16 @@ Codes above should match [codes in implementation](https://github.com/radixdlt/r
 | P1         | byte (1)       | Display address/path on device | 0x00 No        |
 |            |                |                                | 0x01 Yes       |
 | P2         | byte (1)       | Parameter 2                    | ignored        |
-| Magic      | byte (1)       | Radix Universe Magic Byte      | ?              |
-| Path[0]    | byte (4)       | Derivation Path Data           | 0x8000002c<sup id="x1">[1](#fx1)</sup>     |
-| Path[1]    | byte (4)       | Derivation Path Data           | 0x80000218<sup id="x2">[2](#fx2)</sup>     |
-| Path[2]    | byte (4)       | Derivation Path Data           | ?              |
-| Path[3]    | byte (4)       | Derivation Path Data           | ?              |
-| Path[4]    | byte (4)       | Derivation Path Data           | ?              |
+| L          | byte (1)       | Length of Payload              | 12<sup id="ga1">[1](#ga1)</sup>             |
+| |
+| DEFINITION OF PAYLOAD |
+| Path[2]    | byte (4)       | Derivation Path index 2 Data   | ?              |
+| Path[3]    | byte (4)       | Derivation Path index 3 Data   | ?              |
+| Path[4]    | byte (4)       | Derivation Path index 4 Data   | ?              |
 
-<b id="fx1">1:</b> Hex of (hardened) derivation path: `44'` ([BIP44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)).  
-<b id="fx2">2:</b> Hex of Radix cointype,  (hardened) derivation path: `536'`.  
+<b id="ga1">1:</b> Three path components à 4 bytes => 12 bytes. The first two [BIP32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki) components are hard coded to `44'/536'/` ([BIP44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki))
 
-First three items in the derivation path will be automatically hardened
+**First item in the derivation path, data at index 2 (i.e. third component) will be automatically hardened**
 
 #### Response
 
@@ -104,51 +101,43 @@ where `|` denotes concantenation and `PKc` denotes compressed public key.
 
 ### INS_SIGN_ATOM_SECP256K1
 
+Streaming of Atom data in multiple chunks/packets, first chunk will contain meta data about atom and instructions on how to [CBOR - Consice Binary Object Representation](http://cbor.io/) decode the particles in the atom.
+
 #### Command
 
 | Field | Type      | Content                            | Expected  |
 | ----- | --------- | ---------------------------------- | --------- |
 | CLA   | byte (1)  | Application Identifier             | 0xAA      |
 | INS   | byte (1)  | Instruction ID                     | 0x02      |
-| P1    | byte (1)  | Payload desc                       | 0 = init  |
-|       |           |                                    | 1 = add   |
-|       |           |                                    | 2 = last  |
+| P1    | byte (1)  | Total no. of particles w spin UP   | ?         |
 | P2    | byte (1)  | ----                               | not used  |
-| L     | byte (2<sup id="a1">[1](#fa1)</sup>) | Length of "message" (2nd packet)   | (depends) |
+| L  		| byte (1)  | Length of Payload          | ?   |
+| |
+| DEFINITION OF PAYLOAD |
+| Path[2]    | byte (4)       | Derivation Path index 2 Data   | ?              |
+| Path[3]    | byte (4)       | Derivation Path index 3 Data   | ?              |
+| Path[4]    | byte (4)       | Derivation Path index 4 Data   | ?              |
+| AtomSize | byte (2<sup id="sa1">[1](#sa1)</sup>) | CBOR encoded Atom byte count | ? |
+| MetaData UP Particles<sup id="sa2">[2](#sa2)</sup> | bytes | MetaData about how to CBOR decode each UP particle | `P1` * 16 bytes |
 
+<b id="sa1">1:</b> Atom size as 2 bytes => 16 bits => 2^16 = 65536 bytes being MAX size of any Atom signed.
 
-<b id="fa1">1:</b> N.B. not all of those 16 bits can be used, in fact, [this document](https://buildmedia.readthedocs.org/media/pdf/ledger/latest/ledger.pdf) (section 18.1) suggests, that the max size of an application is 4096 bytes. Those we ought to limit max size of Message (DSON byte array) to max 2048 bytes, i.e. 11 bits.
+<b id="sa2">2:</b> Any Radix wallet calling this Ledger instruction/command <b>should</b> provide meta data about each particle with spin `UP`. The meta data consists of 4 byte intervals, being a touple (startsAtByte, byteCount) each consisting of 2 bytes => the byte interval is thus 4 bytes. 4*4 bytes => 16 bytes per particle meta data. These byte intervals points to the following fields within the spun `UP` particle (address, amount, serializer, tokenDefinitionReference) - in that order - for being able to parse TransferableTokensParticles (TokenTransfers). In the case of non-TransferrableTokensParticles, e.g. `MessageParticle`, `RRIParticle` etc, you must provide 4 ZERO bytes for (address, amount, tokenDefinition), but still provide the correct byte interval for `serializer` field. Thus BigEndian hex: `0x0000000000000000dead001700000000`, i.e. all fields are zero except for `serializer` having value `0xdead0018` for a MessageParticle, where `0xdead` = 57005<sub>10</sub> is the where (number of bytes from start of Atom) the field `serializer` for this MessageParticle starts, which is bound by 65536 (max size of atom). And where `0x0017` = 23<sub>10</sub> is number of characaters in the string "radix.particles.message" (the serializer value).
 
-The first packet/chunk includes only the derivation path
-
-All other packets/chunks should contain message to sign 
-
-*First Packet*
-
-| Field      | Type     | Content                | Expected  |
-| ---------- | -------- | ---------------------- | --------- |
-| Path[0]    | byte (4) | Derivation Path Data   | 44        |
-| Path[1]    | byte (4) | Derivation Path Data   | 536       |
-| Path[2]    | byte (4) | Derivation Path Data   | ?         |
-| Path[3]    | byte (4) | Derivation Path Data   | ?         |
-| Path[4]    | byte (4) | Derivation Path Data   | ?         |
+**First item in the derivation path, data at index 2 (i.e. third component) will be automatically hardened**
 
 *Other Chunks/Packets*
 
 | Field   | Type     | Content                                              | Expected |
 | ------- | -------- | ---------------------------------------------------- | -------- |
-| Message | bytes... | L<sup id="b1">[1](#fb1)</sup> number of bytes, a DSON<sup id="b2">[2](#fb2)</sup> serialized atom<sup id="b3">[3](#fb3)</sup> |          |
+| Atom chunk | bytes... | Chunk of max 255 bytes  |      ?    |
 
-<b id="fb1">1:</b> Length of message, as an unsigned integer with 11 bits size, this value (field).  
-is provided in initial `INS_SIGN_ATOM_SECP256K1` command.  
-<b id="fb2">2:</b> DSON: is Radix DLT's own binary format, based on [CBOR - Consice Binary Object Representation](http://cbor.io/).  
-<b id="fb3">3:</b> Atom: The name of the transaction container in the Radix DLT ecosystem.  
 
 #### Response
 
 | Field   | Type      | Content     | Note                     |
 | ------- | --------- | ----------- | ------------------------ |
-| SIG     | byte (64) | Signature   |                          |
+| SIG     | byte (64) | ECDSA Signature of hash  | Hash: SHA256-256 of CBOR encoded atom  |
 | SW1-SW2 | byte (2)  | Return code | see list of return codes |
 
 --------------
@@ -162,13 +151,13 @@ is provided in initial `INS_SIGN_ATOM_SECP256K1` command.
 | --------- | --------- | -------------------------- | --------- |
 | CLA		| byte (1)  | Application Identifier     | 0xAA      |
 | INS		| byte (1)  | Instruction ID             | 0x04      |
-| P1 		| byte (1)  | Length of BIP32 Path       | 20<sup id="c1">[1](#fc1)</sup>    	 |
-| P2 		| byte (1)  | Length of Hash to sign     | 32<sup id="c2">[2](#fc2)</sup>        |
+| P1 		| byte (1)  | Length of BIP32 Path       | 20<sup id="sh1">[1](#sh1)</sup>    	 |
+| P2 		| byte (1)  | Length of Hash to sign     | 32<sup id="sh2">[2](#sh2)</sup>        |
 | L  		| byte (1)  | Length of Payload          | P1 + P2   |
 | Payload 	| byte (L)  | BIP32 path + Hash to sign  | (depends) |
 
-<b id="fc1">1:</b> 5 derivation paths with 4 bytes each => 20 bytes.  
-<b id="fc2">2:</b> SHA256 hashing algorighm used => 32 bytes long hash.  
+<b id="sh1">1:</b> 5 derivation paths with 4 bytes each => 20 bytes.  
+<b id="sh2">2:</b> SHA256 hashing algorighm used => 32 bytes long hash.  
 
 #### Response
 
