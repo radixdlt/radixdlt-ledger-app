@@ -395,7 +395,7 @@ static void parseParticleField(
 
     CBORBytePrefixForByteArray cborBytePrefix = cborBytePrefixForParticleField(field);
 
-    size_t numberOfBytesReadByCBORParser;
+    size_t numberOfBytesReadByCBORParser = valueByteCount;
     uint8_t byteString[valueByteCount];
     CborError cborError = cbor_value_copy_byte_string(
         cborValue,
@@ -422,8 +422,8 @@ static RadixParticleTypes parseSerializer(
     const size_t valueByteCount,
     CborValue *cborValue)
 {
-    size_t numberOfBytesReadByCBORParser;
-    char textString[48]; // len("radix.particles.mutable_supply_token_definition") + 1 for Null.
+    size_t numberOfBytesReadByCBORParser = valueByteCount;
+    char textString[valueByteCount]; 
     CborError cborError = cbor_value_copy_text_string(
         cborValue,
         textString,
