@@ -10,40 +10,23 @@ from hashlib import sha256
 
 def expected_printed_output():
 	return """
-Transfer at index: 0
-Address b58: JEyoKNEYawJkNTiinQh1hR9c3F57ANixyBRi9fsSEfGedumiffR
-Amount (dec): 999 E-18
-Token symbol: ZELDA
+**************************************
+Transfer 0
+    recipient address: JFeqmatdMyjxNce38w3pEfDeJ9CV6NCkygDt3kXtivHLsP3p846
+    amount: 1 E-18
+    token (RRI): ZELDA
 
+Transfer 1
+    recipient address: JG3Ntbhj144hpz2ZooKsQG3Hq7UkCMwmFMwXfaYQgKFzNXAQvo5
+    amount: 2 E-18
+    token (RRI): ZELDA
 
-Transfer at index: 1
-Address b58: JFeqmatdMyjxNce38w3pEfDeJ9CV6NCkygDt3kXtivHLsP3p846
-Amount (dec): 1 E-18
-Token symbol: ZELDA
+Transfer 2
+    recipient address: JFtJPDGvw4NDQyqCk7P5pWudNMeT8TFGCSvY9pTEqiyVhUGM9R9
+    amount: 3 E-18
+    token (RRI): ZELDA
 
-
-Transfer at index: 2
-Address b58: JEyoKNEYawJkNTiinQh1hR9c3F57ANixyBRi9fsSEfGedumiffR
-Amount (dec): 997 E-18
-Token symbol: ZELDA
-
-
-Transfer at index: 3
-Address b58: JG3Ntbhj144hpz2ZooKsQG3Hq7UkCMwmFMwXfaYQgKFzNXAQvo5
-Amount (dec): 2 E-18
-Token symbol: ZELDA
-
-
-Transfer at index: 4
-Address b58: JEyoKNEYawJkNTiinQh1hR9c3F57ANixyBRi9fsSEfGedumiffR
-Amount (dec): 994 E-18
-Token symbol: ZELDA
-
-
-Transfer at index: 5
-Address b58: JFtJPDGvw4NDQyqCk7P5pWudNMeT8TFGCSvY9pTEqiyVhUGM9R9
-Amount (dec): 3 E-18
-Token symbol: ZELDA
+**************************************
 	"""
 
 def bip32_path_big_endian_encoded():
@@ -152,12 +135,13 @@ def send_large_atom_to_ledger_in_many_chunks():
 	expectedSha256TwiceHashOfAtom = secondHasher.hexdigest()
 	hashFromLedger = result.hex()
 
-	print(f"Response: {hashFromLedger}")
-	print(f"Expected hash: {expectedSha256TwiceHashOfAtom}")
 	if expectedSha256TwiceHashOfAtom == hashFromLedger:
-		print("Awesome! Hash from ledger matches expected hash")
+		print("\n✅ Awesome! Hash from ledger matches expected hash ✅\n")
 	else:
-		print("Bah! Something is wrong with the hash")
+		print("\n ☢️ Something is wrong with the hash ☢️\n")
+		print(f"Expected hash: {expectedSha256TwiceHashOfAtom}") # 9678fe0788e78d1b6c12ba2398e1d9acbbfdb589627bfc2ebe134f27e56fb466
+		print(f"But got hash from ledger: {hashFromLedger}")
+
 	# print("Length: " + str(len(result)))
 
 	print("Expected to to parse these transfers:\n")
