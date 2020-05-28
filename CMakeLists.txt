@@ -15,13 +15,9 @@
 #********************************************************************************
 cmake_minimum_required(VERSION 3.0)
 project(radixdlt-ledger VERSION 0.0.0)
-enable_testing()
 
 cmake_policy(SET CMP0025 NEW)
 set(CMAKE_CXX_STANDARD 11)
-
-include(cmake/conan/CMakeLists.txt)
-add_subdirectory(cmake/gtest)
 
 string(APPEND CMAKE_CXX_FLAGS " -fsanitize=address -fno-omit-frame-pointer")
 string(APPEND CMAKE_LINKER_FLAGS " -fsanitize=address -fno-omit-frame-pointer")
@@ -29,83 +25,18 @@ string(APPEND CMAKE_LINKER_FLAGS " -fsanitize=address -fno-omit-frame-pointer")
 ##############################################################
 ##############################################################
 #  static libs
-file(GLOB_RECURSE JSMN_SRC
-        deps/jsmn/src/jsmn.c
-        )
 
 file(GLOB_RECURSE TINYCBOR_SRC
         deps/tinycbor/src/*.c
         deps/tinycbor/src/*.h
         )
 
-#file(GLOB_RECURSE LIB_SRC
-#        app/src/json/json_parser.c
-#        app/src/tx_parser.c
-#        app/src/tx_display.c
-#        app/src/tx_validate.c
-#        app/src/parser.c
-#        app/src/parser_impl.c
-#        )
-
 add_library(app_lib STATIC
         ${LIB_SRC}
         ${TINYCBOR_SRC}
-        ${JSMN_SRC}
         )
 
 target_include_directories(app_lib PUBLIC
-        deps/ledger-zxlib/include
-        deps/jsmn/src
         deps/tinycbor/src
         app/src
         )
-
-##############################################################
-##############################################################
-#  Tests
-file(GLOB_RECURSE TESTS_SRC
-        ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp)
-
-add_executable(unittests ${TESTS_SRC})
-target_include_directories(unittests PUBLIC
-        ${gtest_SOURCE_DIR}/include
-        ${gmock_SOURCE_DIR}/include
-        ${CONAN_INCLUDE_DIRS_FMT}
-        ${CONAN_INCLUDE_DIRS_JSONCPP}
-        deps/jsmn/src
-        )
-
-target_link_libraries(unittests PRIVATE
-        gtest_main
-        app_lib
-        CONAN_PKG::fmt
-        CONAN_PKG::jsoncpp)
-
-add_test(unittests ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unittests)
-set_tests_properties(unittests PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
-
-# file(GLOB_RECURSE FUZZING_SRC
-#         ${CMAKE_CURRENT_SOURCE_DIR}/fuzzing/fuzzingMain.cpp
-#         tests/util/common.cpp
-#         )
-
-# add_executable(fuzzing_stub ${FUZZING_SRC})
-# target_include_directories(fuzzing_stub PUBLIC
-#         app/src
-#         deps/jsmn/src
-#         )
-# target_link_libraries(fuzzing_stub app_lib)
-
-###############################################################
-# Force tests to depend from app compiling
-###############################################################
-
-#set(DISABLE_DOCKER_BUILDS OFF CACHE BOOL "Disables Docker Builds")
-#
-#if (NOT DISABLE_DOCKER_BUILDS)
-#    add_custom_target(ledger_app
-#            COMMAND make build
-#            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-#            )
-#    add_dependencies(unittests ledger_app)
-#endif ()
