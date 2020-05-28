@@ -100,6 +100,7 @@ static ByteInterval intervalOfTransferStructField(ParticleField field)
 static void readNextChunkFromHostMachineAndUpdateHash(
     size_t chunkSize)
 {
+    os_memset(G_io_apdu_buffer, 0x00, IO_APDU_BUFFER_SIZE);
     G_io_apdu_buffer[0] = 0x90;
     G_io_apdu_buffer[1] = 0x00;
     /* unsigned rx = */ io_exchange(CHANNEL_APDU, 2);
@@ -538,7 +539,7 @@ static void cacheBytesToNextChunk(
         tmp,
         numberOfBytesToCache);
 
-    PRINTF("Caching #%u bytes\n", numberOfBytesToCache);
+    // PRINTF("Caching #%u bytes\n", numberOfBytesToCache);
     ctx->numberOfCachedBytes = numberOfBytesToCache;
 }
 
@@ -583,16 +584,15 @@ static bool parseParticlesAndUpdateHash()
     uint16_t bytesLeftToRead = ctx->atomByteCount - ctx->atomByteCountParsed;
     uint16_t chunkSize = MIN(MAX_CHUNK_SIZE, bytesLeftToRead);
 
+    size_t chunkPositionInAtom = ctx->atomByteCountParsed;
+    PRINTF("\nParsing atom chunk: [%u-%u]\n", chunkPositionInAtom, (chunkPositionInAtom+chunkSize));
+
     readNextChunkFromHostMachineAndUpdateHash((size_t)chunkSize);
     
     size_t numberOfCachedBytes = ctx->numberOfCachedBytes;
     ctx->numberOfCachedBytes = 0;
-    size_t chunkPositionInAtom = ctx->atomByteCountParsed;
+
     bool doneWithCurrentSlice = false;
-
-    PRINTF("\nParsing atom chunk: [%u-%u]\n\n", chunkPositionInAtom, (chunkPositionInAtom+chunkSize));
-
-
     while (
         !doneWithCurrentSlice 
         && 
@@ -612,7 +612,7 @@ static bool parseParticlesAndUpdateHash()
 
 static void debugPrintParsedTransfers() {
     // DEBUG PRINT ALL PARSED TransferrableTokensParticles
-    PRINTF("\n\n\n**************************************\n\n");
+    PRINTF("\n**************************************\n");
 
     cx_ecfp_public_key_t myPublicKeyCompressed;
     
@@ -638,7 +638,7 @@ static void debugPrintParsedTransfers() {
         PRINTF("    token (RRI): "); printRRI(&transfer.tokenDefinitionReference); PRINTF("\n");
         PRINTF("\n");
     }
-    PRINTF("\n**************************************\n\n\n");
+    PRINTF("**************************************\n");
 }
 
 static void parseAtom()
@@ -657,7 +657,7 @@ static void parseAtom()
 
     debugPrintParsedTransfers();
 
-    PRINTF("\n\nhash: %.*H\n", HASH256_BYTE_COUNT, ctx->hash);
+    PRINTF("\nhash: %.*H\n", HASH256_BYTE_COUNT, ctx->hash);
 
     // TODO present on display all transfers
     // TODO sign!
