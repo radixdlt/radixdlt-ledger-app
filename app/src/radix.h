@@ -1,3 +1,7 @@
+#include "stdint.h"
+#include <seproxyhal_protocol.h>
+#include <os_io_seproxyhal.h>
+
 // These are the offsets of various parts of a request APDU packet. INS
 // identifies the requested command (see above), and P1 and P2 are parameters
 // to the command.
@@ -14,6 +18,10 @@
 #define DER_DECODE_RADIX 0
 
 #define BIP32_PATH_STRING_MAX_LENGTH 20 // assumed 
+// assuming a font size of 11 (`BAGL_FONT_OPEN_SANS_REGULAR_11px`)
+#define DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE 12
+
+#define ECSDA_SIGNATURE_BYTE_COUNT 64
 
 // MACROS
 #define PLOC() PRINTF("\n%s - %s:%d \n", __FILE__, __func__, __LINE__);
@@ -36,7 +44,6 @@
 // Constants
 #define SHA256_HASH_DIGEST_BYTE_COUNT 32
 #define PUBLIC_KEY_COMPRESSEED_BYTE_COUNT 33
-#define ECDSA_SIGNATURE_BYTE_COUNT 64
 
 // exception codes
 #define SW_DEVELOPER_ERR 0x6B00

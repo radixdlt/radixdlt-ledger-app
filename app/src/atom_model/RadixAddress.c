@@ -13,7 +13,7 @@ size_t to_string_radix_address(
 }
 
 bool matchesPublicKey(RadixAddress *address, cx_ecfp_public_key_t *compressedPublicKey) {
-    return matchesPublicKeyBytes(address, &(compressedPublicKey->W));
+    return matchesPublicKeyBytes(address, compressedPublicKey->W);
 }
 
 bool matchesPublicKeyBytes(RadixAddress *address, uint8_t *compressedPublicKeyBytes)
