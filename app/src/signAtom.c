@@ -10,10 +10,8 @@
 #include "sha256_hash.h"
 #include "cbor.h"
 #include "base_conversion.h"
+#include "signAtomUI.h"
 
-// Get a pointer to signHash's state variables. This is purely for
-// convenience, so that we can refer to these variables concisely from any
-// signHash-related function.
 static signAtomContext_t *ctx = &global.signAtomContext;
 
 static bool isZeroByteInterval(ByteInterval *byteInterval)
@@ -263,24 +261,6 @@ static ParticleField getNextFieldToParse() {
     }
 
     return TokenDefinitionReferenceField;
-}
-
-static void printRRI(RadixResourceIdentifier *rri) {
-    const size_t max_length = RADIX_RRI_STRING_LENGTH_MAX;
-    char rri_utf8_string[max_length];
-
-    to_string_rri(rri, rri_utf8_string, max_length, true);
-
-    PRINTF("%s", rri_utf8_string);
-}
-
-static void printTokenAmount(TokenAmount *tokenAmount) {
-    const size_t max_length = (UINT256_DEC_STRING_MAX_LENGTH + 1); // +1 for null
-    char dec_string[max_length];
-
-    to_string_uint256(tokenAmount, dec_string, max_length);
-
-    PRINTF("%s", dec_string);
 }
 
 static void finishedParsingAWholeTransfer(
@@ -610,37 +590,6 @@ static bool parseParticlesAndUpdateHash()
     return ctx->atomByteCountParsed == ctx->atomByteCount && totalNumberOfParticlesParsed() == ctx->numberOfParticlesWithSpinUp;
 }
 
-static void debugPrintParsedTransfers() {
-    // DEBUG PRINT ALL PARSED TransferrableTokensParticles
-    PRINTF("\n**************************************\n");
-
-    cx_ecfp_public_key_t myPublicKeyCompressed;
-    
-    deriveRadixKeyPair(
-        ctx->bip32Path, 
-        &myPublicKeyCompressed, 
-        NULL // dont write private key
-    );
-
-    int transferNumber = 0;
-    for (int i = 0; i < ctx->numberOfTransferrableTokensParticlesParsed; ++i)
-    {
-        Transfer transfer = ctx->transfers[i];
-
-        if (matchesPublicKey(&transfer.address, &myPublicKeyCompressed)) {
-            continue; // dont display "change" (money back) to you (i.e. transfers to your own address.)
-        }
-
-        PRINTF("Transfer %u\n", transferNumber);
-        transferNumber++;
-        PRINTF("    recipient address: "); printRadixAddress(&transfer.address); PRINTF("\n");
-        PRINTF("    amount: "), printTokenAmount(&transfer.amount); PRINTF(" E-18\n");
-        PRINTF("    token (RRI): "); printRRI(&transfer.tokenDefinitionReference); PRINTF("\n");
-        PRINTF("\n");
-    }
-    PRINTF("**************************************\n");
-}
-
 static void parseAtom()
 {
     bool finishedParsingWholeAtomAndAllParticles = false;
@@ -654,16 +603,6 @@ static void parseAtom()
     assert(totalNumberOfParticlesParsed() == ctx->numberOfParticlesWithSpinUp);
 
     PRINTF("\n\n.-~=*#^^^ FINISHED PARSING _all_ PARTICLES ^^^#*=~-.\n\n");
-
-    debugPrintParsedTransfers();
-
-    PRINTF("\nhash: %.*H\n", HASH256_BYTE_COUNT, ctx->hash);
-
-    // TODO present on display all transfers
-    // TODO sign!
-    os_memcpy(G_io_apdu_buffer, ctx->hash, HASH256_BYTE_COUNT);
-    io_exchange_with_code(SW_OK, HASH256_BYTE_COUNT);
-    PRINTF("\nTODO sign hash and present transfers on display...\nLEDGER IS READY FOR MORE COMMANDS\n");
 }
 
 // p1 = #particlesWithSpinUp
@@ -793,9 +732,14 @@ void handleSignAtom(
     ctx->hasConfirmedSerializerOfTransferrableTokensParticle = false;
     ctx->numberOfNonTransferrableTokensParticlesIdentified = 0;
     ctx->numberOfTransferrableTokensParticlesParsed = 0;
+    ctx->numberOfTransfersToNotMyAddress = 0;
 
     // INSTRUCTIONS ON HOW TO PARSE PARTICLES FROM ATOM RECEIVED => start parsing
     // This will be done in `ctx->atomByteCount / CHUNK_SIZE` number of chunks
     // by 'streaming' data in this chunks using multiple `io_exchange` calls.
     parseAtom();
+
+    presentAtomContentsOnDisplay(flags);
+    *flags |= IO_ASYNCH_REPLY;
+    PRINTF("'SignAtom' command finished => LEDGER IS READY FOR MORE COMMANDS\n");
 }
