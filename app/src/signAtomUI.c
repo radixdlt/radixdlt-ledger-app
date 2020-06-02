@@ -8,19 +8,8 @@ static signAtomContext_t *ctx = &global.signAtomContext;
 // ===== START ====== APPROVE HASH->SIGN =================
 static void didFinishSignAtomFlow()
 {
+    deriveSignRespond(ctx->bip32Path, ctx->hash);
     PRINTF("\n\nWOHO!!! DID FINISH FLOW!\n\n");
-    // Derive the secret key and sign the hash, storing the signature in
-    // the APDU buffer.
-
-    uint8_t ecdsaSignatureR_S[ECSDA_SIGNATURE_BYTE_COUNT];
-    deriveAndSign(ctx->bip32Path, ctx->hash, ecdsaSignatureR_S);
-    os_memcpy(G_io_apdu_buffer, ecdsaSignatureR_S, ECSDA_SIGNATURE_BYTE_COUNT);
-
-    // Send the data in the APDU buffer, along with a special code that
-    // indicates approval. 64 is the number of bytes in the response APDU,
-    // sans response code.
-    io_exchange_with_code(SW_OK, ECSDA_SIGNATURE_BYTE_COUNT);
-    // Return to the main screen.
     ui_idle();
 }
 
