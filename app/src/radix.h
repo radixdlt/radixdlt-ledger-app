@@ -79,13 +79,9 @@ void deriveRadixKeyPair(
     cx_ecfp_private_key_t *privateKey_nullable
 );
 
-// deriveAndSign derives a secp256k1 private key from a BIP32 path and the
-// Ledger seed, and uses it to produce a 64-byte ECDSA signature (DER decoded)
-// of the provided 32-byte hash. The key is cleared from memory after signing.
-void deriveAndSign(
+void deriveSignRespond(
     uint32_t *bip32path, 
-    const uint8_t *hash,
-    uint8_t *output_signature_R_S
+    const uint8_t *hash
 );
 
 // bin2hex converts binary to hex and appends a final NUL byte.

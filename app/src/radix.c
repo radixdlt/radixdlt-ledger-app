@@ -205,10 +205,9 @@ static void format_signature_out(const uint8_t* signature) {
   memmove(G_io_apdu_buffer+offset+32-xlength, signature+xoffset, xlength);
 }
 
-void deriveAndSign(
+void deriveSignRespond(
     uint32_t *bip32path, 
-    const uint8_t *hash,
-    uint8_t *output_signature_R_S
+    const uint8_t *hash
 ) {
 
 	cx_ecfp_public_key_t publicKey;
@@ -250,6 +249,8 @@ void deriveAndSign(
     }
 
     format_signature_out(der_sig);
+
+    io_exchange_with_code(SW_OK, 65);
 
     // bool successful = parse_der(der_sig, derSignatureLength, output_signature_R_S, 64);
     // if (!successful) {

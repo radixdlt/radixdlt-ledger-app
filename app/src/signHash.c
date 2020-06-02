@@ -98,18 +98,9 @@ static unsigned int ui_signHash_approve_button(unsigned int button_mask, unsigne
 		}
 
 		case BUTTON_EVT_RELEASED | BUTTON_RIGHT: { // APPROVE
-			// Derive the secret key and sign the hash, storing the signature in
-			// the APDU buffer.
-			
-			// int signature_byte_count = 64 + 1; // +1 for NULL
-			// uint8_t ecdsaSignatureR_S[100];
-			deriveAndSign(ctx->bip32Path, ctx->hash, NULL);
-			// os_memcpy(G_io_apdu_buffer, ecdsaSignatureR_S, signature_byte_count);
 
-			// Send the data in the APDU buffer, along with a special code that
-			// indicates approval. 64 is the number of bytes in the response APDU,
-			// sans response code.
-			io_exchange_with_code(SW_OK, 65); // +1 for null
+			deriveSignRespond(ctx->bip32Path, ctx->hash);
+
 			// Return to the main screen.
 			ui_idle();
 			break;
