@@ -126,7 +126,74 @@ static void proceedToDisplayingHash() {
 
 
 
-// ===== START ====== APPROVE TRANSFERS =================
+
+// ===== START ====== APPROVE DETAILS OF EACH TRANSFER  =================
+static const bagl_element_t ui_sign_approve_tx[] = {
+    UI_BACKGROUND(),
+
+    UI_ICON_LEFT(0x00, BAGL_GLYPH_ICON_CROSS),
+    UI_ICON_RIGHT(0x00, BAGL_GLYPH_ICON_CHECK),
+
+
+    UI_TEXT(0x00, 0, 12, 128, "Approve TX:"),
+    UI_TEXT(0x00, 0, 26, 128, global.signAtomContext.partialString12Char),
+};
+
+static void proceedToDisplayingDetailsForTransfer();
+
+static unsigned int ui_sign_approve_tx_button(
+    unsigned int button_mask, 
+    unsigned int button_mask_counter
+) {
+    switch (button_mask) {
+        case BUTTON_EVT_RELEASED | BUTTON_LEFT: { // REJECT
+            io_exchange_with_code(SW_USER_REJECTED, 0);
+            ui_idle();
+            break;
+        }
+        case BUTTON_EVT_RELEASED | BUTTON_RIGHT: { // Approve
+            ctx->numberOfTransfersToNotMyAddressApproved++;
+            if (ctx->numberOfTransfersToNotMyAddressApproved < ctx->numberOfTransfersToNotMyAddress) {
+                // Proceed with next transfer
+                proceedToDisplayingDetailsForTransfer();
+            }
+            else
+            {
+                // Finished accepting all transfers
+                proceedToDisplayingHash();
+            }
+            break;
+        }
+    }
+    return 0;
+}
+
+
+static void proceedToDisplayingDetailsForTransfer() {
+    assert(ctx->numberOfTransfersToNotMyAddressApproved < ctx->numberOfTransfersToNotMyAddress);
+    PRINTF("\nNow displaying details for transfer: %d\n", ctx->numberOfTransfersToNotMyAddressApproved);
+    snprintf(ctx->partialString12Char, DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE, "tx@index: %d\0", ctx->numberOfTransfersToNotMyAddressApproved);
+    UX_DISPLAY(ui_sign_approve_tx, NULL);
+}
+
+static void proceedToDisplayingDetailsForEachTransfer() {
+    PRINTF("\nNow displaying details for each transfer on display\n");
+    
+    ctx->numberOfTransfersToNotMyAddressApproved = 0;
+    proceedToDisplayingDetailsForTransfer();
+}
+// ===== END ====== APPROVE DETAILS OF EACH TRANSFER  =================
+
+
+
+
+
+
+
+
+
+
+// ===== START ====== APPROVE NO OF TRANSFERS =================
 static const bagl_element_t ui_sign_approve_transfers[] = {
     UI_BACKGROUND(),
 
@@ -149,7 +216,7 @@ static unsigned int ui_sign_approve_transfers_button(
             break;
         }
         case BUTTON_EVT_RELEASED | BUTTON_RIGHT: { // Approve
-            proceedToDisplayingHash();
+            proceedToDisplayingDetailsForEachTransfer();
             break;
         }
     }
@@ -214,6 +281,7 @@ static void filterOutTransfersBackToMeFromAllTransfers(bool debugPrintTransferTo
 
 static void proceedToDisplayingTransfersIfAny() {
     if (ctx->numberOfTransferrableTokensParticlesParsed > 0) {
+
         filterOutTransfersBackToMeFromAllTransfers(true);
 
         if (ctx->numberOfTransfersToNotMyAddress > 9) {
@@ -227,7 +295,7 @@ static void proceedToDisplayingTransfersIfAny() {
         proceedToDisplayingHash();
     }
 }
-// ===== END ====== APPROVE TRANSFERS =================
+// ===== END ====== APPROVE NO OF TRANSFERS =================
 
 
 
