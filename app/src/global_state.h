@@ -125,6 +125,7 @@ typedef struct {
 	uint8_t numberOfNonTransferrableTokensParticlesIdentified;
     uint8_t numberOfTransferrableTokensParticlesParsed;
     uint8_t numberOfTransfersToNotMyAddress;
+    uint8_t numberOfTransfersToNotMyAddressApproved;
 
 	RadixParticleTypes nonTransferrableTokensParticlesIdentified[MAX_AMOUNT_OF_OTHER_PARTICLES_WITH_SPIN_UP];
 
