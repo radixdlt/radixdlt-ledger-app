@@ -5,27 +5,26 @@ from ledgerblue.commException import CommException
 import argparse
 import struct
 import math
-from hashlib import sha256
+import binascii
 
 
 def expected_printed_output():
 	return """
 **************************************
-Transfer 0
+Transfer 1
     recipient address: JFeqmatdMyjxNce38w3pEfDeJ9CV6NCkygDt3kXtivHLsP3p846
     amount: 1 E-18
     token (RRI): ZELDA
 
-Transfer 1
+Transfer 2
     recipient address: JG3Ntbhj144hpz2ZooKsQG3Hq7UkCMwmFMwXfaYQgKFzNXAQvo5
     amount: 2 E-18
     token (RRI): ZELDA
 
-Transfer 2
+Transfer 3
     recipient address: JFtJPDGvw4NDQyqCk7P5pWudNMeT8TFGCSvY9pTEqiyVhUGM9R9
     amount: 3 E-18
     token (RRI): ZELDA
-
 **************************************
 	"""
 
@@ -128,19 +127,19 @@ def send_large_atom_to_ledger_in_many_chunks():
 		chunkIndex += 1
 		print(f"numberOfBytesThatHaveBeenSentToLedger: {numberOfBytesThatHaveBeenSentToLedger}, atomByteCount: {atomByteCount}")
 
-	firstHasher = sha256()
-	firstHasher.update(atomBytes)
-	secondHasher = sha256()
-	secondHasher.update(firstHasher.digest())
-	expectedSha256TwiceHashOfAtom = secondHasher.hexdigest()
-	hashFromLedger = result.hex()
+	responseFromLedgerContainingSignature = result.hex()
+	signatureFromLedger = responseFromLedgerContainingSignature[2:130]
 
-	if expectedSha256TwiceHashOfAtom == hashFromLedger:
-		print("\n✅ Awesome! Hash from ledger matches expected hash ✅\n")
+	
+	expectedSignatureHex = "1f4b599e8983345745d76eefda8edec0b300604c11115e4e79bc3275acb40a884f8e6d91204aea49b51d3ba497a4cbce9d5cd4d008608fdf4e741ee948f910e1"
+	expectedSignature = bytearray.fromhex(expectedSignatureHex)
+
+	if expectedSignatureHex == signatureFromLedger:
+		print("\n✅ Awesome! Signature from ledger matches that from Swift library ✅\n")
 	else:
-		print("\n ☢️ Something is wrong with the hash ☢️\n")
-		print(f"Expected hash: {expectedSha256TwiceHashOfAtom}") # 9678fe0788e78d1b6c12ba2398e1d9acbbfdb589627bfc2ebe134f27e56fb466
-		print(f"But got hash from ledger: {hashFromLedger}")
+		print("\n ☢️ Signature mismatch ☢️\n")
+		print(f"Expected signature: {expectedSignatureHex}") 
+		print(f"But got signature from ledger: {signatureFromLedger}")
 
 	# print("Length: " + str(len(result)))
 
