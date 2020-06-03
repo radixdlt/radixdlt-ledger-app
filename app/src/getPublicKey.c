@@ -33,8 +33,9 @@ static getPublicKeyContext_t *ctx = &global.getPublicKeyContext;
 // public key (or address) on their device to the one shown on the computer.
 static const bagl_element_t ui_getPublicKey_compare[] = {
         UI_BACKGROUND(),
-        UI_ICON_LEFT(0x01, BAGL_GLYPH_ICON_LEFT),
-        UI_ICON_RIGHT(0x02, BAGL_GLYPH_ICON_RIGHT),
+        ICON_LEFT_ARROW,
+        ICON_RIGHT_ARROW,
+
         UI_TEXT(0x00, 0, 12, 128, "Compare:"),
         // The visible portion of the public key or address.
         UI_TEXT(0x00, 0, 26, 128, global.getPublicKeyContext.partialStr),
@@ -91,8 +92,10 @@ static unsigned int ui_getPublicKey_compare_button(
 // generation of the public key (or address).
 static const bagl_element_t ui_getPublicKey_approve[] = {
         UI_BACKGROUND(),
-        UI_ICON_LEFT(0x00, BAGL_GLYPH_ICON_CROSS),
-        UI_ICON_RIGHT(0x00, BAGL_GLYPH_ICON_CHECK),
+
+        ICON_CROSS_L,
+        ICON_CHECK_R,
+
         // These two lines form a complete sentence:
         //
         //    Gen PubKey

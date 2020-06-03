@@ -6,15 +6,27 @@ static signAtomContext_t *ctx = &global.signAtomContext;
 
 
 // ===== START ===== HELPERS =========
-
-#define APPROVAL_SCREEN(textLine1, textLine2)   \
- {                                              \
-    UI_BACKGROUND(),                            \
-    UI_ICON_LEFT(0x00, BAGL_GLYPH_ICON_CROSS),  \
-    UI_ICON_RIGHT(0x00, BAGL_GLYPH_ICON_CHECK), \
-    UI_TEXT(0x00, 0, 11, 128, textLine1),       \
-    UI_TEXT(0x00, 0, 26, 128, textLine2),       \
+#define APPROVAL_SCREEN_TWO_LINES(textLine1, textLine2) \
+    {                                                   \
+        UI_BACKGROUND(),                                \
+        ICON_CROSS_L,                                   \
+        ICON_CHECK_R,                                   \
+        UI_TEXT(0x00, 0, 11, 128, textLine1),           \
+        UI_TEXT(0x00, 0, 26, 128, textLine2),           \
 }
+
+#define APPROVAL_SCREEN(textLine1) APPROVAL_SCREEN_TWO_LINES(textLine1, global.signAtomContext.partialString12Char)
+
+#define SEEK_SCREEN_TWO_LINES(textLine1, textLine2) \
+    {                                               \
+        UI_BACKGROUND(),                            \
+        ICON_LEFT_ARROW,                            \
+        ICON_RIGHT_ARROW,                           \
+        UI_TEXT(0x00, 0, 11, 128, textLine1),       \
+        UI_TEXT(0x00, 0, 26, 128, textLine2),       \
+}
+
+#define SEEK_SCREEN(textLine1) SEEK_SCREEN_TWO_LINES(textLine1, global.signAtomContext.partialString12Char)
 
 static unsigned int reject_or_approve(
     unsigned int button_mask, 
@@ -135,13 +147,7 @@ static void didFinishSignAtomFlow()
     ui_idle();
 }
 
-static const bagl_element_t ui_sign_confirm_signing[] = {
-	UI_BACKGROUND(),
-	UI_ICON_LEFT(0x00, BAGL_GLYPH_ICON_CROSS),
-	UI_ICON_RIGHT(0x00, BAGL_GLYPH_ICON_CHECK),
-	UI_TEXT(0x00, 0, 11, 128, "Sign w key"),
-	UI_TEXT(0x00, 0, 26, 128, global.signAtomContext.bip32PathString),
-};
+static const bagl_element_t ui_sign_confirm_signing[] = APPROVAL_SCREEN_TWO_LINES("Sign w key", global.signAtomContext.bip32PathString);
 
 static unsigned int ui_sign_confirm_signing_button(
     unsigned int button_mask, 
@@ -150,13 +156,7 @@ static unsigned int ui_sign_confirm_signing_button(
     reject_or_approve(button_mask, button_mask_counter, didFinishSignAtomFlow);
 }
 
-static const bagl_element_t ui_sign_approve_hash_compare[] = {
-    UI_BACKGROUND(),
-	UI_ICON_LEFT(0x01, BAGL_GLYPH_ICON_LEFT),
-	UI_ICON_RIGHT(0x02, BAGL_GLYPH_ICON_RIGHT),
-	UI_TEXT(0x00, 0, 11, 128, "Verify Hash"),
-	UI_TEXT(0x00, 0, 26, 128, global.signAtomContext.partialString12Char),
-};
+static const bagl_element_t ui_sign_approve_hash_compare[] = SEEK_SCREEN("Verify Hash");
 
 static const bagl_element_t *ui_prepro_sign_approve_hash_compare(const bagl_element_t *element) {
     return preprocessor_for_seeking(element, HASH256_BYTE_COUNT * 2);
@@ -195,13 +195,7 @@ static void proceedToDisplayingHash() {
 static void proceedToDisplayingDetailsForTransfer();
 
 // ==== START ======= STEP 4/4: RRI ========
-static const bagl_element_t ui_sign_approve_tx_step4of4_rri[] = {
-    UI_BACKGROUND(),
-    UI_ICON_LEFT(0x00, BAGL_GLYPH_ICON_CROSS),
-    UI_ICON_RIGHT(0x00, BAGL_GLYPH_ICON_CHECK),
-    UI_TEXT(0x00, 0, 11, 128, "Token:"),
-    UI_TEXT(0x00, 0, 26, 128, global.signAtomContext.partialString12Char),
-};
+static const bagl_element_t ui_sign_approve_tx_step4of4_rri[] = SEEK_SCREEN("Token:");
 
 static const bagl_element_t *ui_prepro_sign_approve_tx_step4of4_rri(const bagl_element_t *element) {
     return preprocessor_for_seeking(element, RADIX_RRI_STRING_LENGTH_MAX);
@@ -239,17 +233,12 @@ static void prepareForApprovalOfRRI() {
 
 
 // ==== START ======= STEP 3/4: Amount ========
-static const bagl_element_t ui_sign_approve_tx_step3of4_amount[] = {
-    UI_BACKGROUND(),
-    UI_ICON_LEFT(0x00, BAGL_GLYPH_ICON_CROSS),
-    UI_ICON_RIGHT(0x00, BAGL_GLYPH_ICON_CHECK),
-    UI_TEXT(0x00, 0, 11, 128, "Amount:"),
-    UI_TEXT(0x00, 0, 26, 128, global.signAtomContext.partialString12Char),
-};
+static const bagl_element_t ui_sign_approve_tx_step3of4_amount[] = APPROVAL_SCREEN("Amount:");
+// static const bagl_element_t ui_sign_approve_tx_step3of4_amount[] = SEEK_SCREEN("Amount:");
 
-static const bagl_element_t *ui_prepro_sign_approve_tx_step3of4_amount(const bagl_element_t *element) {
-    return preprocessor_for_seeking(element, UINT256_DEC_STRING_MAX_LENGTH);
-}
+// static const bagl_element_t *ui_prepro_sign_approve_tx_step3of4_amount(const bagl_element_t *element) {
+//     return preprocessor_for_seeking(element, UINT256_DEC_STRING_MAX_LENGTH);
+// }
 
 static void didApproveAmountInTransferProceedWithRRI()
 {
@@ -260,12 +249,14 @@ static unsigned int ui_sign_approve_tx_step3of4_amount_button(
     unsigned int button_mask, 
     unsigned int button_mask_counter
 ) {
-    seek_left_right_or_approve(button_mask, button_mask_counter, didApproveAmountInTransferProceedWithRRI);
+    // seek_left_right_or_approve(button_mask, button_mask_counter, didApproveAmountInTransferProceedWithRRI);
+    reject_or_approve(button_mask, button_mask_counter, didApproveAmountInTransferProceedWithRRI);
 }
 
 static void prepareForApprovalOfAmount() {
     resetDisplayAndDisplayFieldInStructTransfer(AmountField);
-    UX_DISPLAY(ui_sign_approve_tx_step3of4_amount, ui_prepro_sign_approve_tx_step3of4_amount);
+    // UX_DISPLAY(ui_sign_approve_tx_step3of4_amount, ui_prepro_sign_approve_tx_step3of4_amount);
+    UX_DISPLAY(ui_sign_approve_tx_step3of4_amount, NULL);
 }
 // ==== END ======= STEP 3/4: Amount ========
 
@@ -275,13 +266,7 @@ static void prepareForApprovalOfAmount() {
 
 
 // ==== START ======= STEP 2/4: Address ========
-static const bagl_element_t ui_sign_approve_tx_step2of4_address[] = {
-    UI_BACKGROUND(),
-    UI_ICON_LEFT(0x00, BAGL_GLYPH_ICON_CROSS),
-    UI_ICON_RIGHT(0x00, BAGL_GLYPH_ICON_CHECK),
-    UI_TEXT(0x00, 0, 11, 128, "To address: "),
-    UI_TEXT(0x00, 0, 26, 128, global.signAtomContext.partialString12Char),
-};
+static const bagl_element_t ui_sign_approve_tx_step2of4_address[] = SEEK_SCREEN("To address:");
 
 static const bagl_element_t *ui_prepro_sign_approve_tx_step2of4_address(const bagl_element_t *element) {
     return preprocessor_for_seeking(element, UINT256_DEC_STRING_MAX_LENGTH);
@@ -307,17 +292,8 @@ static void prepareForApprovalOfAddress() {
 
 
 
-
-
-
-
-static const bagl_element_t ui_sign_approve_tx_step1of4_txid[] = {
-    UI_BACKGROUND(),
-    UI_ICON_LEFT(0x00, BAGL_GLYPH_ICON_CROSS),
-    UI_ICON_RIGHT(0x00, BAGL_GLYPH_ICON_CHECK),
-    UI_TEXT(0x00, 0, 11, 128, "Approve TX:"),
-    UI_TEXT(0x00, 0, 26, 128, global.signAtomContext.partialString12Char),
-};
+// ==== START ==== APPROVE TX DETAILS STEP 1/4: Transfer number =====
+static const bagl_element_t ui_sign_approve_tx_step1of4_txid[] = APPROVAL_SCREEN("Approve TX:");
 
 static void proceedWithApprovalOfTransferAddress() {
     prepareForApprovalOfAddress();
@@ -349,19 +325,13 @@ static void proceedToDisplayingDetailsForEachTransfer() {
     proceedToDisplayingDetailsForTransfer();
 }
 
+
 // ===== END ====== APPROVE DETAILS OF EACH TRANSFER  =================
 
 
-// ===== START ====== APPROVE NO OF TRANSFERS =================
-static const bagl_element_t ui_sign_approve_transfers[] = APPROVAL_SCREEN("Found #TX:", global.signAtomContext.partialString12Char);
 
-// static const bagl_element_t ui_sign_approve_transfers[] = {
-//     UI_BACKGROUND(),
-//     UI_ICON_LEFT(0x00, BAGL_GLYPH_ICON_CROSS),
-//     UI_ICON_RIGHT(0x00, BAGL_GLYPH_ICON_CHECK),
-//     UI_TEXT(0x00, 0, 11, 128, "Found #TX:"),
-//     UI_TEXT(0x00, 0, 26, 128, global.signAtomContext.partialString12Char),
-// };
+// ===== START ====== APPROVE NO OF TRANSFERS =================
+static const bagl_element_t ui_sign_approve_transfers[] = APPROVAL_SCREEN("Found #TX:");
 
 
 static unsigned int ui_sign_approve_transfers_button(
@@ -374,18 +344,14 @@ static unsigned int ui_sign_approve_transfers_button(
 static void printRRI(RadixResourceIdentifier *rri) {
     const size_t max_length = RADIX_RRI_STRING_LENGTH_MAX;
     char rri_utf8_string[max_length];
-
     to_string_rri(rri, rri_utf8_string, max_length, true);
-
     PRINTF("%s", rri_utf8_string);
 }
 
 static void printTokenAmount(TokenAmount *tokenAmount) {
     const size_t max_length = (UINT256_DEC_STRING_MAX_LENGTH + 1); // +1 for null
     char dec_string[max_length];
-
     to_string_uint256(tokenAmount, dec_string, max_length);
-
     PRINTF("%s", dec_string);
 }
 
@@ -457,14 +423,7 @@ static void proceedToDisplayingTransfersIfAny() {
 
 
 // ===== START ====== APPROVE NON-TRANSFER DATA =================
-static const bagl_element_t ui_sign_approve_nonTransferData[] = {
-    UI_BACKGROUND(),
-    UI_ICON_LEFT(0x00, BAGL_GLYPH_ICON_CROSS),
-    UI_ICON_RIGHT(0x00, BAGL_GLYPH_ICON_CHECK),
-    UI_TEXT(0x00, 0, 11, 128, "Non-transfer"),
-    UI_TEXT(0x00, 0, 26, 128, "data found!!"),
-};
-
+static const bagl_element_t ui_sign_approve_nonTransferData[] = APPROVAL_SCREEN_TWO_LINES("Non-transfer", "data found!!");
 
 static unsigned int ui_sign_approve_nonTransferData_button(
     unsigned int button_mask, 

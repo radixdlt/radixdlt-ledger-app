@@ -20,8 +20,17 @@ extern ux_state_t ux;
 // you'll want to read include/bagl.h and include/os_io_seproxyhal.h in the
 // nanos-secure-sdk repo to learn what each of the fields are used for.
 #define UI_BACKGROUND() {{BAGL_RECTANGLE,0,0,0,128,32,0,0,BAGL_FILL,0,0xFFFFFF,0,0},NULL,0,0,0,NULL,NULL,NULL}
-#define UI_ICON_LEFT(userid, glyph) {{BAGL_ICON,userid,3,12,7,7,0,0,0,0xFFFFFF,0,0,glyph},NULL,0,0,0,NULL,NULL,NULL}
-#define UI_ICON_RIGHT(userid, glyph) {{BAGL_ICON,userid,117,13,8,6,0,0,0,0xFFFFFF,0,0,glyph},NULL,0,0,0,NULL,NULL,NULL}
+
+#define UI_ICON_LEFT_ID(userid, glyph) {{BAGL_ICON,userid,3,12,7,7,0,0,0,0xFFFFFF,0,0,glyph},NULL,0,0,0,NULL,NULL,NULL}
+#define UI_ICON_LEFT(glyph) UI_ICON_LEFT_ID(0x00, glyph)
+#define ICON_LEFT_ARROW UI_ICON_LEFT_ID(0x01, BAGL_GLYPH_ICON_LEFT)
+#define ICON_CROSS_L UI_ICON_LEFT(BAGL_GLYPH_ICON_CROSS)
+
+#define UI_ICON_RIGHT_ID(userid, glyph) {{BAGL_ICON,userid,117,13,8,6,0,0,0,0xFFFFFF,0,0,glyph},NULL,0,0,0,NULL,NULL,NULL}
+#define UI_ICON_RIGHT(glyph) UI_ICON_RIGHT_ID(0x00, glyph)
+#define ICON_RIGHT_ARROW UI_ICON_RIGHT_ID(0x02, BAGL_GLYPH_ICON_RIGHT)
+#define ICON_CHECK_R UI_ICON_RIGHT(BAGL_GLYPH_ICON_CHECK)
+
 #define UI_TEXT(userid, x, y, w, text) {{BAGL_LABELINE,userid,x,y,w,12,0,0,0,0xFFFFFF,0,BAGL_FONT_OPEN_SANS_REGULAR_11px|BAGL_FONT_ALIGNMENT_CENTER,0},(char *)text,0,0,0,NULL,NULL,NULL}
 
 // ui_idle displays the main menu screen. Command handlers should call ui_idle

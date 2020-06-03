@@ -36,39 +36,11 @@ static signHashContext_t *ctx = &global.signHashContext;
 // Screens are arrays of elements; the order of elements determines the order
 // in which they are rendered. Elements cannot be modified at runtime.
 static const bagl_element_t ui_signHash_approve[] = {
-	// The background; literally a black rectangle. This element must be
-	// defined first, so that the other elements render on top of it. Also, if
-	// your screen doesn't include a background, it will render directly on
-	// top of the previous screen.
 	UI_BACKGROUND(),
 
-	// Rejection/approval icons, represented by a cross and a check mark,
-	// respectively. The cross will be displayed on the far left of the
-	// screen, and the check on the far right, so as to indicate which button
-	// corresponds to each action.
-	UI_ICON_LEFT(0x00, BAGL_GLYPH_ICON_CROSS),
-	UI_ICON_RIGHT(0x00, BAGL_GLYPH_ICON_CHECK),
+	ICON_CROSS_L,
+	ICON_CHECK_R,
 
-	// The two lines of text, which together form a complete sentence:
-	//
-	//    Sign this Hash
-	//    with Key #123?
-	//
-	// The first line is always the same, but the second line must reflect
-	// which signing key is used. Hence, the first UI_TEXT points to a
-	// compile-time string literal, while the second points to a buffer whose
-	// contents we can modify.
-	//
-	// There is an important restriction here, though: the elements of a
-	// screen are declared const, so their fields cannot be modified at
-	// runtime. In other words, we can change the *contents* of the text
-	// buffer, but we cannot change the *pointer* to the buffer, and thus we
-	// cannot resize it. (This is also why we cannot write ctx->indexStr: ctx
-	// is not const.) So it is important to ensure that the buffer will be
-	// large enough to hold any string we want to display. In practice, the
-	// Nano S screen is only wide enough for a small number of characters, so
-	// you should never need a buffer larger than 40 bytes. Later on, we'll
-	// demonstrate a technique for displaying larger strings.
 	UI_TEXT(0x00, 0, 12, 128, "Sign this Hash"),
 	UI_TEXT(0x00, 0, 26, 128, global.signHashContext.bip32PathString),
 };
@@ -122,8 +94,8 @@ static const bagl_element_t ui_signHash_compare[] = {
 	// Left and right buttons for scrolling the text. The 0x01 and 0x02 are
 	// called userids; they allow the preprocessor (below) to know which
 	// element it's examining.
-	UI_ICON_LEFT(0x01, BAGL_GLYPH_ICON_LEFT),
-	UI_ICON_RIGHT(0x02, BAGL_GLYPH_ICON_RIGHT),
+	ICON_LEFT_ARROW,
+	ICON_RIGHT_ARROW,
 
 	// Two lines of text: a header and the contents of the hash. We will be
 	// implementing a fancy scrollable text field, so the second line only
