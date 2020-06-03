@@ -124,8 +124,11 @@ typedef struct {
 
 	uint8_t numberOfNonTransferrableTokensParticlesIdentified;
     uint8_t numberOfTransferrableTokensParticlesParsed;
+
     uint8_t numberOfTransfersToNotMyAddress;
-    uint8_t numberOfTransfersToNotMyAddressApproved;
+	uint8_t indiciesTransfersToNotMyAddress[MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP];
+
+	uint8_t numberOfTransfersToNotMyAddressApproved;
 
 	RadixParticleTypes nonTransferrableTokensParticlesIdentified[MAX_AMOUNT_OF_OTHER_PARTICLES_WITH_SPIN_UP];
 
@@ -158,7 +161,7 @@ typedef struct {
 	// ===== START DISPLAY ========
 	uint8_t displayIndex;
 	// NUL-terminated strings for display
-	uint8_t fullString64Char[(2 * HASH256_BYTE_COUNT) + 1]; // 1 for null
+	uint8_t fullString[RADIX_RRI_STRING_LENGTH_MAX]; // the RRI is the longest data we wanna display
 	uint8_t partialString12Char[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE + 1]; //+1 for NULL
 } signAtomContext_t;
 
