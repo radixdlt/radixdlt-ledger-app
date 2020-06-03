@@ -734,6 +734,7 @@ void handleSignAtom(
     ctx->numberOfNonTransferrableTokensParticlesIdentified = 0;
     ctx->numberOfTransferrableTokensParticlesParsed = 0;
     ctx->numberOfTransfersToNotMyAddress = 0;
+    ctx->lengthOfFullString = 0;
 
     // INSTRUCTIONS ON HOW TO PARSE PARTICLES FROM ATOM RECEIVED => start parsing
     // This will be done in `ctx->atomByteCount / CHUNK_SIZE` number of chunks
