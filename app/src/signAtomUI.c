@@ -6,25 +6,9 @@ static signAtomContext_t *ctx = &global.signAtomContext;
 
 
 // ===== START ===== HELPERS =========
-#define APPROVAL_SCREEN_TWO_LINES(textLine1, textLine2) \
-    {                                                   \
-        UI_BACKGROUND(),                                \
-        ICON_CROSS_L,                                   \
-        ICON_CHECK_R,                                   \
-        UI_TEXT(0x00, 0, 11, 128, textLine1),           \
-        UI_TEXT(0x00, 0, 26, 128, textLine2),           \
-}
+
 
 #define APPROVAL_SCREEN(textLine1) APPROVAL_SCREEN_TWO_LINES(textLine1, global.signAtomContext.partialString12Char)
-
-#define SEEK_SCREEN_TWO_LINES(textLine1, textLine2) \
-    {                                               \
-        UI_BACKGROUND(),                            \
-        ICON_LEFT_ARROW,                            \
-        ICON_RIGHT_ARROW,                           \
-        UI_TEXT(0x00, 0, 11, 128, textLine1),       \
-        UI_TEXT(0x00, 0, 26, 128, textLine2),       \
-}
 
 #define SEEK_SCREEN(textLine1) SEEK_SCREEN_TWO_LINES(textLine1, global.signAtomContext.partialString12Char)
 

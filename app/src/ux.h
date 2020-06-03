@@ -31,7 +31,54 @@ extern ux_state_t ux;
 #define ICON_RIGHT_ARROW UI_ICON_RIGHT_ID(0x02, BAGL_GLYPH_ICON_RIGHT)
 #define ICON_CHECK_R UI_ICON_RIGHT(BAGL_GLYPH_ICON_CHECK)
 
-#define UI_TEXT(userid, x, y, w, text) {{BAGL_LABELINE,userid,x,y,w,12,0,0,0,0xFFFFFF,0,BAGL_FONT_OPEN_SANS_REGULAR_11px|BAGL_FONT_ALIGNMENT_CENTER,0},(char *)text,0,0,0,NULL,NULL,NULL}
+#define UI_TEXT(userid, x, y, w, text) { \
+    { \
+        BAGL_LABELINE, \
+        userid, \
+        x, \
+        y, \
+        w, \
+        12, \
+        0, \
+        0, \
+        0, \
+        0xFFFFFF, \
+        0, \
+        BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, \
+        0 \
+    }, \
+    \
+    (char *)text, \
+    0, \
+    0, \
+    0, \
+    NULL, \
+    NULL, \
+    NULL \
+}
+
+#define TEXT_UPPER_ID(userid, text) UI_TEXT(userid, 0, 11, 128, text)
+#define TEXT_UPPER(text) TEXT_UPPER_ID(0x00, text)
+#define TEXT_LOWER_ID(userid, text) UI_TEXT(userid, 0, 26, 128, text)
+#define TEXT_LOWER(text) TEXT_LOWER_ID(0x00, text)
+
+#define APPROVAL_SCREEN_TWO_LINES(textLine1, textLine2) \
+    {                                                   \
+        UI_BACKGROUND(),                                \
+        ICON_CROSS_L,                                   \
+        ICON_CHECK_R,                                   \
+        TEXT_UPPER(textLine1),           \
+        TEXT_LOWER(textLine2),           \
+}
+
+#define SEEK_SCREEN_TWO_LINES(textLine1, textLine2) \
+    {                                               \
+        UI_BACKGROUND(),                            \
+        ICON_LEFT_ARROW,                            \
+        ICON_RIGHT_ARROW,                           \
+        TEXT_UPPER(textLine1),           \
+        TEXT_LOWER(textLine2),           \
+}
 
 // ui_idle displays the main menu screen. Command handlers should call ui_idle
 // when they finish.
