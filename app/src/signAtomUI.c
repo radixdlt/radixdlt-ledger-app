@@ -84,29 +84,35 @@ static void resetDisplay() {
     os_memset(ctx->partialString12Char, 0x00, DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE);
     os_memmove(ctx->partialString12Char, ctx->fullString, DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE);
     ctx->partialString12Char[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE] = '\0';
-	ctx->displayIndex = 0;
+    ctx->displayIndex = 0;
 }
 
 static void resetDisplayAndDisplayFieldInStructTransfer(ParticleField field) {
 
-    os_memset(ctx->fullString, 0x00, RADIX_RRI_STRING_LENGTH_MAX);
+    os_memset(ctx->fullString, 0x00, MAX_LENGTH_FULL_STR_DISPLAY);
 
     Transfer *transfer = nextTransfer();
     switch (field)
     {
     case AddressField:
     {
-        to_string_radix_address(&(transfer->address), ctx->fullString, RADIX_ADDRESS_BASE58_CHAR_COUNT_MAX + 1);
+        size_t number_of_chars_to_copy = RADIX_ADDRESS_BASE58_CHAR_COUNT_MAX + 1;
+        assert(number_of_chars_to_copy <= MAX_LENGTH_FULL_STR_DISPLAY);
+        ctx->lengthOfFullString = to_string_radix_address(&(transfer->address), ctx->fullString, number_of_chars_to_copy);
         break;
     }
     case AmountField:
     {
-        to_string_uint256(&(transfer->amount), ctx->fullString, UINT256_DEC_STRING_MAX_LENGTH + 1);
+        size_t number_of_chars_to_copy = UINT256_DEC_STRING_MAX_LENGTH + 1;
+        assert(number_of_chars_to_copy <= MAX_LENGTH_FULL_STR_DISPLAY);
+        ctx->lengthOfFullString = to_string_uint256(&(transfer->amount), ctx->fullString, number_of_chars_to_copy);
         break;
     }
     case TokenDefinitionReferenceField:
     {
-        to_string_rri(&(transfer->tokenDefinitionReference), ctx->fullString, RADIX_RRI_STRING_LENGTH_MAX + 1, false);
+        size_t number_of_chars_to_copy = RADIX_RRI_STRING_LENGTH_MAX + 1;
+        assert(number_of_chars_to_copy <= MAX_LENGTH_FULL_STR_DISPLAY);
+        ctx->lengthOfFullString = to_string_rri(&(transfer->tokenDefinitionReference), ctx->fullString, number_of_chars_to_copy, false);
         break;
     }
     default:
@@ -159,7 +165,9 @@ static unsigned int ui_sign_approve_hash_compare_button(
 
 static void proceedToDisplayingHash() {
     PRINTF("\nHash should be visible on display: %.*H\n", HASH256_BYTE_COUNT, ctx->hash);
-	bin2hex(ctx->fullString, HASH256_BYTE_COUNT*2+1, ctx->hash, HASH256_BYTE_COUNT); // + 1 for NULL
+    size_t lengthOfHashString = HASH256_BYTE_COUNT * 2 + 1; // + 1 for NULL
+    bin2hex(ctx->fullString, lengthOfHashString, ctx->hash, HASH256_BYTE_COUNT); 
+    ctx->lengthOfFullString = lengthOfHashString;
     resetDisplay();
     UX_DISPLAY(ui_sign_approve_hash_compare, ui_prepro_sign_approve_hash_compare);
 }
@@ -295,7 +303,9 @@ static void proceedToDisplayingDetailsForTransfer() {
 
     PRINTF("\nNow displaying details for transfer: %d\n", ctx->numberOfTransfersToNotMyAddressApproved);
 
-    snprintf(ctx->fullString, DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE, "tx@index: %d\0", ctx->numberOfTransfersToNotMyAddressApproved);
+    size_t lengthOfTransferAtIndexString = DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE;
+    snprintf(ctx->fullString, lengthOfTransferAtIndexString, "tx@index: %d\0", ctx->numberOfTransfersToNotMyAddressApproved);
+    ctx->lengthOfFullString = lengthOfTransferAtIndexString;
     resetDisplay();
 
     UX_DISPLAY(ui_sign_approve_tx_step1of4_txid, NULL);

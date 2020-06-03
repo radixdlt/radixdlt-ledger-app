@@ -101,6 +101,9 @@ typedef struct {
 // The biggest of a value split across chunks might be the `rri`
 #define MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS (RADIX_RRI_MAX_BYTE_COUNT - 1)
 
+// Size of some string used for displaying long text on disaply
+#define MAX_LENGTH_FULL_STR_DISPLAY UINT256_DEC_STRING_MAX_LENGTH + 1 // +1 for NULL
+
 typedef struct {
 	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
 	uint8_t bip32PathString[BIP32_PATH_STRING_MAX_LENGTH]; // variable-length
@@ -161,7 +164,8 @@ typedef struct {
 	// ===== START DISPLAY ========
 	uint8_t displayIndex;
 	// NUL-terminated strings for display
-	uint8_t fullString[RADIX_RRI_STRING_LENGTH_MAX]; // the RRI is the longest data we wanna display
+	uint8_t fullString[MAX_LENGTH_FULL_STR_DISPLAY]; // the RRI is the longest data we wanna display
+	uint8_t lengthOfFullString;
 	uint8_t partialString12Char[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE + 1]; //+1 for NULL
 } signAtomContext_t;
 
