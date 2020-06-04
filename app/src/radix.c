@@ -5,7 +5,6 @@
 #include "radix.h"
 #include "os_io_seproxyhal.h"
 #include "stringify_bip32_path.h"
-#include "deserialize_DER_signature.h"
 
 #define KEY_SEED_BYTE_COUNT 32
 

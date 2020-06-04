@@ -1,13 +1,16 @@
-// #include "global_state.h"
-// #include "radix.h"
 #include "ux.h"
 
 static signAtomContext_t *ctx = &global.signAtomContext;
 
+typedef enum {
+    ReviewStart = 0,
+    ReviewAddress,
+    ReviewAmount,
+    ReviewRRI
+} ReviewTransferStep;
+
 
 // ===== START ===== HELPERS =========
-
-
 #define APPROVAL_SCREEN(textLine1) APPROVAL_SCREEN_TWO_LINES(textLine1, global.signAtomContext.partialString12Char)
 
 #define SEEK_SCREEN(textLine1) SEEK_SCREEN_TWO_LINES(textLine1, global.signAtomContext.partialString12Char)
@@ -87,28 +90,35 @@ static void resetDisplay() {
     ctx->displayIndex = 0;
 }
 
-static void resetDisplayAndDisplayFieldInStructTransfer(ParticleField field) {
+static void copyOverTransferDataToFullStringAndResetDisplayForStep(ReviewTransferStep step) {
 
     os_memset(ctx->fullString, 0x00, MAX_LENGTH_FULL_STR_DISPLAY);
 
     Transfer *transfer = nextTransfer();
-    switch (field)
+    switch (step)
     {
-    case AddressField:
+    case ReviewStart: 
+    {
+        size_t lengthOfTransferAtIndexString = DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE;
+        snprintf(ctx->fullString, lengthOfTransferAtIndexString, "tx@index: %d", ctx->numberOfTransfersToNotMyAddressApproved);
+        ctx->lengthOfFullString = lengthOfTransferAtIndexString;
+        break;
+    }
+    case ReviewAddress: 
     {
         size_t number_of_chars_to_copy = RADIX_ADDRESS_BASE58_CHAR_COUNT_MAX + 1;
         assert(number_of_chars_to_copy <= MAX_LENGTH_FULL_STR_DISPLAY);
         ctx->lengthOfFullString = to_string_radix_address(&(transfer->address), ctx->fullString, number_of_chars_to_copy);
         break;
     }
-    case AmountField:
+    case ReviewAmount:
     {
         size_t number_of_chars_to_copy = UINT256_DEC_STRING_MAX_LENGTH + 1;
         assert(number_of_chars_to_copy <= MAX_LENGTH_FULL_STR_DISPLAY);
         ctx->lengthOfFullString = to_string_uint256(&(transfer->amount), ctx->fullString, number_of_chars_to_copy);
         break;
     }
-    case TokenDefinitionReferenceField:
+    case ReviewRRI:
     {
         size_t number_of_chars_to_copy = RADIX_RRI_STRING_LENGTH_MAX + 1;
         assert(number_of_chars_to_copy <= MAX_LENGTH_FULL_STR_DISPLAY);
@@ -116,17 +126,12 @@ static void resetDisplayAndDisplayFieldInStructTransfer(ParticleField field) {
         break;
     }
     default:
-        FATAL_ERROR("Unknown field: %d", field);
+        FATAL_ERROR("Unknown step: %d", step);
     }
 
     resetDisplay();
 }
 // ===== END ===== HELPERS =========
-
-
-
-
-
 
 
 // ===== START ====== APPROVE HASH->SIGN =================
@@ -175,16 +180,22 @@ static void proceedToDisplayingHash() {
 
 
 
-
-
-
-
-
-
-
-
 // ===== START ====== APPROVE DETAILS OF EACH TRANSFER  =================
-static void proceedToDisplayingDetailsForTransfer();
+static void proceedWithNextTransfer();
+
+static void proceedWithNextTransferIfAnyElseDisplayHash()
+{
+    // approved RRI -> finished with this transfer => proceed
+    ctx->numberOfTransfersToNotMyAddressApproved++;
+    if (ctx->numberOfTransfersToNotMyAddressApproved < ctx->numberOfTransfersToNotMyAddress) {
+        proceedWithNextTransfer();
+    } else {
+        // Finished accepting all transfers
+        proceedToDisplayingHash();
+    }
+}
+
+
 
 // ==== START ======= STEP 4/4: RRI ========
 static const bagl_element_t ui_sign_approve_tx_step4of4_rri[] = SEEK_SCREEN("Token:");
@@ -193,66 +204,30 @@ static const bagl_element_t *ui_prepro_sign_approve_tx_step4of4_rri(const bagl_e
     return preprocessor_for_seeking(element, RADIX_RRI_STRING_LENGTH_MAX);
 }
 
-static void didConfirmRRIEitherProceedWithNextTransferOrDisplayHashIfDone()
-{
-    // approved RRI -> finished with this transfer => proceed
-    ctx->numberOfTransfersToNotMyAddressApproved++;
-    if (ctx->numberOfTransfersToNotMyAddressApproved < ctx->numberOfTransfersToNotMyAddress) {
-        // Proceed with next transfer
-        proceedToDisplayingDetailsForTransfer();
-    } else {
-        // Finished accepting all transfers
-        proceedToDisplayingHash();
-    }
-}
-
-static unsigned int ui_sign_approve_tx_step4of4_rri_button(
-    unsigned int button_mask, 
-    unsigned int button_mask_counter
-) {
-    seek_left_right_or_approve(button_mask, button_mask_counter, didConfirmRRIEitherProceedWithNextTransferOrDisplayHashIfDone);
+static unsigned int ui_sign_approve_tx_step4of4_rri_button(unsigned int button_mask, unsigned int button_mask_counter) {
+    seek_left_right_or_approve(button_mask, button_mask_counter, proceedWithNextTransferIfAnyElseDisplayHash);
 }
 
 static void prepareForApprovalOfRRI() {
-    resetDisplayAndDisplayFieldInStructTransfer(TokenDefinitionReferenceField);
+    copyOverTransferDataToFullStringAndResetDisplayForStep(ReviewRRI);
     UX_DISPLAY(ui_sign_approve_tx_step4of4_rri, ui_prepro_sign_approve_tx_step4of4_rri);
 }
 // ==== END ======= STEP 4/4: RRI ========
 
 
 
-
-
-
 // ==== START ======= STEP 3/4: Amount ========
 static const bagl_element_t ui_sign_approve_tx_step3of4_amount[] = APPROVAL_SCREEN("Amount:");
-// static const bagl_element_t ui_sign_approve_tx_step3of4_amount[] = SEEK_SCREEN("Amount:");
 
-// static const bagl_element_t *ui_prepro_sign_approve_tx_step3of4_amount(const bagl_element_t *element) {
-//     return preprocessor_for_seeking(element, UINT256_DEC_STRING_MAX_LENGTH);
-// }
-
-static void didApproveAmountInTransferProceedWithRRI()
-{
-    prepareForApprovalOfRRI();
-}
-
-static unsigned int ui_sign_approve_tx_step3of4_amount_button(
-    unsigned int button_mask, 
-    unsigned int button_mask_counter
-) {
-    // seek_left_right_or_approve(button_mask, button_mask_counter, didApproveAmountInTransferProceedWithRRI);
-    reject_or_approve(button_mask, button_mask_counter, didApproveAmountInTransferProceedWithRRI);
+static unsigned int ui_sign_approve_tx_step3of4_amount_button(unsigned int button_mask, unsigned int button_mask_counter) {
+    reject_or_approve(button_mask, button_mask_counter, prepareForApprovalOfRRI);
 }
 
 static void prepareForApprovalOfAmount() {
-    resetDisplayAndDisplayFieldInStructTransfer(AmountField);
-    // UX_DISPLAY(ui_sign_approve_tx_step3of4_amount, ui_prepro_sign_approve_tx_step3of4_amount);
+    copyOverTransferDataToFullStringAndResetDisplayForStep(ReviewAmount);
     UX_DISPLAY(ui_sign_approve_tx_step3of4_amount, NULL);
 }
 // ==== END ======= STEP 3/4: Amount ========
-
-
 
 
 
@@ -264,59 +239,40 @@ static const bagl_element_t *ui_prepro_sign_approve_tx_step2of4_address(const ba
     return preprocessor_for_seeking(element, UINT256_DEC_STRING_MAX_LENGTH);
 }
 
-static void didApproveAaddressInTransferProceedWithAmount()
-{
-    prepareForApprovalOfAmount();
-}
-
-static unsigned int ui_sign_approve_tx_step2of4_address_button(
-    unsigned int button_mask, 
-    unsigned int button_mask_counter
-) {
-    seek_left_right_or_approve(button_mask, button_mask_counter, didApproveAaddressInTransferProceedWithAmount);
+static unsigned int ui_sign_approve_tx_step2of4_address_button(unsigned int button_mask, unsigned int button_mask_counter) {
+    seek_left_right_or_approve(button_mask, button_mask_counter, prepareForApprovalOfAmount);
 }
 
 static void prepareForApprovalOfAddress() {
-    resetDisplayAndDisplayFieldInStructTransfer(AddressField);
+    copyOverTransferDataToFullStringAndResetDisplayForStep(ReviewAddress);
     UX_DISPLAY(ui_sign_approve_tx_step2of4_address, ui_prepro_sign_approve_tx_step2of4_address);
 }
 // ==== END ======= STEP 2/4: Address ========
 
 
 
+
 // ==== START ==== APPROVE TX DETAILS STEP 1/4: Transfer number =====
 static const bagl_element_t ui_sign_approve_tx_step1of4_txid[] = APPROVAL_SCREEN("Approve TX:");
-
-static void proceedWithApprovalOfTransferAddress() {
-    prepareForApprovalOfAddress();
-}
 
 static unsigned int ui_sign_approve_tx_step1of4_txid_button(
     unsigned int button_mask, 
     unsigned int button_mask_counter
 ) {
-    reject_or_approve(button_mask, button_mask_counter, proceedWithApprovalOfTransferAddress);
+    reject_or_approve(button_mask, button_mask_counter, prepareForApprovalOfAddress);
 }
 
-static void proceedToDisplayingDetailsForTransfer() {
+static void proceedWithNextTransfer() {
     assert(ctx->numberOfTransfersToNotMyAddressApproved < ctx->numberOfTransfersToNotMyAddress);
-
-    PRINTF("\nNow displaying details for transfer: %d\n", ctx->numberOfTransfersToNotMyAddressApproved);
-
-    size_t lengthOfTransferAtIndexString = DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE;
-    snprintf(ctx->fullString, lengthOfTransferAtIndexString, "tx@index: %d\0", ctx->numberOfTransfersToNotMyAddressApproved);
-    ctx->lengthOfFullString = lengthOfTransferAtIndexString;
-    resetDisplay();
+    copyOverTransferDataToFullStringAndResetDisplayForStep(ReviewStart);
 
     UX_DISPLAY(ui_sign_approve_tx_step1of4_txid, NULL);
 }
-
 // ==== END ==== APPROVE TX DETAILS STEP 1/4: Transfer number =====
+
 static void proceedToDisplayingDetailsForEachTransfer() {
-    PRINTF("\nNow displaying details for each transfer on display\n");
-    
     ctx->numberOfTransfersToNotMyAddressApproved = 0;
-    proceedToDisplayingDetailsForTransfer();
+    proceedWithNextTransfer();
 }
 
 
@@ -327,11 +283,7 @@ static void proceedToDisplayingDetailsForEachTransfer() {
 // ===== START ====== APPROVE NO OF TRANSFERS =================
 static const bagl_element_t ui_sign_approve_transfers[] = APPROVAL_SCREEN("Found #TX:");
 
-
-static unsigned int ui_sign_approve_transfers_button(
-    unsigned int button_mask, 
-    unsigned int button_mask_counter
-) {
+static unsigned int ui_sign_approve_transfers_button(unsigned int button_mask, unsigned int button_mask_counter) {
     reject_or_approve(button_mask, button_mask_counter, proceedToDisplayingDetailsForEachTransfer);
 }
 
@@ -393,12 +345,15 @@ static void proceedToDisplayingTransfersIfAny() {
 
         filterOutTransfersBackToMeFromAllTransfers(true);
 
-        if (ctx->numberOfTransfersToNotMyAddress > 9) {
-            snprintf(ctx->partialString12Char, DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE, "no of tx:%02d\0", ctx->numberOfTransfersToNotMyAddress);
+        if (ctx->numberOfTransfersToNotMyAddress == 1) {
+            prepareForApprovalOfAddress();
         } else {
-            snprintf(ctx->partialString12Char, DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE, "no of tx: %d\0", ctx->numberOfTransfersToNotMyAddress);
+            if (ctx->numberOfTransfersToNotMyAddress > 9) {
+                snprintf(ctx->partialString12Char, DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE, "no of tx:%02d\0", ctx->numberOfTransfersToNotMyAddress);
+            } else {
+                snprintf(ctx->partialString12Char, DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE, "no of tx: %d\0", ctx->numberOfTransfersToNotMyAddress);
+            }
         }
-
         UX_DISPLAY(ui_sign_approve_transfers, NULL);
     } else {
         proceedToDisplayingHash();
@@ -408,21 +363,10 @@ static void proceedToDisplayingTransfersIfAny() {
 
 
 
-
-
-
-
-
-
-
-
 // ===== START ====== APPROVE NON-TRANSFER DATA =================
 static const bagl_element_t ui_sign_approve_nonTransferData[] = APPROVAL_SCREEN_TWO_LINES("Non-transfer", "data found!!");
 
-static unsigned int ui_sign_approve_nonTransferData_button(
-    unsigned int button_mask, 
-    unsigned int button_mask_counter
-) {
+static unsigned int ui_sign_approve_nonTransferData_button(unsigned int button_mask, unsigned int button_mask_counter) {
     reject_or_approve(button_mask, button_mask_counter, proceedToDisplayingTransfersIfAny);
 }
 
@@ -431,9 +375,6 @@ static void notifyNonTransferDataFound() {
     UX_DISPLAY(ui_sign_approve_nonTransferData, NULL);
 }
 // ===== END ====== APPROVE NON-TRANSFER DATA =================
-
-
-
 
 
 
