@@ -1,1 +1,0 @@
-bool parse_der(uint8_t *der, uint8_t der_len, volatile uint8_t *sig, uint8_t sig_sz);
