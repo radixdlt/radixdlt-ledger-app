@@ -164,9 +164,10 @@ static int ecdsa_sign_or_verify_hash(
             out, outlen, 
             &result_info
         );
-        if (result_info & CX_ECCINFO_PARITY_ODD) {
-            out[0] |= 0x01;
-        }
+    //    if (result_info & CX_ECCINFO_PARITY_ODD)
+    //    {
+    //        out[0] |= 0x01;
+    //    }
     }
     else
     {
@@ -182,29 +183,7 @@ static int ecdsa_sign_or_verify_hash(
     return result;
 }
 
-static void format_signature_out(const uint8_t* signature) {
-  os_memset(G_io_apdu_buffer + 1, 0x00, 64);
-  uint8_t offset = 1;
-  uint8_t xoffset = 4; //point to r value
-  //copy r
-  uint8_t xlength = signature[xoffset-1];
-  if (xlength == 33) {
-    xlength = 32;
-    xoffset ++;
-  }
-  memmove(G_io_apdu_buffer+offset+32-xlength,  signature+xoffset, xlength);
-  offset += 32;
-  xoffset += xlength +2; //move over rvalue and TagLEn
-  //copy s value
-  xlength = signature[xoffset-1];
-  if (xlength == 33) {
-    xlength = 32;
-    xoffset ++;
-  }
-  memmove(G_io_apdu_buffer+offset+32-xlength, signature+xoffset, xlength);
-}
-
-void deriveSignRespond(
+size_t deriveSignRespond(
     uint32_t *bip32path, 
     const uint8_t *hash
 ) {
@@ -213,13 +192,13 @@ void deriveSignRespond(
 	cx_ecfp_private_key_t privateKey;
 	deriveRadixKeyPair(bip32path, &publicKey, &privateKey);
 
-    int over_estimated_DER_sig_length = 100; // min length is 70. 
+    int over_estimated_DER_sig_length = 80; // min length is 70. 
     uint8_t der_sig[over_estimated_DER_sig_length];
     int actual_DER_sig_length = 0;
 
     BEGIN_TRY {
         TRY {
-            PRINTF("About to sign hash\n");
+            // PRINTF("About to sign hash\n");
             actual_DER_sig_length = ecdsa_sign_or_verify_hash(
                 &privateKey, 
                 NULL, // pubkey not needed for sign
@@ -230,12 +209,13 @@ void deriveSignRespond(
                 over_estimated_DER_sig_length,
                 1 // use deterministic signing
             );
-            PRINTF("DER encoded signature has length: %d\n", actual_DER_sig_length);
-            PRINTF("DER encoded signature is: %.*H\n", actual_DER_sig_length, der_sig);
+            // PRINTF("DER encoded signature has length: %d\n", actual_DER_sig_length);
+            // PRINTF("DER encoded signature is: %.*H\n", actual_DER_sig_length, der_sig);
         }
         CATCH_OTHER(e) {
-            PRINTF("Failed to sign, got some error: %d\n, e");
-        } 
+            // PRINTF("Failed to sign, got some error: %d\n, e");
+            THROW(0x9988);
+        }
         FINALLY {
         	os_memset(&privateKey, 0, sizeof(privateKey));
         }
@@ -247,16 +227,9 @@ void deriveSignRespond(
         FATAL_ERROR("LENGTH MISMATCH");
     }
 
-    format_signature_out(der_sig);
+    os_memcpy(G_io_apdu_buffer, der_sig, actual_DER_sig_length);
 
-    io_exchange_with_code(SW_OK, 65);
-
-    // bool successful = parse_der(der_sig, derSignatureLength, output_signature_R_S, 64);
-    // if (!successful) {
-    //     FATAL_ERROR("Failed to DER decode signature??\n");
-    // }
-
-    // PRINTF("Signature RS: %.*H\n", 64, output_signature_R_S);
+    return actual_DER_sig_length;
 }
 
 void bin2hex(uint8_t *dst, uint64_t dstlen, uint8_t *data, uint64_t inlen) {

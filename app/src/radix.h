@@ -79,7 +79,7 @@ void deriveRadixKeyPair(
     cx_ecfp_private_key_t *privateKey_nullable
 );
 
-void deriveSignRespond(
+size_t deriveSignRespond(
     uint32_t *bip32path, 
     const uint8_t *hash
 );
