@@ -137,7 +137,12 @@ static void copyOverTransferDataToFullStringAndResetDisplayForStep(ReviewTransfe
 static void didFinishSignAtomFlow()
 {
     int tx = deriveSignRespond(ctx->bip32Path, ctx->hash);
-    io_exchange_with_code(SW_OK, tx);
+
+    G_io_apdu_buffer[tx++] = 0x90;
+    G_io_apdu_buffer[tx++] = 0x00;
+    // Send back the response, do not restart the event loop
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
+
     ui_idle();
 }
 

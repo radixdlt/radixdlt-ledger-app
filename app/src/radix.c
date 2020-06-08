@@ -141,6 +141,27 @@ void deriveRadixKeyPair(
     os_memset(&privateKeyLocal, 0, sizeof(privateKeyLocal));
 }
 
+void format_signature_out(const uint8_t* signature) {
+  os_memset(G_io_apdu_buffer + 1, 0x00, 64);
+  uint8_t offset = 1;
+  uint8_t xoffset = 4; //point to r value
+  //copy r
+  uint8_t xlength = signature[xoffset-1];
+  if (xlength == 33) {
+    xlength = 32;
+    xoffset ++;
+  }
+  memmove(G_io_apdu_buffer+offset+32-xlength,  signature+xoffset, xlength);
+  offset += 32;
+  xoffset += xlength +2; //move over rvalue and TagLEn
+  //copy s value
+  xlength = signature[xoffset-1];
+  if (xlength == 33) {
+    xlength = 32;
+    xoffset ++;
+  }
+  memmove(G_io_apdu_buffer+offset+32-xlength, signature+xoffset, xlength);
+}
 
 
 static int ecdsa_sign_or_verify_hash(
@@ -164,10 +185,10 @@ static int ecdsa_sign_or_verify_hash(
             out, outlen, 
             &result_info
         );
-    //    if (result_info & CX_ECCINFO_PARITY_ODD)
-    //    {
-    //        out[0] |= 0x01;
-    //    }
+       if (result_info & CX_ECCINFO_PARITY_ODD)
+       {
+           out[0] |= 0x01;
+       }
     }
     else
     {
@@ -227,9 +248,9 @@ size_t deriveSignRespond(
         FATAL_ERROR("LENGTH MISMATCH");
     }
 
-    os_memcpy(G_io_apdu_buffer, der_sig, actual_DER_sig_length);
+    format_signature_out(der_sig);
 
-    return actual_DER_sig_length;
+    return ECSDA_SIGNATURE_BYTE_COUNT + 1;
 }
 
 void bin2hex(uint8_t *dst, uint64_t dstlen, uint8_t *data, uint64_t inlen) {

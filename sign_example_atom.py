@@ -175,11 +175,12 @@ Transfers: {}
 		chunk_index += 1
 
 
-	signature_from_ledger_device = result.hex()
-	expected_signature_hex = vector.expected_signature_DER_hex()
+	signature_from_ledger_device_raw = result.hex()
+	signature_from_ledger_device = signature_from_ledger_device_raw[2:]
+	expected_signature_hex = vector.expected_signature_rs_hex()
 
 	if expected_signature_hex == signature_from_ledger_device:
-		print(f"\n✅ Awesome! Signature from ledger matches that from Swift library ✅\nDER signature: {signature_from_ledger_device}")
+		print(f"\n✅ Awesome! Signature from ledger matches that from Swift library ✅\nSignature: {signature_from_ledger_device}")
 	else:
 		print("\n ☢️ Signature mismatch ☢️\n")
 		print(f"Expected signature: {expected_signature_hex}") 
