@@ -217,15 +217,32 @@ static void prepareForApprovalOfRRI() {
 
 
 // ==== START ======= STEP 3/4: Amount ========
-static const bagl_element_t ui_sign_approve_tx_step3of4_amount[] = APPROVAL_SCREEN("Amount:");
 
-static unsigned int ui_sign_approve_tx_step3of4_amount_button(unsigned int button_mask, unsigned int button_mask_counter) {
+// ==== START == NO SEEK
+static const bagl_element_t ui_sign_approve_tx_step3of4_amount_no_seek[] = APPROVAL_SCREEN("Amount:");
+
+static unsigned int ui_sign_approve_tx_step3of4_amount_no_seek_button(unsigned int button_mask, unsigned int button_mask_counter) {
     reject_or_approve(button_mask, button_mask_counter, prepareForApprovalOfRRI);
+}
+// === END == NO SEEK
+
+static const bagl_element_t ui_sign_approve_tx_step3of4_amount_seek[] = SEEK_SCREEN("Amount:");
+
+static const bagl_element_t *ui_prepro_sign_approve_tx_step3of4_amount_seek(const bagl_element_t *element) {
+    return preprocessor_for_seeking(element, UINT256_DEC_STRING_MAX_LENGTH);
+}
+
+static unsigned int ui_sign_approve_tx_step3of4_amount_seek_button(unsigned int button_mask, unsigned int button_mask_counter) {
+    seek_left_right_or_approve(button_mask, button_mask_counter, prepareForApprovalOfRRI);
 }
 
 static void prepareForApprovalOfAmount() {
     copyOverTransferDataToFullStringAndResetDisplayForStep(ReviewAmount);
-    UX_DISPLAY(ui_sign_approve_tx_step3of4_amount, NULL);
+    if (ctx->lengthOfFullString > DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE) {
+        UX_DISPLAY(ui_sign_approve_tx_step3of4_amount_seek, ui_prepro_sign_approve_tx_step3of4_amount_seek);
+    } else {
+        UX_DISPLAY(ui_sign_approve_tx_step3of4_amount_no_seek, NULL);
+    }
 }
 // ==== END ======= STEP 3/4: Amount ========
 
@@ -341,8 +358,9 @@ static void filterOutTransfersBackToMeFromAllTransfers(bool debugPrintTransferTo
 }
 
 static void proceedToDisplayingTransfersIfAny() {
-    if (ctx->numberOfTransferrableTokensParticlesParsed > 0) {
-
+    if (ctx->numberOfTransferrableTokensParticlesParsed == 0) {
+        proceedToDisplayingHash();
+    } else { 
         filterOutTransfersBackToMeFromAllTransfers(true);
 
         if (ctx->numberOfTransfersToNotMyAddress == 1) {
@@ -355,8 +373,6 @@ static void proceedToDisplayingTransfersIfAny() {
             }
         }
         UX_DISPLAY(ui_sign_approve_transfers, NULL);
-    } else {
-        proceedToDisplayingHash();
     }
 }
 // ===== END ====== APPROVE NO OF TRANSFERS =================
