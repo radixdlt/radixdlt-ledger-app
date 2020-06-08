@@ -39,7 +39,7 @@ APPPATH = "44'/536'"
 APP_LOAD_PARAMS = --delete $(COMMON_LOAD_PARAMS)
 APP_LOAD_PARAMS += --appFlags 0x40 # 0x200 ? WHAT IS THIS?!
 APP_LOAD_PARAMS += --path $(APPPATH) 
-# APP_LOAD_PARAMS += --curve secp256k1
+APP_LOAD_PARAMS += --curve secp256k1
 
 
 ifeq ($(TARGET_NAME),TARGET_NANOS)

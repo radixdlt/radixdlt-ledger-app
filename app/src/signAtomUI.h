@@ -1,3 +1,1 @@
-void presentAtomContentsOnDisplay(
-    volatile unsigned int *flags
-);
+void presentAtomContentsOnDisplay();

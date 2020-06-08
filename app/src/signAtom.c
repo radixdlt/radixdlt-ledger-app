@@ -741,7 +741,8 @@ void handleSignAtom(
     // by 'streaming' data in this chunks using multiple `io_exchange` calls.
     parseAtom();
 
-    presentAtomContentsOnDisplay(flags);
-    *flags |= IO_ASYNCH_REPLY;
-    PRINTF("'SignAtom' command finished => LEDGER IS READY FOR MORE COMMANDS\n");
+    *flags |= IO_ASYNCH_REPLY; // Too early? set after first call to `UX_DISPLAY` in `signAtomUI.c` ?
+
+    presentAtomContentsOnDisplay();
+
 }

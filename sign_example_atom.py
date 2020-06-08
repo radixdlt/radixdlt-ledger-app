@@ -61,6 +61,9 @@ class TestVector(object):
 	def expected_signature_rs_hex(self) -> str:
 		return self.expected['signatureRSOfAtomHashHex']
 
+	def expected_signature_DER_hex(self) -> str:
+		return self.expected['signatureDEROfAtomHashHex']
+
 	def up_particles_dict(self):
 		non_filtered_up_particle_count_dict = self.atomDescription['upParticles']
 		return { key:value for (key,value) in non_filtered_up_particle_count_dict.items() if value > 0 }
@@ -118,9 +121,7 @@ Transfers: {}
 	hasher.update(first_digest)
 	hash_of_atom = hasher.hexdigest()
 
-	if hash_of_atom == vector.expected_hash_hex():
-		print("\n✅ Awesome! Calculated hash matches the expected one that from Swift library ✅\n")
-	else:
+	if hash_of_atom != vector.expected_hash_hex():
 		print("\n ☢️ Hash mismatch ☢️\n")
 		print(f"Expected hash: {vector.expected_hash_hex()}") 
 		print(f"But calculated hash: {hash_of_atom}")
@@ -173,23 +174,20 @@ Transfers: {}
 		result = dongle.exchange(apdu)
 		chunk_index += 1
 
-	response_from_ledger_device_w_signature = result.hex()
-	signature_from_ledger_device = response_from_ledger_device_w_signature[2:130]
 
-	
-	expected_signature_hex = vector.expected_signature_rs_hex()
+	signature_from_ledger_device = result.hex()
+	expected_signature_hex = vector.expected_signature_DER_hex()
 
 	if expected_signature_hex == signature_from_ledger_device:
-		print("\n✅ Awesome! Signature from ledger matches that from Swift library ✅\n")
+		print(f"\n✅ Awesome! Signature from ledger matches that from Swift library ✅\nDER signature: {signature_from_ledger_device}")
 	else:
 		print("\n ☢️ Signature mismatch ☢️\n")
 		print(f"Expected signature: {expected_signature_hex}") 
 		print(f"But got signature from ledger: {signature_from_ledger_device}")
+		return
 
-	# print("Length: " + str(len(result)))
+	print("⭐️ DONE! ⭐️")
 
-	print("Expected to to parse these transfers:\n")
-	print(vector.expected_printed_output())
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description="Stream CBOR encoded atom to Ledger for signing.")

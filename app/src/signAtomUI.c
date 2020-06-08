@@ -133,12 +133,11 @@ static void copyOverTransferDataToFullStringAndResetDisplayForStep(ReviewTransfe
 }
 // ===== END ===== HELPERS =========
 
-
 // ===== START ====== APPROVE HASH->SIGN =================
 static void didFinishSignAtomFlow()
 {
-    deriveSignRespond(ctx->bip32Path, ctx->hash);
-    PRINTF("\n\nWOHO!!! DID FINISH FLOW!\n\n");
+    int tx = deriveSignRespond(ctx->bip32Path, ctx->hash);
+    io_exchange_with_code(SW_OK, tx);
     ui_idle();
 }
 
@@ -148,7 +147,7 @@ static unsigned int ui_sign_confirm_signing_button(
     unsigned int button_mask, 
     unsigned int button_mask_counter
 ) {
-    reject_or_approve(button_mask, button_mask_counter, didFinishSignAtomFlow);
+    return reject_or_approve(button_mask, button_mask_counter, didFinishSignAtomFlow);
 }
 
 static const bagl_element_t ui_sign_approve_hash_compare[] = SEEK_SCREEN("Verify Hash");
@@ -165,11 +164,11 @@ static unsigned int ui_sign_approve_hash_compare_button(
     unsigned int button_mask, 
     unsigned int button_mask_counter
 ) {
-    seek_left_right_or_approve(button_mask, button_mask_counter, didApproveHashProceedWithFinalConfirmationBeforeSigning);
+    return seek_left_right_or_approve(button_mask, button_mask_counter, didApproveHashProceedWithFinalConfirmationBeforeSigning);
 }
 
 static void proceedToDisplayingHash() {
-    PRINTF("\nHash should be visible on display: %.*H\n", HASH256_BYTE_COUNT, ctx->hash);
+    // PRINTF("\nHash should be visible on display: %.*H\n", HASH256_BYTE_COUNT, ctx->hash);
     size_t lengthOfHashString = HASH256_BYTE_COUNT * 2 + 1; // + 1 for NULL
     bin2hex(ctx->fullString, lengthOfHashString, ctx->hash, HASH256_BYTE_COUNT); 
     ctx->lengthOfFullString = lengthOfHashString;
@@ -205,7 +204,7 @@ static const bagl_element_t *ui_prepro_sign_approve_tx_step4of4_rri(const bagl_e
 }
 
 static unsigned int ui_sign_approve_tx_step4of4_rri_button(unsigned int button_mask, unsigned int button_mask_counter) {
-    seek_left_right_or_approve(button_mask, button_mask_counter, proceedWithNextTransferIfAnyElseDisplayHash);
+    return seek_left_right_or_approve(button_mask, button_mask_counter, proceedWithNextTransferIfAnyElseDisplayHash);
 }
 
 static void prepareForApprovalOfRRI() {
@@ -222,7 +221,7 @@ static void prepareForApprovalOfRRI() {
 static const bagl_element_t ui_sign_approve_tx_step3of4_amount_no_seek[] = APPROVAL_SCREEN("Amount:");
 
 static unsigned int ui_sign_approve_tx_step3of4_amount_no_seek_button(unsigned int button_mask, unsigned int button_mask_counter) {
-    reject_or_approve(button_mask, button_mask_counter, prepareForApprovalOfRRI);
+    return reject_or_approve(button_mask, button_mask_counter, prepareForApprovalOfRRI);
 }
 // === END == NO SEEK
 
@@ -233,7 +232,7 @@ static const bagl_element_t *ui_prepro_sign_approve_tx_step3of4_amount_seek(cons
 }
 
 static unsigned int ui_sign_approve_tx_step3of4_amount_seek_button(unsigned int button_mask, unsigned int button_mask_counter) {
-    seek_left_right_or_approve(button_mask, button_mask_counter, prepareForApprovalOfRRI);
+    return seek_left_right_or_approve(button_mask, button_mask_counter, prepareForApprovalOfRRI);
 }
 
 static void prepareForApprovalOfAmount() {
@@ -257,7 +256,7 @@ static const bagl_element_t *ui_prepro_sign_approve_tx_step2of4_address(const ba
 }
 
 static unsigned int ui_sign_approve_tx_step2of4_address_button(unsigned int button_mask, unsigned int button_mask_counter) {
-    seek_left_right_or_approve(button_mask, button_mask_counter, prepareForApprovalOfAmount);
+    return seek_left_right_or_approve(button_mask, button_mask_counter, prepareForApprovalOfAmount);
 }
 
 static void prepareForApprovalOfAddress() {
@@ -276,7 +275,7 @@ static unsigned int ui_sign_approve_tx_step1of4_txid_button(
     unsigned int button_mask, 
     unsigned int button_mask_counter
 ) {
-    reject_or_approve(button_mask, button_mask_counter, prepareForApprovalOfAddress);
+    return reject_or_approve(button_mask, button_mask_counter, prepareForApprovalOfAddress);
 }
 
 static void proceedWithNextTransfer() {
@@ -291,8 +290,6 @@ static void proceedToDisplayingDetailsForEachTransfer() {
     ctx->numberOfTransfersToNotMyAddressApproved = 0;
     proceedWithNextTransfer();
 }
-
-
 // ===== END ====== APPROVE DETAILS OF EACH TRANSFER  =================
 
 
@@ -301,7 +298,7 @@ static void proceedToDisplayingDetailsForEachTransfer() {
 static const bagl_element_t ui_sign_approve_transfers[] = APPROVAL_SCREEN("Found #TX:");
 
 static unsigned int ui_sign_approve_transfers_button(unsigned int button_mask, unsigned int button_mask_counter) {
-    reject_or_approve(button_mask, button_mask_counter, proceedToDisplayingDetailsForEachTransfer);
+    return reject_or_approve(button_mask, button_mask_counter, proceedToDisplayingDetailsForEachTransfer);
 }
 
 static void printRRI(RadixResourceIdentifier *rri) {
@@ -358,10 +355,15 @@ static void filterOutTransfersBackToMeFromAllTransfers(bool debugPrintTransferTo
 }
 
 static void proceedToDisplayingTransfersIfAny() {
-    if (ctx->numberOfTransferrableTokensParticlesParsed == 0) {
+
+    if (ctx->numberOfTransferrableTokensParticlesParsed == 0)
+    {
         proceedToDisplayingHash();
-    } else { 
-        filterOutTransfersBackToMeFromAllTransfers(true);
+    }
+    else
+    {
+        bool debugPrintTransfers = false;
+        filterOutTransfersBackToMeFromAllTransfers(debugPrintTransfers);
 
         if (ctx->numberOfTransfersToNotMyAddress == 1) {
             prepareForApprovalOfAddress();
@@ -383,20 +385,18 @@ static void proceedToDisplayingTransfersIfAny() {
 static const bagl_element_t ui_sign_approve_nonTransferData[] = APPROVAL_SCREEN_TWO_LINES("Non-transfer", "data found!!");
 
 static unsigned int ui_sign_approve_nonTransferData_button(unsigned int button_mask, unsigned int button_mask_counter) {
-    reject_or_approve(button_mask, button_mask_counter, proceedToDisplayingTransfersIfAny);
+    return reject_or_approve(button_mask, button_mask_counter, proceedToDisplayingTransfersIfAny);
 }
 
 static void notifyNonTransferDataFound() {
-    PRINTF("Non-tranfer\ndata found!!\n");
+    // PRINTF("Non-tranfer\ndata found!!\n");
     UX_DISPLAY(ui_sign_approve_nonTransferData, NULL);
 }
 // ===== END ====== APPROVE NON-TRANSFER DATA =================
 
 
 
-void presentAtomContentsOnDisplay(
-    volatile unsigned int *flags
-) {
+void presentAtomContentsOnDisplay() {
 
     if (ctx->numberOfNonTransferrableTokensParticlesIdentified > 0) {
         notifyNonTransferDataFound();
