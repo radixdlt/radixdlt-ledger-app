@@ -196,7 +196,7 @@ if __name__ == "__main__":
 	parser.add_argument(
 		'--vectorJson', 
 		'-j', 
-		default='./TestVectors/WithNonTransferData/WithTransfers/MultipleTransfers/vector.json',
+		default='./vectors/small_and_big_transfers_data_messages.json',
 		type=str, 
 		# required=True,
 		help='Path to JSON file containing test vector with CBOR encoded Atom, the particle meta data, description of atom contents and expected hash and signature.\n\nDefaults to %(default)',
