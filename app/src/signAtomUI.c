@@ -369,9 +369,9 @@ static void proceedToDisplayingTransfersIfAny() {
             prepareForApprovalOfAddress();
         } else {
             if (ctx->numberOfTransfersToNotMyAddress > 9) {
-                snprintf(ctx->partialString12Char, DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE, "no of tx:%02d\0", ctx->numberOfTransfersToNotMyAddress);
+                snprintf(ctx->partialString12Char, DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE, "no of tx:%02d", ctx->numberOfTransfersToNotMyAddress);
             } else {
-                snprintf(ctx->partialString12Char, DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE, "no of tx: %d\0", ctx->numberOfTransfersToNotMyAddress);
+                snprintf(ctx->partialString12Char, DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE, "no of tx: %d", ctx->numberOfTransfersToNotMyAddress);
             }
         }
         UX_DISPLAY(ui_sign_approve_transfers, NULL);

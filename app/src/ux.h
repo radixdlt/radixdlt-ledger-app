@@ -79,6 +79,12 @@ extern ux_state_t ux;
 #define TEXT_LOWER_ID(userid, text) UI_TEXT(userid, 0, 26, 128, text)
 #define TEXT_LOWER(text) TEXT_LOWER_ID(0x00, text)
 
+#define TEXT_TWO_LINES(textLine1, textLine2) { \
+        UI_BACKGROUND(),                                \
+        TEXT_UPPER(textLine1),           \
+        TEXT_LOWER(textLine2),           \
+}
+
 #define APPROVAL_SCREEN_TWO_LINES(textLine1, textLine2) { \
         UI_BACKGROUND(),                                \
         ICON_CROSS_L,                                   \
