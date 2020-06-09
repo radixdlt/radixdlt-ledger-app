@@ -71,15 +71,11 @@ static unsigned int ui_signHash_approve_button(unsigned int button_mask, unsigne
 
 		case BUTTON_EVT_RELEASED | BUTTON_RIGHT: { // APPROVE
 
-			deriveSignRespond(ctx->bip32Path, ctx->hash);
+			int tx = deriveSignRespond(ctx->bip32Path, ctx->hash);
+		    io_exchange_with_code(SW_OK, tx);
 
-			// Return to the main screen.
 			ui_idle();
 			break;
-		}
-
-		default: {
-			PRINTF("Unknown button combo...\n");
 		}
 	}
 	return 0;
@@ -198,8 +194,6 @@ static unsigned int ui_signHash_compare_button(unsigned int button_mask, unsigne
 // dataBuffer, initializing the command context, and displaying the first
 // screen of the command.
 void handleSignHash(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLength, volatile unsigned int *flags, volatile unsigned int *tx) {
-	PRINTF("Received APDU of length: %u\n", dataLength);
-    PRINTF("Received APDU hex: %.*H\n", dataLength, dataBuffer);
 
     uint16_t expected_number_of_bip32_compents = 3;
     uint16_t byte_count_bip_component = 4;
@@ -213,16 +207,13 @@ void handleSignHash(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLe
     }
 
     parse_bip32_path_from_apdu_command(dataBuffer, ctx->bip32Path, ctx->bip32PathString, sizeof(ctx->bip32PathString));
-    PRINTF("BIP 32 Path used for signing: %s\n", ctx->bip32PathString);
 
 	// // Read the hash.
 	os_memmove(ctx->hash, dataBuffer+expected_bip32_byte_count, sizeof(ctx->hash));
-	PRINTF("Sign hash: %.*H\n", byte_count_hash, ctx->hash);
 	
 	// Prepare to display the comparison screen by converting the hash to hex
 	// and moving the first 12 characters into the partialHashStr buffer.
 	bin2hex(ctx->hexHash, byte_count_hash*2+1, ctx->hash, byte_count_hash); // + 1 for NULL
-	PRINTF("ctx->hexHash: %s\n", ctx->hexHash);
 	os_memmove(ctx->partialHashStr, ctx->hexHash, 12);
 	ctx->partialHashStr[12] = '\0';
 	ctx->displayIndex = 0;
