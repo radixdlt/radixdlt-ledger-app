@@ -14,6 +14,8 @@
 
 static signAtomContext_t *ctx = &global.signAtomContext;
 
+static unsigned short ux_visible_element_index = 0;
+
 static bool isZeroByteInterval(ByteInterval *byteInterval)
 {
     if (byteInterval->byteCount > 0)
@@ -608,7 +610,7 @@ static void updateProgressDisplay() {
         (ctx->atomByteCount/MAX_CHUNK_SIZE)
     );
     
-    UX_REDISPLAY();
+    UX_REDISPLAY_IDX(ux_visible_element_index);
 }
 // ==== END ==== UI PROGRESS UPDATE ========
 
@@ -767,6 +769,7 @@ void handleSignAtom(
 
 
     UX_MENU_DISPLAY(0, ui_hack_as_menu_progress_update, NULL);
+    ux_visible_element_index = G_ux.stack[0].element_index;
 
     // INSTRUCTIONS ON HOW TO PARSE PARTICLES FROM ATOM RECEIVED => start parsing
     // This will be done in `ctx->atomByteCount / CHUNK_SIZE` number of chunks
