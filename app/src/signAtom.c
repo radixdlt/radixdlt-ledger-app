@@ -590,12 +590,40 @@ static bool parseParticlesAndUpdateHash()
     return ctx->atomByteCountParsed == ctx->atomByteCount && totalNumberOfParticlesParsed() == ctx->numberOfParticlesWithSpinUp;
 }
 
+
+
+
+// ==== START ==== UI PROGRESS UPDATE ========
+static const ux_menu_entry_t ui_hack_as_menu_progress_update[] = {
+	{NULL, NULL, 0, NULL, "Parsing TX..", global.signAtomContext.partialString12Char, 0, 0},
+	UX_MENU_END,
+};
+
+static void updateProgressDisplay() {
+    snprintf(
+        ctx->partialString12Char, 
+        DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE, 
+        "Part: %02d/%02d",
+        (ctx->atomByteCountParsed/MAX_CHUNK_SIZE),
+        (ctx->atomByteCount/MAX_CHUNK_SIZE)
+    );
+    
+    UX_REDISPLAY();
+}
+// ==== END ==== UI PROGRESS UPDATE ========
+
+
+
+
 static void parseAtom()
 {
     bool finishedParsingWholeAtomAndAllParticles = false;
     while (!finishedParsingWholeAtomAndAllParticles)
     {
         finishedParsingWholeAtomAndAllParticles = parseParticlesAndUpdateHash();
+
+        updateProgressDisplay();
+
         PRINTF("Finished parsing %u/%u particles\n", totalNumberOfParticlesParsed(), ctx->numberOfParticlesWithSpinUp);
         PRINTF("Finished parsing %u/%u bytes of the Atom\n", ctx->atomByteCountParsed, ctx->atomByteCount);
     }
@@ -604,6 +632,7 @@ static void parseAtom()
 
     PRINTF("\n\n.-~=*#^^^ FINISHED PARSING _all_ PARTICLES ^^^#*=~-.\n\n");
 }
+
 
 // p1 = #particlesWithSpinUp
 // p2 = NOT USED
@@ -735,6 +764,9 @@ void handleSignAtom(
     ctx->numberOfTransferrableTokensParticlesParsed = 0;
     ctx->numberOfTransfersToNotMyAddress = 0;
     ctx->lengthOfFullString = 0;
+
+
+    UX_MENU_DISPLAY(0, ui_hack_as_menu_progress_update, NULL);
 
     // INSTRUCTIONS ON HOW TO PARSE PARTICLES FROM ATOM RECEIVED => start parsing
     // This will be done in `ctx->atomByteCount / CHUNK_SIZE` number of chunks
