@@ -177,7 +177,7 @@ static int ecdsa_sign_or_verify_hash(
     if (sign_one_verify_zero)
     {
         unsigned int result_info = 0;
-       result = cx_ecdsa_sign(
+        result = cx_ecdsa_sign(
             privateKey,
             CX_LAST | (use_rfc6979_deterministic_signing ? CX_RND_RFC6979 : CX_RND_TRNG),
             CX_SHA256, 

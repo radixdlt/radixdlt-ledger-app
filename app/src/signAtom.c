@@ -655,9 +655,16 @@ void handleSignAtom(
     uint16_t byte_count_bip_component = 4;
     uint16_t expected_bip32_byte_count = expected_number_of_bip32_compents * byte_count_bip_component;
 
-    if (dataLength < expected_bip32_byte_count)
+    size_t byte_count_of_atom_size = 2;
+    size_t max_size_particle_meta_data = MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP * sizeof(ParticleMetaData);
+
+    // Meta sanity check
+    assert(MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP < MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP);
+    assert(max_size_particle_meta_data <= (MAX_CHUNK_SIZE - byte_count_of_atom_size - expected_bip32_byte_count));
+
+    if (dataLength < (expected_bip32_byte_count + byte_count_of_atom_size + sizeof(ParticleMetaData))) // expect at least one particle
     {
-        PRINTF("'dataLength' should be at least: %u, but was: %d\n", expected_bip32_byte_count, dataLength);
+        PRINTF("'dataLength' is to small, only: %d\n", dataLength);
         THROW(SW_INVALID_PARAM);
     }
 
@@ -672,13 +679,13 @@ void handleSignAtom(
     int dataOffset = 0;
 
     // READ BIP32 path from first chunk, available directly
-    parse_bip32_path_from_apdu_command(dataBuffer, ctx->bip32Path, ctx->bip32PathString, sizeof(ctx->bip32PathString));
+    parse_bip32_path_from_apdu_command(dataBuffer, ctx->bip32Path, NULL, 0);
     dataOffset += expected_bip32_byte_count;
-    PRINTF("BIP 32 Path used for signing: %s\n", ctx->bip32PathString);
+    // PRINTF("BIP 32 Path used for signing: %s\n", ctx->bip32PathString);
 
     // READ Atom Byte Count (CBOR encoded data)
     ctx->atomByteCount = U2BE(dataBuffer, dataOffset);
-    dataOffset += 2;
+    dataOffset += byte_count_of_atom_size;
     PRINTF("Atom byte count: %d bytes\n", ctx->atomByteCount);
     ctx->atomByteCountParsed = 0;
 
@@ -776,7 +783,7 @@ void handleSignAtom(
     // by 'streaming' data in this chunks using multiple `io_exchange` calls.
     parseAtom();
 
-    *flags |= IO_ASYNCH_REPLY; // Too early? set after first call to `UX_DISPLAY` in `signAtomUI.c` ?
+    *flags |= IO_ASYNCH_REPLY;
 
     presentAtomContentsOnDisplay();
 

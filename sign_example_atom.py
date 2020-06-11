@@ -9,6 +9,9 @@ import math
 import binascii
 import json
 import hashlib
+import glob
+import os
+from pathlib import Path
 
 
 STREAM_LEN = 255 # Stream in batches of STREAM_LEN bytes each.
@@ -194,18 +197,34 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description="Stream CBOR encoded atom to Ledger for signing.")
 	
 	parser.add_argument(
-		'--vectorJson', 
-		'-j', 
-		default='./vectors/small_and_big_transfers_data_messages.json',
+		'--inputAtomVector', 
+		'-i', 
+		default='./vectors/data_single_transfer_huge_amount_with_change.json',
 		type=str, 
 		# required=True,
 		help='Path to JSON file containing test vector with CBOR encoded Atom, the particle meta data, description of atom contents and expected hash and signature.\n\nDefaults to %(default)',
 		metavar='FILE'
 	)
 
-	args = parser.parse_args()
-	json_file_path = args.vectorJson
+	parser.add_argument('--all', action='store_true')
 
-	with open(json_file_path) as json_file:
-		vector = TestVector(json_file.read())
-		send_large_atom_to_ledger_in_many_chunks(vector=vector)
+
+	args = parser.parse_args()
+	if args.all:
+		print("🚀 Testing all test vectors...")
+
+		source_file_dir = Path(__file__).parent.absolute()
+		vectors_dir = source_file_dir.joinpath("vectors")
+
+		for vector_file_path in vectors_dir.rglob("*.json"):   
+			print(vector_file_path)
+			with open(vector_file_path) as json_file:
+				vector = TestVector(json_file.read())
+				send_large_atom_to_ledger_in_many_chunks(vector=vector)
+
+	else:
+		json_file_path = args.inputAtomVector
+
+		with open(json_file_path) as json_file:
+			vector = TestVector(json_file.read())
+			send_large_atom_to_ledger_in_many_chunks(vector=vector)
