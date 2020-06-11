@@ -92,21 +92,17 @@ typedef struct {
 
 #define MAX_CHUNK_SIZE 255 
 
-#define MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP 7
-
-#define MAX_AMOUNT_OF_OTHER_PARTICLES_WITH_SPIN_UP 3 // arbitrarily chosen
-
-#define MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP (MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP + MAX_AMOUNT_OF_OTHER_PARTICLES_WITH_SPIN_UP)
+#define MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP 6
+#define MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP 15 // 240/16, where 16 is size of `ParticleMetaData` and 240 is MAX_CHUNK_SIZE-2-12, where 2 is number of bytes to encode AtomSize and 12 is number of bytes for BIP32 path
 
 // The biggest of a value split across chunks might be the `rri`
 #define MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS (RADIX_RRI_MAX_BYTE_COUNT - 1)
 
 // Size of some string used for displaying long text on disaply
-#define MAX_LENGTH_FULL_STR_DISPLAY UINT256_DEC_STRING_MAX_LENGTH + 1 // +1 for NULL
+#define MAX_LENGTH_FULL_STR_DISPLAY 103 // "ABCD0123456789E, Full Identifier: /9hTaTtgqxhAGRryeMs5htePmJA53tpjDgJK1FY3H1tLrmiZjv6j/ABCD0123456789E\0"
 
 typedef struct {
 	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
-	uint8_t bip32PathString[BIP32_PATH_STRING_MAX_LENGTH]; // variable-length
 	
     uint16_t atomByteCount;
     uint16_t atomByteCountParsed;
@@ -133,7 +129,9 @@ typedef struct {
 
 	uint8_t numberOfTransfersToNotMyAddressApproved;
 
-	RadixParticleTypes nonTransferrableTokensParticlesIdentified[MAX_AMOUNT_OF_OTHER_PARTICLES_WITH_SPIN_UP];
+	// This might only contains `MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP` many Non-TTP particles, if the number
+	// of TTP particles is 0....
+	RadixParticleTypes nonTransferrableTokensParticlesIdentified[MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP];
 
 	// The number of cached bytes from last chunk, bound by `MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS`
 	uint8_t numberOfCachedBytes;
@@ -158,8 +156,6 @@ typedef struct {
 	// At max all particles with spin up are transferrableTokensParticles that we
 	// need to parse into transfers.
 	Transfer transfers[MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP];
-
-	// uint8_t ecdsa_signature[ECSDA_SIGNATURE_BYTE_COUNT];
 
 	// ===== START DISPLAY ========
 	uint8_t displayIndex;
