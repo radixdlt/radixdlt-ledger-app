@@ -765,6 +765,8 @@ void handleSignAtom(
 
     os_memset(ctx->transfers, 0x00, MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP * sizeof(Transfer));
     os_memset(ctx->indiciesTransfersToNotMyAddress, 0x00, MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP * sizeof(uint8_t));
+    os_memset(ctx->partialString12Char, 0x00, DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE);
+    os_memset(ctx->fullString, 0x00, MAX_LENGTH_FULL_STR_DISPLAY);
 
     zeroOutAddress();
     zeroOutAmount();
