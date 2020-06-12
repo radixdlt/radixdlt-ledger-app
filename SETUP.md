@@ -65,6 +65,13 @@ If you see conan is not found, check that you installed the package in the same 
 
 There are a few additional steps that increase reproducibility and simplify development:
 
+**0 - Install Debug firmware and download USB-tool logger**
+Debug print statements in the code will not be visible for you if you haven't got the debug firmware installed.
+
+Follow Ledger's [guide here to install the Debug firmware](https://ledger.readthedocs.io/en/latest/userspace/debugging.html). 
+
+Also make sure to download USBTool by clinking the link in the above page. ⚠️ USBTool is built for Ubuntu, but you can delete the binary from the downloaded folder and just `make` to build it to work on **macOS**. Start it with the same command `./usbtool -v 0x2c97 log`.
+
 **1 - Ensure your device works in your OS**
 - In Linux hosts it might be necessary to adjust udev rules, etc. Refer to Ledger documentation: https://support.ledger.com/hc/en-us/articles/115005165269-Fix-connection-issues
 
