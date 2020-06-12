@@ -1,4 +1,4 @@
-#include "radix.h"
+#include "key_and_signatures.h"
 #include "Transfer.h"
 
 #define NUMBER_OF_BIP32_COMPONENTS_IN_PATH 5

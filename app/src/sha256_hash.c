@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <os.h>
 #include <os_io_seproxyhal.h>
-#include "radix.h"
+#include "key_and_signatures.h"
 #include "ux.h"
 
 bool sha256_hash(

@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <os.h>
 #include <os_io_seproxyhal.h>
-#include "radix.h"
+#include "key_and_signatures.h"
 #include "ux.h"
 #include "sha256_hash.h"
 #include "cbor.h"
@@ -101,18 +101,19 @@ static void readNextChunkFromHostMachineAndUpdateHash(
     size_t chunkSize)
 {
     os_memset(G_io_apdu_buffer, 0x00, IO_APDU_BUFFER_SIZE);
-    G_io_apdu_buffer[0] = 0x90;
-    G_io_apdu_buffer[1] = 0x00;
-    /* unsigned rx = */ io_exchange(CHANNEL_APDU, 2);
+    G_io_apdu_buffer[0] = 0x90; // 0x9000 == 'SW_OK'
+    G_io_apdu_buffer[1] = 0x00; // 0x9000 == 'SW_OK'
+    io_exchange(CHANNEL_APDU, 2);
 
     // N.B. we do not provide any meta data at all for chunked data,
     // not in the databuffer any way, we might use P1, P2 here...
     uint32_t dataOffset = OFFSET_CDATA + 0;
 
     os_memcpy(
-        /* destination */ ctx->atomSlice + ctx->numberOfCachedBytes,
-        /* source */ G_io_apdu_buffer + dataOffset,
-        /* number of bytes*/ chunkSize);
+        ctx->atomSlice + ctx->numberOfCachedBytes,
+        G_io_apdu_buffer + dataOffset,
+        chunkSize
+    );
 
     bool shouldFinalizeHash = chunkSize < MAX_CHUNK_SIZE;
     if (shouldFinalizeHash) {
@@ -521,7 +522,6 @@ static void cacheBytesToNextChunk(
         tmp,
         numberOfBytesToCache);
 
-    // PRINTF("Caching #%u bytes\n", numberOfBytesToCache);
     ctx->numberOfCachedBytes = numberOfBytesToCache;
 }
 

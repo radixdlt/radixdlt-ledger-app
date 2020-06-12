@@ -1,7 +1,7 @@
 #ifndef RADIX_TOKEN_NANOS_UX_H
 #define RADIX_TOKEN_NANOS_UX_H
 
-#include "radix.h"
+#include "key_and_signatures.h"
 #include "global_state.h"
 
 extern ux_state_t ux;

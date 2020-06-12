@@ -1,7 +1,7 @@
 #include "UnsignedInteger256.h"
 #include <stdbool.h>
 #include <os.h>
-#include "radix.h"
+#include "key_and_signatures.h"
 #include "base_conversion.h"
 
 size_t to_string_uint256(
