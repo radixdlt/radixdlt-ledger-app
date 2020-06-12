@@ -17,3 +17,10 @@ size_t to_string_rri(
     const size_t size_of_buffer,
     bool skip_address
 );
+
+size_t to_string_rri_null_term_or_not(
+    RadixResourceIdentifier *rri,
+    char *output_buffer,
+    const size_t size_of_buffer,
+    bool skip_address,
+    bool null_terminate);

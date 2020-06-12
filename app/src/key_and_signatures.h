@@ -1,3 +1,7 @@
+#include "stdint.h"
+#include <seproxyhal_protocol.h>
+#include <os_io_seproxyhal.h>
+
 // These are the offsets of various parts of a request APDU packet. INS
 // identifies the requested command (see above), and P1 and P2 are parameters
 // to the command.
@@ -9,11 +13,11 @@
 #define OFFSET_LC    0x04
 #define OFFSET_CDATA 0x05
 
-// Use Radix's DER decode function for signing?
-// (this shouldn't have any functional impact).
-#define DER_DECODE_RADIX 0
-
 #define BIP32_PATH_STRING_MAX_LENGTH 20 // assumed 
+// assuming a font size of 11 (`BAGL_FONT_OPEN_SANS_REGULAR_11px`)
+#define DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE 12
+
+#define ECSDA_SIGNATURE_BYTE_COUNT 64
 
 // MACROS
 #define PLOC() PRINTF("\n%s - %s:%d \n", __FILE__, __func__, __LINE__);
@@ -36,7 +40,6 @@
 // Constants
 #define SHA256_HASH_DIGEST_BYTE_COUNT 32
 #define PUBLIC_KEY_COMPRESSEED_BYTE_COUNT 33
-#define ECDSA_SIGNATURE_BYTE_COUNT 64
 
 // exception codes
 #define SW_DEVELOPER_ERR 0x6B00
@@ -59,43 +62,17 @@ void parse_bip32_path_from_apdu_command(
 );
 
 // Convert un-compressed zilliqa public key to a compressed form.
-void compressPubKey(cx_ecfp_public_key_t *publicKey);
+void compress_public_key(cx_ecfp_public_key_t *publicKey);
 
-// pubkeyToRadixAddress converts a Ledger pubkey to a Radix wallet address.
-void pubkeyToRadixAddress(uint8_t *dst, cx_ecfp_public_key_t *publicKey);
-
-// deriveRadixKeyPair derives a key pair from a BIP32 path and the Ledger
+// derive_radix_key_pair derives a key pair from a BIP32 path and the Ledger
 // seed. Returns the public key and private key if not NULL.
-void deriveRadixKeyPair(
+void derive_radix_key_pair(
     uint32_t *bip32path, 
     cx_ecfp_public_key_t *publicKey,
     cx_ecfp_private_key_t *privateKey_nullable
 );
 
-// deriveAndSign derives a secp256k1 private key from a BIP32 path and the
-// Ledger seed, and uses it to produce a 64-byte ECDSA signature (DER decoded)
-// of the provided 32-byte hash. The key is cleared from memory after signing.
-void deriveAndSign(
+size_t derive_sign_move_to_global_buffer(
     uint32_t *bip32path, 
-    const uint8_t *hash,
-    uint8_t *output_signature_R_S
+    const uint8_t *hash
 );
-
-// bin2hex converts binary to hex and appends a final NUL byte.
-void bin2hex(uint8_t *dst, uint64_t dstlen, uint8_t *data, uint64_t inlen);
-
-// bin64b2dec converts an unsigned integer to a decimal string and appends a
-// final NUL byte. It returns the length of the string.
-int bin64b2dec(uint8_t *dst, uint32_t dst_len, uint64_t n);
-
-// Given a hex string with numhexchar characters, convert it
-// to byte sequence and place in "bin" (which must be allocated
-// with at least numhexchar/2 bytes already).
-void hex2bin(uint8_t *hexstr, unsigned numhexchars, uint8_t *bin);
-
-// Equivalent to what is there in stdlib.
-int strncmp( const char * s1, const char * s2, size_t n );
-// Equivalent to what is there in stdlib.
-size_t strlen(const char *str);
-// Equivalent to what is there in stdlib.
-char* strcpy(char *dst, const char *src);

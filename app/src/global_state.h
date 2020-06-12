@@ -1,4 +1,4 @@
-#include "radix.h"
+#include "key_and_signatures.h"
 #include "Transfer.h"
 
 #define NUMBER_OF_BIP32_COMPONENTS_IN_PATH 5
@@ -45,7 +45,7 @@ typedef struct {
 	uint8_t fullStr[77]; // variable length
 	// partialStr contains 12 characters of a longer string. This allows text
 	// to be scrolled.
-	uint8_t partialStr[13];
+	uint8_t partialStr[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE + 1]; //+1 for NULL
 } getPublicKeyContext_t;
 
 #define HASH256_BYTE_COUNT 32
@@ -55,11 +55,11 @@ typedef struct {
 	uint8_t bip32PathString[BIP32_PATH_STRING_MAX_LENGTH]; // variable-length
 	uint8_t hash[HASH256_BYTE_COUNT];
 
-	uint8_t hexHash[65]; // 2*sizeof(hash) + 1 for '\0'
+	uint8_t hexHash[(2 * HASH256_BYTE_COUNT) + 1]; // 1 for null
 
 	uint8_t displayIndex;
 	// NUL-terminated strings for display
-	uint8_t partialHashStr[13];
+	uint8_t partialHashStr[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE + 1]; //+1 for NULL
 } signHashContext_t;
 
 typedef struct {
@@ -92,18 +92,17 @@ typedef struct {
 
 #define MAX_CHUNK_SIZE 255 
 
-#define MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP 7
-
-#define MAX_AMOUNT_OF_OTHER_PARTICLES_WITH_SPIN_UP 3 // arbitrarily chosen
-
-#define MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP (MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP + MAX_AMOUNT_OF_OTHER_PARTICLES_WITH_SPIN_UP)
+#define MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP 6
+#define MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP 15 // 240/16, where 16 is size of `ParticleMetaData` and 240 is MAX_CHUNK_SIZE-2-12, where 2 is number of bytes to encode AtomSize and 12 is number of bytes for BIP32 path
 
 // The biggest of a value split across chunks might be the `rri`
 #define MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS (RADIX_RRI_MAX_BYTE_COUNT - 1)
 
+// Size of some string used for displaying long text on disaply
+#define MAX_LENGTH_FULL_STR_DISPLAY 103 // "ABCD0123456789E, Full Identifier: /9hTaTtgqxhAGRryeMs5htePmJA53tpjDgJK1FY3H1tLrmiZjv6j/ABCD0123456789E\0"
+
 typedef struct {
 	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
-	uint8_t bip32PathString[BIP32_PATH_STRING_MAX_LENGTH]; // variable-length
 	
     uint16_t atomByteCount;
     uint16_t atomByteCountParsed;
@@ -125,7 +124,14 @@ typedef struct {
 	uint8_t numberOfNonTransferrableTokensParticlesIdentified;
     uint8_t numberOfTransferrableTokensParticlesParsed;
 
-	RadixParticleTypes nonTransferrableTokensParticlesIdentified[MAX_AMOUNT_OF_OTHER_PARTICLES_WITH_SPIN_UP];
+    uint8_t numberOfTransfersToNotMyAddress;
+	uint8_t indiciesTransfersToNotMyAddress[MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP];
+
+	uint8_t numberOfTransfersToNotMyAddressApproved;
+
+	// This might only contains `MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP` many Non-TTP particles, if the number
+	// of TTP particles is 0....
+	RadixParticleTypes nonTransferrableTokensParticlesIdentified[MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP];
 
 	// The number of cached bytes from last chunk, bound by `MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS`
 	uint8_t numberOfCachedBytes;
@@ -151,6 +157,12 @@ typedef struct {
 	// need to parse into transfers.
 	Transfer transfers[MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP];
 
+	// ===== START DISPLAY ========
+	uint8_t displayIndex;
+	// NUL-terminated strings for display
+	uint8_t fullString[MAX_LENGTH_FULL_STR_DISPLAY]; // the RRI is the longest data we wanna display
+	uint8_t lengthOfFullString;
+	uint8_t partialString12Char[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE + 1]; //+1 for NULL
 } signAtomContext_t;
 
 // To save memory, we store all the context types in a single global union,

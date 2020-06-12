@@ -5,16 +5,16 @@
 #include <stdbool.h>
 #include <os.h>
 #include <os_io_seproxyhal.h>
-#include "radix.h"
+#include "key_and_signatures.h"
 #include "ux.h"
 #include "sha256_hash.h"
 #include "cbor.h"
 #include "base_conversion.h"
+#include "signAtomUI.h"
 
-// Get a pointer to signHash's state variables. This is purely for
-// convenience, so that we can refer to these variables concisely from any
-// signHash-related function.
 static signAtomContext_t *ctx = &global.signAtomContext;
+
+static unsigned short ux_visible_element_index = 0;
 
 static bool isZeroByteInterval(ByteInterval *byteInterval)
 {
@@ -101,18 +101,19 @@ static void readNextChunkFromHostMachineAndUpdateHash(
     size_t chunkSize)
 {
     os_memset(G_io_apdu_buffer, 0x00, IO_APDU_BUFFER_SIZE);
-    G_io_apdu_buffer[0] = 0x90;
-    G_io_apdu_buffer[1] = 0x00;
-    /* unsigned rx = */ io_exchange(CHANNEL_APDU, 2);
+    G_io_apdu_buffer[0] = 0x90; // 0x9000 == 'SW_OK'
+    G_io_apdu_buffer[1] = 0x00; // 0x9000 == 'SW_OK'
+    io_exchange(CHANNEL_APDU, 2);
 
     // N.B. we do not provide any meta data at all for chunked data,
     // not in the databuffer any way, we might use P1, P2 here...
     uint32_t dataOffset = OFFSET_CDATA + 0;
 
     os_memcpy(
-        /* destination */ ctx->atomSlice + ctx->numberOfCachedBytes,
-        /* source */ G_io_apdu_buffer + dataOffset,
-        /* number of bytes*/ chunkSize);
+        ctx->atomSlice + ctx->numberOfCachedBytes,
+        G_io_apdu_buffer + dataOffset,
+        chunkSize
+    );
 
     bool shouldFinalizeHash = chunkSize < MAX_CHUNK_SIZE;
     if (shouldFinalizeHash) {
@@ -263,24 +264,6 @@ static ParticleField getNextFieldToParse() {
     }
 
     return TokenDefinitionReferenceField;
-}
-
-static void printRRI(RadixResourceIdentifier *rri) {
-    const size_t max_length = RADIX_RRI_STRING_LENGTH_MAX;
-    char rri_utf8_string[max_length];
-
-    to_string_rri(rri, rri_utf8_string, max_length, true);
-
-    PRINTF("%s", rri_utf8_string);
-}
-
-static void printTokenAmount(TokenAmount *tokenAmount) {
-    const size_t max_length = (UINT256_DEC_STRING_MAX_LENGTH + 1); // +1 for null
-    char dec_string[max_length];
-
-    to_string_uint256(tokenAmount, dec_string, max_length);
-
-    PRINTF("%s", dec_string);
 }
 
 static void finishedParsingAWholeTransfer(
@@ -539,7 +522,6 @@ static void cacheBytesToNextChunk(
         tmp,
         numberOfBytesToCache);
 
-    // PRINTF("Caching #%u bytes\n", numberOfBytesToCache);
     ctx->numberOfCachedBytes = numberOfBytesToCache;
 }
 
@@ -610,36 +592,30 @@ static bool parseParticlesAndUpdateHash()
     return ctx->atomByteCountParsed == ctx->atomByteCount && totalNumberOfParticlesParsed() == ctx->numberOfParticlesWithSpinUp;
 }
 
-static void debugPrintParsedTransfers() {
-    // DEBUG PRINT ALL PARSED TransferrableTokensParticles
-    PRINTF("\n**************************************\n");
 
-    cx_ecfp_public_key_t myPublicKeyCompressed;
-    
-    deriveRadixKeyPair(
-        ctx->bip32Path, 
-        &myPublicKeyCompressed, 
-        NULL // dont write private key
+
+
+// ==== START ==== UI PROGRESS UPDATE ========
+static const ux_menu_entry_t ui_hack_as_menu_progress_update[] = {
+	{NULL, NULL, 0, NULL, "Parsing TX..", global.signAtomContext.partialString12Char, 0, 0},
+	UX_MENU_END,
+};
+
+static void updateProgressDisplay() {
+    snprintf(
+        ctx->partialString12Char, 
+        DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE, 
+        "Part: %02d/%02d",
+        (ctx->atomByteCountParsed/MAX_CHUNK_SIZE),
+        (ctx->atomByteCount/MAX_CHUNK_SIZE)
     );
-
-    int transferNumber = 0;
-    for (int i = 0; i < ctx->numberOfTransferrableTokensParticlesParsed; ++i)
-    {
-        Transfer transfer = ctx->transfers[i];
-
-        if (matchesPublicKey(&transfer.address, &myPublicKeyCompressed)) {
-            continue; // dont display "change" (money back) to you (i.e. transfers to your own address.)
-        }
-
-        PRINTF("Transfer %u\n", transferNumber);
-        transferNumber++;
-        PRINTF("    recipient address: "); printRadixAddress(&transfer.address); PRINTF("\n");
-        PRINTF("    amount: "), printTokenAmount(&transfer.amount); PRINTF(" E-18\n");
-        PRINTF("    token (RRI): "); printRRI(&transfer.tokenDefinitionReference); PRINTF("\n");
-        PRINTF("\n");
-    }
-    PRINTF("**************************************\n");
+    
+    UX_REDISPLAY_IDX(ux_visible_element_index);
 }
+// ==== END ==== UI PROGRESS UPDATE ========
+
+
+
 
 static void parseAtom()
 {
@@ -647,6 +623,9 @@ static void parseAtom()
     while (!finishedParsingWholeAtomAndAllParticles)
     {
         finishedParsingWholeAtomAndAllParticles = parseParticlesAndUpdateHash();
+
+        updateProgressDisplay();
+
         PRINTF("Finished parsing %u/%u particles\n", totalNumberOfParticlesParsed(), ctx->numberOfParticlesWithSpinUp);
         PRINTF("Finished parsing %u/%u bytes of the Atom\n", ctx->atomByteCountParsed, ctx->atomByteCount);
     }
@@ -654,17 +633,8 @@ static void parseAtom()
     assert(totalNumberOfParticlesParsed() == ctx->numberOfParticlesWithSpinUp);
 
     PRINTF("\n\n.-~=*#^^^ FINISHED PARSING _all_ PARTICLES ^^^#*=~-.\n\n");
-
-    debugPrintParsedTransfers();
-
-    PRINTF("\nhash: %.*H\n", HASH256_BYTE_COUNT, ctx->hash);
-
-    // TODO present on display all transfers
-    // TODO sign!
-    os_memcpy(G_io_apdu_buffer, ctx->hash, HASH256_BYTE_COUNT);
-    io_exchange_with_code(SW_OK, HASH256_BYTE_COUNT);
-    PRINTF("\nTODO sign hash and present transfers on display...\nLEDGER IS READY FOR MORE COMMANDS\n");
 }
+
 
 // p1 = #particlesWithSpinUp
 // p2 = NOT USED
@@ -685,9 +655,16 @@ void handleSignAtom(
     uint16_t byte_count_bip_component = 4;
     uint16_t expected_bip32_byte_count = expected_number_of_bip32_compents * byte_count_bip_component;
 
-    if (dataLength < expected_bip32_byte_count)
+    size_t byte_count_of_atom_size = 2;
+    size_t max_size_particle_meta_data = MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP * sizeof(ParticleMetaData);
+
+    // Meta sanity check
+    assert(MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP < MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP);
+    assert(max_size_particle_meta_data <= (MAX_CHUNK_SIZE - byte_count_of_atom_size - expected_bip32_byte_count));
+
+    if (dataLength < (expected_bip32_byte_count + byte_count_of_atom_size + sizeof(ParticleMetaData))) // expect at least one particle
     {
-        PRINTF("'dataLength' should be at least: %u, but was: %d\n", expected_bip32_byte_count, dataLength);
+        PRINTF("'dataLength' is to small, only: %d\n", dataLength);
         THROW(SW_INVALID_PARAM);
     }
 
@@ -702,13 +679,13 @@ void handleSignAtom(
     int dataOffset = 0;
 
     // READ BIP32 path from first chunk, available directly
-    parse_bip32_path_from_apdu_command(dataBuffer, ctx->bip32Path, ctx->bip32PathString, sizeof(ctx->bip32PathString));
+    parse_bip32_path_from_apdu_command(dataBuffer, ctx->bip32Path, NULL, 0);
     dataOffset += expected_bip32_byte_count;
-    PRINTF("BIP 32 Path used for signing: %s\n", ctx->bip32PathString);
+    // PRINTF("BIP 32 Path used for signing: %s\n", ctx->bip32PathString);
 
     // READ Atom Byte Count (CBOR encoded data)
     ctx->atomByteCount = U2BE(dataBuffer, dataOffset);
-    dataOffset += 2;
+    dataOffset += byte_count_of_atom_size;
     PRINTF("Atom byte count: %d bytes\n", ctx->atomByteCount);
     ctx->atomByteCountParsed = 0;
 
@@ -787,15 +764,30 @@ void handleSignAtom(
     }
 
     os_memset(ctx->transfers, 0x00, MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP * sizeof(Transfer));
+    os_memset(ctx->indiciesTransfersToNotMyAddress, 0x00, MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP * sizeof(uint8_t));
+    os_memset(ctx->partialString12Char, 0x00, DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE);
+    os_memset(ctx->fullString, 0x00, MAX_LENGTH_FULL_STR_DISPLAY);
 
     zeroOutAddress();
     zeroOutAmount();
     ctx->hasConfirmedSerializerOfTransferrableTokensParticle = false;
     ctx->numberOfNonTransferrableTokensParticlesIdentified = 0;
     ctx->numberOfTransferrableTokensParticlesParsed = 0;
+    ctx->numberOfTransfersToNotMyAddressApproved = 0;
+    ctx->numberOfTransfersToNotMyAddress = 0;
+    ctx->lengthOfFullString = 0;
+
+
+    UX_MENU_DISPLAY(0, ui_hack_as_menu_progress_update, NULL);
+    ux_visible_element_index = G_ux.stack[0].element_index;
 
     // INSTRUCTIONS ON HOW TO PARSE PARTICLES FROM ATOM RECEIVED => start parsing
     // This will be done in `ctx->atomByteCount / CHUNK_SIZE` number of chunks
     // by 'streaming' data in this chunks using multiple `io_exchange` calls.
     parseAtom();
+
+    *flags |= IO_ASYNCH_REPLY;
+
+    presentAtomContentsOnDisplay();
+
 }
