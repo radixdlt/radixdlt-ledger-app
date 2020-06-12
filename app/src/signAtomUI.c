@@ -307,21 +307,7 @@ static unsigned int ui_sign_approve_transfers_button(unsigned int button_mask, u
     return reject_or_approve(button_mask, button_mask_counter, proceedToDisplayingDetailsForEachTransfer);
 }
 
-static void printRRI(RadixResourceIdentifier *rri) {
-    const size_t max_length = RADIX_RRI_STRING_LENGTH_MAX;
-    char rri_utf8_string[max_length];
-    to_string_rri(rri, rri_utf8_string, max_length, true);
-    PRINTF("%s", rri_utf8_string);
-}
-
-static void printTokenAmount(TokenAmount *tokenAmount) {
-    const size_t max_length = (UINT256_DEC_STRING_MAX_LENGTH + 1); // +1 for null
-    char dec_string[max_length];
-    to_string_uint256(tokenAmount, dec_string, max_length);
-    PRINTF("%s", dec_string);
-}
-
-static void filterOutTransfersBackToMeFromAllTransfers(bool debugPrintTransferToConsole) {
+static void filterOutTransfersBackToMeFromAllTransfers() {
     cx_ecfp_public_key_t myPublicKeyCompressed;
     
     deriveRadixKeyPair(
@@ -332,29 +318,11 @@ static void filterOutTransfersBackToMeFromAllTransfers(bool debugPrintTransferTo
 
     for (int transferIndex = 0; transferIndex < ctx->numberOfTransferrableTokensParticlesParsed; ++transferIndex)
     {
-        Transfer transfer = ctx->transfers[transferIndex];
-        if (matchesPublicKey(&transfer.address, &myPublicKeyCompressed))
+        Transfer *transfer = &(ctx->transfers[transferIndex]);
+        if (!matchesPublicKey(&(transfer->address), &myPublicKeyCompressed))
         {
-            continue; // dont display "change" (money back) to you (transferIndex.e. transfers to your own address.)
-        } else {
             ctx->indiciesTransfersToNotMyAddress[ctx->numberOfTransfersToNotMyAddress] = transferIndex;
             ctx->numberOfTransfersToNotMyAddress++;
-        }
-
-        if (!debugPrintTransferToConsole) {
-            continue;
-        }
-        // DEBUG PRINT ALL PARSED TransferrableTokensParticles
-        if (transferIndex == 0) {
-            PRINTF("\n**************************************\n");
-        }
-        PRINTF("Transfer %u\n", ctx->numberOfTransfersToNotMyAddress);
-        PRINTF("    recipient address: "); printRadixAddress(&transfer.address); PRINTF("\n");
-        PRINTF("    amount: "), printTokenAmount(&transfer.amount); PRINTF(" E-18\n");
-        PRINTF("    token (RRI): "); printRRI(&transfer.tokenDefinitionReference); PRINTF("\n");
-        PRINTF("\n");
-        if (transferIndex == ctx->numberOfTransferrableTokensParticlesParsed - 1) {
-            PRINTF("**************************************\n");
         }
     }
 }
@@ -366,8 +334,7 @@ static void proceedToDisplayingTransfersIfAny() {
     }
     else
     {
-        bool debugPrintTransfers = false;
-        filterOutTransfersBackToMeFromAllTransfers(debugPrintTransfers);
+        filterOutTransfersBackToMeFromAllTransfers();
 
         if (ctx->numberOfTransfersToNotMyAddress == 0) {
             // Either Burn Action or Mint Action
