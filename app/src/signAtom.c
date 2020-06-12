@@ -773,6 +773,7 @@ void handleSignAtom(
     ctx->hasConfirmedSerializerOfTransferrableTokensParticle = false;
     ctx->numberOfNonTransferrableTokensParticlesIdentified = 0;
     ctx->numberOfTransferrableTokensParticlesParsed = 0;
+    ctx->numberOfTransfersToNotMyAddressApproved = 0;
     ctx->numberOfTransfersToNotMyAddress = 0;
     ctx->lengthOfFullString = 0;
 

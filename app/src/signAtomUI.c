@@ -3,12 +3,9 @@
 static signAtomContext_t *ctx = &global.signAtomContext;
 
 typedef enum {
-    ReviewStart = 0,
-    ReviewAddress,
+    ReviewAddress = 0,
     ReviewAmount,
-    ReviewRRI,
-    ReviewHash,
- // ReviewBIP32Path 
+    ReviewRRI
 } ReviewAtomStep;
 
 
@@ -73,6 +70,8 @@ static Transfer* nextTransfer() {
     assert(ctx->numberOfTransfersToNotMyAddress > 0);
 
     uint8_t indexOfNextTransferToNotMyAddress = ctx->indiciesTransfersToNotMyAddress[ctx->numberOfTransfersToNotMyAddressApproved];
+   
+    assert(indexOfNextTransferToNotMyAddress < ctx->numberOfTransferrableTokensParticlesParsed);
     return &(ctx->transfers[indexOfNextTransferToNotMyAddress]);
 }
 
@@ -89,6 +88,9 @@ static const bagl_element_t* preprocessor_for_seeking(const bagl_element_t *elem
     return element;
 }
 
+static void clearFullString() {
+    os_memset(ctx->fullString, 0x00, MAX_LENGTH_FULL_STR_DISPLAY);
+}
 
 static void resetDisplay() {
     os_memset(ctx->partialString12Char, 0x00, DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE);
@@ -99,18 +101,10 @@ static void resetDisplay() {
 
 static void copyOverTransferDataToFullStringAndResetDisplayForStep(ReviewAtomStep step)
 {
-    os_memset(ctx->fullString, 0x00, MAX_LENGTH_FULL_STR_DISPLAY);
-
+    clearFullString();
     Transfer *transfer = nextTransfer();
     switch (step)
     {
-    case ReviewStart:
-    {
-        size_t lengthOfTransferAtIndexString = DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE;
-        snprintf(ctx->fullString, lengthOfTransferAtIndexString, "tx@index: %d", ctx->numberOfTransfersToNotMyAddressApproved);
-        ctx->lengthOfFullString = lengthOfTransferAtIndexString;
-        break;
-    }
     case ReviewAddress:
     {
         size_t number_of_chars_to_copy = RADIX_ADDRESS_BASE58_CHAR_COUNT_MAX + 1;
@@ -154,21 +148,6 @@ static void copyOverTransferDataToFullStringAndResetDisplayForStep(ReviewAtomSte
         ctx->lengthOfFullString = offset;
         break;
     }
-    case ReviewHash: {
-        size_t lengthOfHashString = HASH256_BYTE_COUNT * 2 + 1; // + 1 for NULL
-        bin2hex(ctx->fullString, lengthOfHashString, ctx->hash, HASH256_BYTE_COUNT);
-        ctx->lengthOfFullString = lengthOfHashString;
-        break;
-    }
-    // case ReviewBIP32Path:
-    // {
-    //     ctx->lengthOfFullString = stringify_bip32_path(
-    //         ctx->bip32Path,
-    //         5,
-    //         ctx->fullString
-    //     );
-    //     break;
-    // }
     default:
         FATAL_ERROR("Unknown step: %d", step);
     }
@@ -205,8 +184,14 @@ static unsigned int ui_sign_approve_hash_compare_button(
     return seek_left_right_or_approve(button_mask, button_mask_counter, askUserForFinalConfirmation);
 }
 
-static void prepareForDisplayingHash() {
-    copyOverTransferDataToFullStringAndResetDisplayForStep(ReviewHash);
+static void prepareForDisplayingHash()
+{
+    clearFullString();
+    size_t lengthOfHashString = HASH256_BYTE_COUNT * 2 + 1; // + 1 for NULL
+    bin2hex(ctx->fullString, lengthOfHashString, ctx->hash, HASH256_BYTE_COUNT);
+    ctx->lengthOfFullString = lengthOfHashString;
+    resetDisplay();
+
     UX_DISPLAY(ui_sign_approve_hash_compare, preprocessor_for_seeking);
 }
 // ===== END ====== APPROVE HASH->SIGN =================
@@ -220,15 +205,16 @@ static void proceedWithNextTransferIfAnyElseDisplayHash()
 {
     // approved RRI -> finished with this transfer => proceed
     ctx->numberOfTransfersToNotMyAddressApproved++;
-    if (ctx->numberOfTransfersToNotMyAddressApproved < ctx->numberOfTransfersToNotMyAddress) {
+    if (ctx->numberOfTransfersToNotMyAddressApproved < ctx->numberOfTransfersToNotMyAddress)
+    {
         proceedWithNextTransfer();
-    } else {
+    }
+    else
+    {
         // Finished accepting all transfers
         prepareForDisplayingHash();
     }
 }
-
-
 
 // ==== START ======= STEP 4/4: RRI ========
 static const bagl_element_t ui_sign_approve_tx_step4of4_rri[] = SEEK_SCREEN("Token:");
@@ -236,7 +222,8 @@ static unsigned int ui_sign_approve_tx_step4of4_rri_button(unsigned int button_m
     return seek_left_right_or_approve(button_mask, button_mask_counter, proceedWithNextTransferIfAnyElseDisplayHash);
 }
 
-static void prepareForApprovalOfRRI() {
+static void prepareForApprovalOfRRI()
+{
     copyOverTransferDataToFullStringAndResetDisplayForStep(ReviewRRI);
     UX_DISPLAY(ui_sign_approve_tx_step4of4_rri, preprocessor_for_seeking);
 }
@@ -295,14 +282,18 @@ static unsigned int ui_sign_approve_tx_step1of4_txid_button(
 
 static void proceedWithNextTransfer() {
     assert(ctx->numberOfTransfersToNotMyAddressApproved < ctx->numberOfTransfersToNotMyAddress);
-    copyOverTransferDataToFullStringAndResetDisplayForStep(ReviewStart);
+
+    clearFullString();
+    size_t lengthOfTransferAtIndexString = DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE;
+    snprintf(ctx->fullString, lengthOfTransferAtIndexString, "tx@index: %d", ctx->numberOfTransfersToNotMyAddressApproved);
+    ctx->lengthOfFullString = lengthOfTransferAtIndexString;
+    resetDisplay();
 
     UX_DISPLAY(ui_sign_approve_tx_step1of4_txid, NULL);
 }
 // ==== END ==== APPROVE TX DETAILS STEP 1/4: Transfer number =====
 
 static void proceedToDisplayingDetailsForEachTransfer() {
-    ctx->numberOfTransfersToNotMyAddressApproved = 0;
     proceedWithNextTransfer();
 }
 // ===== END ====== APPROVE DETAILS OF EACH TRANSFER  =================
@@ -331,7 +322,6 @@ static void printTokenAmount(TokenAmount *tokenAmount) {
 }
 
 static void filterOutTransfersBackToMeFromAllTransfers(bool debugPrintTransferToConsole) {
-
     cx_ecfp_public_key_t myPublicKeyCompressed;
     
     deriveRadixKeyPair(
@@ -370,7 +360,6 @@ static void filterOutTransfersBackToMeFromAllTransfers(bool debugPrintTransferTo
 }
 
 static void proceedToDisplayingTransfersIfAny() {
-
     if (ctx->numberOfTransferrableTokensParticlesParsed == 0)
     {
         prepareForDisplayingHash();
@@ -380,7 +369,12 @@ static void proceedToDisplayingTransfersIfAny() {
         bool debugPrintTransfers = false;
         filterOutTransfersBackToMeFromAllTransfers(debugPrintTransfers);
 
-        if (ctx->numberOfTransfersToNotMyAddress == 1) {
+        if (ctx->numberOfTransfersToNotMyAddress == 0) {
+            // Either Burn Action or Mint Action
+            // assert Data found
+            assert(ctx->numberOfNonTransferrableTokensParticlesIdentified > 0); // Expect 
+            prepareForDisplayingHash();
+        } else if (ctx->numberOfTransfersToNotMyAddress == 1) {
             prepareForApprovalOfAddress();
         } else {
             snprintf(
@@ -389,8 +383,9 @@ static void proceedToDisplayingTransfersIfAny() {
                 "no of tx:%2d", 
                 ctx->numberOfTransfersToNotMyAddress
             );
+            
+            UX_DISPLAY(ui_sign_approve_transfers, NULL);
         }
-        UX_DISPLAY(ui_sign_approve_transfers, NULL);
     }
 }
 // ===== END ====== APPROVE NO OF TRANSFERS =================
@@ -404,7 +399,7 @@ static unsigned int ui_sign_approve_nonTransferData_button(unsigned int button_m
     return reject_or_approve(button_mask, button_mask_counter, proceedToDisplayingTransfersIfAny);
 }
 
-static void notifyNonTransferDataFound() {
+static void notifyNonTransferDataFound() {    
     UX_DISPLAY(ui_sign_approve_nonTransferData, NULL);
 }
 // ===== END ====== APPROVE NON-TRANSFER DATA =================
@@ -412,10 +407,12 @@ static void notifyNonTransferDataFound() {
 
 
 void presentAtomContentsOnDisplay() {
-
-    if (ctx->numberOfNonTransferrableTokensParticlesIdentified > 0) {
+    if (ctx->numberOfNonTransferrableTokensParticlesIdentified > 0)
+    {
         notifyNonTransferDataFound();
-    } else {
+    }
+    else
+    {
         proceedToDisplayingTransfersIfAny();
     }
 }

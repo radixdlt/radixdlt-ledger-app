@@ -13,6 +13,8 @@ import glob
 import os
 from pathlib import Path
 
+CommExceptionUserRejection = 0x6985
+
 
 STREAM_LEN = 255 # Stream in batches of STREAM_LEN bytes each.
 
@@ -75,7 +77,7 @@ class TestVector(object):
 		return self.up_particles_dict()['totalCount']
 
 	def number_of_transferrable_tokens_particles_with_spin_up(self) -> int:
-		return self.up_particles_dict()['transferrableTokensParticles']
+		return self.up_particles_dict().get('transferrableTokensParticles', 0)
 
 	def contains_non_transfer_data(self) -> bool:
 		return (self.number_of_up_particles() - self.number_of_transferrable_tokens_particles_with_spin_up()) > 0
@@ -93,7 +95,16 @@ class TestVector(object):
 		return self.atomDescription['particleGroupCount']
 
 
-def send_large_atom_to_ledger_in_many_chunks(vector: TestVector):
+def send_large_atom_to_ledger_in_many_chunks(vector: TestVector) -> bool:
+	"""
+	Returns true if user did sign the atom and if the signature matches the expected one specified
+	in the TestVector 'vector'
+	"""
+
+	transfers_string_if_any = ""
+	if vector.transfers_human_readable() != "":
+		transfers_string_if_any = "Transfers: {}".format(vector.transfers_human_readable())
+
 	print(
 		"""
 🚀 Streaming Atom from vector to Ledger:
@@ -102,14 +113,14 @@ Atom byte count: #{}bytes
 Particle groups: #{}
 Particles with spin UP: #{}
 Contains non transfer data: {}
-Transfers: {}
+{}
 		""".format(
 			vector.description(), 
 			vector.atom_byte_count(),
 			vector.particle_group_count(),
 			vector.up_particles_dict(),
 			vector.contains_non_transfer_data(),
-			vector.transfers_human_readable()
+			transfers_string_if_any
 		)
 	)
 
@@ -174,7 +185,18 @@ Transfers: {}
 		L_c = bytes([chunk_size])
 		count_bytes_sent_to_ledger += chunk_size
 		apdu = prefix + L_c + chunk
-		result = dongle.exchange(apdu)
+		if (chunk_index+1) == number_of_chunks_to_send:
+			print(f"🔮 Finished streaming all chunks to the ledger. Waiting for your to press the Ledger's buttons...")
+
+		try:
+			result = dongle.exchange(apdu)
+		except CommException as commException:
+			if commException.sw == CommExceptionUserRejection:
+				print("🙅🏿‍♀️ You rejected the atom...Aborting vector.")
+				dongle.close()
+				return False
+			else:
+				raise commException # unknown error, interrupt exection and propage the error.
 		chunk_index += 1
 
 
@@ -188,9 +210,11 @@ Transfers: {}
 		print("\n ☢️ Signature mismatch ☢️\n")
 		print(f"Expected signature: {expected_signature_hex}") 
 		print(f"But got signature from ledger: {signature_from_ledger_device}")
-		return
+		return False
 
 	print("⭐️ DONE! ⭐️")
+	dongle.close()
+	return True
 
 
 if __name__ == "__main__":
@@ -199,9 +223,8 @@ if __name__ == "__main__":
 	parser.add_argument(
 		'--inputAtomVector', 
 		'-i', 
-		default='./vectors/data_single_transfer_huge_amount_with_change.json',
+		default='./vectors/02.json',
 		type=str, 
-		# required=True,
 		help='Path to JSON file containing test vector with CBOR encoded Atom, the particle meta data, description of atom contents and expected hash and signature.\n\nDefaults to %(default)',
 		metavar='FILE'
 	)
@@ -214,13 +237,16 @@ if __name__ == "__main__":
 		print("🚀 Testing all test vectors...")
 
 		source_file_dir = Path(__file__).parent.absolute()
-		vectors_dir = source_file_dir.joinpath("vectors")
+		vectors_dir = source_file_dir.joinpath("vectors").joinpath("working")
 
 		for vector_file_path in vectors_dir.rglob("*.json"):   
-			print(vector_file_path)
 			with open(vector_file_path) as json_file:
+				print(f"Found test vector in file: {json_file.name}")
 				vector = TestVector(json_file.read())
-				send_large_atom_to_ledger_in_many_chunks(vector=vector)
+				did_sign_and_signature_matches = send_large_atom_to_ledger_in_many_chunks(vector=vector)
+				if not did_sign_and_signature_matches:
+					print("\n🛑 Interrupting testing of all vectors since you rejected the last atom, or signature did not match the expected one?\bBye bye!")
+					break
 
 	else:
 		json_file_path = args.inputAtomVector
