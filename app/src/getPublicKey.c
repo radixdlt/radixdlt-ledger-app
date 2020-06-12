@@ -25,6 +25,8 @@
 #include "radix.h"
 #include "ux.h"
 #include "stringify_bip32_path.h"
+#include "base_conversion.h"
+
 
 // Get a pointer to getPublicKey's state variables.
 static getPublicKeyContext_t *ctx = &global.getPublicKeyContext;
@@ -115,7 +117,7 @@ static void genPubKey() {
     uint16_t tx = 0;
     cx_ecfp_public_key_t publicKey;
     
-    deriveRadixKeyPair(
+    derive_radix_key_pair(
         ctx->bip32Path, 
         &publicKey, 
         NULL // dont write private key
@@ -131,7 +133,7 @@ static void genPubKey() {
 
         // The APDU buffer contains the raw bytes of the public key.
         // So, first we need to convert to a human-readable form.
-        bin2hex(ctx->fullStr, sizeof(ctx->fullStr), G_io_apdu_buffer, publicKey.W_len);
+        hexadecimal_string_from(G_io_apdu_buffer, publicKey.W_len, ctx->fullStr);
 
         os_memmove(ctx->partialStr, ctx->fullStr, 12);
         ctx->partialStr[12] = '\0';

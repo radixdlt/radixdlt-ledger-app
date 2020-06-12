@@ -1,4 +1,5 @@
 #include "base_conversion.h"
+#include "os.h"
 
 // Divide "number" of length "length" by "divisor" in place, returning remainder
 static uint8_t divmod(uint8_t *number, uint16_t length, uint8_t divisor) {
@@ -76,4 +77,28 @@ uint16_t convertByteBufferIntoBase58(uint8_t *bytes, int length, char *buffer) {
     }
     buffer[number_of_digits] = '\0'; // NULL terminate
     return number_of_digits;
+}
+
+// Convert "bytes" of length "length" into digits of base 16 in "buffer", returning the length
+static uint16_t convertByteBufferIntoHexadecimal(uint8_t *bytes, int length, char *buffer) {
+    uint8_t number_of_digits = convertByteBufferIntoDigitsWithBase(bytes, length, buffer, 16);
+
+    static const char base16_digits[] = "0123456789abcdef";
+
+    for (unsigned int digitIndex = 0; digitIndex < number_of_digits; ++digitIndex)
+    {
+        uint8_t base16DigitIndex = (uint8_t) buffer[digitIndex];
+        buffer[digitIndex] = base16_digits[base16DigitIndex];
+    }
+    buffer[number_of_digits] = '\0'; // NULL terminate
+    return number_of_digits;
+}
+uint16_t hexadecimal_string_from(
+    uint8_t *bytes,
+    int byte_count, 
+    char *output_buffer
+) {
+	uint8_t copy[byte_count];
+	os_memcpy(copy, bytes, byte_count);
+	return convertByteBufferIntoHexadecimal(copy, byte_count, output_buffer);
 }

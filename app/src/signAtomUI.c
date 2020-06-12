@@ -1,4 +1,5 @@
 #include "ux.h"
+#include "base_conversion.h"
 
 static signAtomContext_t *ctx = &global.signAtomContext;
 
@@ -159,7 +160,7 @@ static void copyOverTransferDataToFullStringAndResetDisplayForStep(ReviewAtomSte
 // ===== START ====== APPROVE HASH->SIGN =================
 static void didFinishSignAtomFlow()
 {
-    int tx = deriveSignRespond(ctx->bip32Path, ctx->hash);
+    int tx = derive_sign_move_to_global_buffer(ctx->bip32Path, ctx->hash);
 	io_exchange_with_code(SW_OK, tx);
     ui_idle();
 }
@@ -188,7 +189,9 @@ static void prepareForDisplayingHash()
 {
     clearFullString();
     size_t lengthOfHashString = HASH256_BYTE_COUNT * 2 + 1; // + 1 for NULL
-    bin2hex(ctx->fullString, lengthOfHashString, ctx->hash, HASH256_BYTE_COUNT);
+
+    hexadecimal_string_from(ctx->hash, HASH256_BYTE_COUNT, ctx->fullString);
+
     ctx->lengthOfFullString = lengthOfHashString;
     resetDisplay();
 
@@ -310,7 +313,7 @@ static unsigned int ui_sign_approve_transfers_button(unsigned int button_mask, u
 static void filterOutTransfersBackToMeFromAllTransfers() {
     cx_ecfp_public_key_t myPublicKeyCompressed;
     
-    deriveRadixKeyPair(
+    derive_radix_key_pair(
         ctx->bip32Path, 
         &myPublicKeyCompressed, 
         NULL // dont write private key
