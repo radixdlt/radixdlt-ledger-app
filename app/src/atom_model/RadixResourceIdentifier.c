@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <os.h>
-#include "radix.h"
+#include "key_and_signatures.h"
 // #include <os_io_seproxyhal.h>
 
 

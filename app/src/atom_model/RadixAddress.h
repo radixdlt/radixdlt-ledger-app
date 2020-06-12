@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <os.h>
 #include <os_io_seproxyhal.h>
-#include "radix.h"
+#include "key_and_signatures.h"
 
 #define RADIX_ADDRESS_BYTE_COUNT 38 // MagicByte(1) + PubKeyCompr(33) + Checksum(4)
 #define RADIX_ADDRESS_BASE58_CHAR_COUNT_MAX 52
