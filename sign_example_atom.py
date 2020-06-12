@@ -186,7 +186,7 @@ Contains non transfer data: {}
 		count_bytes_sent_to_ledger += chunk_size
 		apdu = prefix + L_c + chunk
 		if (chunk_index+1) == number_of_chunks_to_send:
-			print(f"🔮 Finished streaming all chunks to the ledger. Waiting for your to press the Ledger's buttons...")
+			print(f"🔮 Finished streaming all chunks to the ledger.\n💡 Expected Hash: {vector.expected_hash_hex()}\nWaiting for your to press the Ledger's buttons...")
 
 		try:
 			result = dongle.exchange(apdu)
