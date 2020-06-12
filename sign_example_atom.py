@@ -100,7 +100,7 @@ def send_large_atom_to_ledger_in_many_chunks(vector: TestVector) -> bool:
 	Returns true if user did sign the atom and if the signature matches the expected one specified
 	in the TestVector 'vector'
 	"""
-	
+
 	letDongleOutputDebugPrintStatements = False
 	dongle = getDongle(debug=letDongleOutputDebugPrintStatements)
 
@@ -224,7 +224,7 @@ if __name__ == "__main__":
 	parser.add_argument(
 		'--inputAtomVector', 
 		'-i', 
-		default='./vectors/02.json',
+		default='./vectors/no_data_single_transfer_small_amount_no_change.json',
 		type=str, 
 		help='Path to JSON file containing test vector with CBOR encoded Atom, the particle meta data, description of atom contents and expected hash and signature.\n\nDefaults to %(default)',
 		metavar='FILE'
@@ -238,7 +238,7 @@ if __name__ == "__main__":
 		print("🚀 Testing all test vectors...")
 
 		source_file_dir = Path(__file__).parent.absolute()
-		vectors_dir = source_file_dir.joinpath("vectors").joinpath("working")
+		vectors_dir = source_file_dir.joinpath("vectors")
 
 		for vector_file_path in vectors_dir.rglob("*.json"):   
 			with open(vector_file_path) as json_file:
