@@ -71,7 +71,7 @@ static unsigned int ui_signHash_approve_button(unsigned int button_mask, unsigne
 
 		case BUTTON_EVT_RELEASED | BUTTON_RIGHT: { // APPROVE
 
-			int tx = deriveSignRespond(ctx->bip32Path, ctx->hash);
+			int tx = derive_sign_move_to_global_buffer(ctx->bip32Path, ctx->hash);
 		    io_exchange_with_code(SW_OK, tx);
 
 			ui_idle();
@@ -212,9 +212,10 @@ void handleSignHash(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLe
 	os_memmove(ctx->hash, dataBuffer+expected_bip32_byte_count, sizeof(ctx->hash));
 	
 	// Prepare to display the comparison screen by converting the hash to hex
+    hexadecimal_string_from(ctx->hash, HASH256_BYTE_COUNT, ctx->hexHash);
 	// and moving the first 12 characters into the partialHashStr buffer.
-	bin2hex(ctx->hexHash, byte_count_hash*2+1, ctx->hash, byte_count_hash); // + 1 for NULL
 	os_memmove(ctx->partialHashStr, ctx->hexHash, 12);
+
 	ctx->partialHashStr[12] = '\0';
 	ctx->displayIndex = 0;
 
