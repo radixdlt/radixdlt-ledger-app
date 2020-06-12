@@ -100,6 +100,9 @@ def send_large_atom_to_ledger_in_many_chunks(vector: TestVector) -> bool:
 	Returns true if user did sign the atom and if the signature matches the expected one specified
 	in the TestVector 'vector'
 	"""
+	
+	letDongleOutputDebugPrintStatements = False
+	dongle = getDongle(debug=letDongleOutputDebugPrintStatements)
 
 	transfers_string_if_any = ""
 	if vector.transfers_human_readable() != "":
@@ -156,8 +159,6 @@ Contains non transfer data: {}
 	L_c = bytes([len(payload)])
 	apdu = prefix + L_c + payload
 
-	letDongleOutputDebugPrintStatements = False
-	dongle = getDongle(debug=letDongleOutputDebugPrintStatements)
 	result = dongle.exchange(apdu)
 
 	count_bytes_sent_to_ledger = 0
