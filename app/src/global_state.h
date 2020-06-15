@@ -19,10 +19,6 @@ extern ui_state_t G_ui_state;
 
 #define SEEK_SCREEN(textLine1) SEEK_SCREEN_TWO_LINES(textLine1, G_ui_state.partialString12Char)
 
-void display_seek_if_needed(
-	char *title_row_max_12_chars,
-	void (*didApproveCallback)(void));
-
 void reset_ui();
 
 void ui_fullStr_to_partial();
@@ -38,16 +34,6 @@ unsigned int seek_left_right_or_approve(
 	unsigned int button_mask,
 	unsigned int button_mask_counter,
 	void (*didApproveCallback)(void));
-
-
-
-
-
-
-
-
-
-
 
 
 typedef enum {
