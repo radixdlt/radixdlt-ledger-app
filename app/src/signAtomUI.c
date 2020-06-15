@@ -11,61 +11,6 @@ typedef enum {
 
 
 // ===== START ===== HELPERS =========
-#define APPROVAL_SCREEN(textLine1) APPROVAL_SCREEN_TWO_LINES(textLine1, global.signAtomContext.partialString12Char)
-
-#define SEEK_SCREEN(textLine1) SEEK_SCREEN_TWO_LINES(textLine1, global.signAtomContext.partialString12Char)
-
-static unsigned int reject_or_approve(
-    unsigned int button_mask, 
-    unsigned int button_mask_counter,
-    void (*didApproveCallback)(void)
-) {
-    switch (button_mask) {
-        case BUTTON_EVT_RELEASED | BUTTON_LEFT: { // REJECT
-            io_exchange_with_code(SW_USER_REJECTED, 0);
-            ui_idle();
-            break;
-        }
-        case BUTTON_EVT_RELEASED | BUTTON_RIGHT: { // Approve
-            didApproveCallback();
-            break;
-        }
-    }
-    return 0;
-}
-
-static unsigned int seek_left_right_or_approve(
-    unsigned int button_mask, 
-    unsigned int button_mask_counter,
-    void (*didApproveCallback)(void)
-) {
-	switch (button_mask) {
-	case BUTTON_LEFT:
-	case BUTTON_EVT_FAST | BUTTON_LEFT: // SEEK LEFT
-		// Decrement the displayIndex when the left button is pressed (or held).
-		if (ctx->displayIndex > 0) {
-			ctx->displayIndex--;
-		}
-		os_memmove(ctx->partialString12Char, ctx->fullString + ctx->displayIndex, DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE);
-		// Re-render the screen.
-		UX_REDISPLAY();
-		break;
-
-	case BUTTON_RIGHT:
-	case BUTTON_EVT_FAST | BUTTON_RIGHT: // SEEK RIGHT
-		if (ctx->displayIndex < sizeof(ctx->fullString) - DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE) {
-			ctx->displayIndex++;
-		}
-		os_memmove(ctx->partialString12Char, ctx->fullString + ctx->displayIndex, DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE);
-		UX_REDISPLAY();
-		break;
-
-	case BUTTON_EVT_RELEASED | BUTTON_LEFT | BUTTON_RIGHT: // PROCEED
-        didApproveCallback();
-        break;
-    }
-	return 0;
-}
 
 static Transfer* nextTransfer() {
     assert(ctx->numberOfTransfersToNotMyAddress > 0);
@@ -76,33 +21,9 @@ static Transfer* nextTransfer() {
     return &(ctx->transfers[indexOfNextTransferToNotMyAddress]);
 }
 
-static const bagl_element_t* preprocessor_for_seeking(const bagl_element_t *element) {
-    if (
-        (element->component.userid == 1 && ctx->displayIndex == 0) 
-        ||
-        (element->component.userid == 2 
-        && 
-        (ctx->displayIndex == (ctx->lengthOfFullString - DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE)))) 
-    {
-        return NULL;
-    }
-    return element;
-}
-
-static void clearFullString() {
-    os_memset(ctx->fullString, 0x00, MAX_LENGTH_FULL_STR_DISPLAY);
-}
-
-static void resetDisplay() {
-    os_memset(ctx->partialString12Char, 0x00, DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE);
-    os_memmove(ctx->partialString12Char, ctx->fullString, DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE);
-    ctx->partialString12Char[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE] = '\0';
-    ctx->displayIndex = 0;
-}
-
 static void copyOverTransferDataToFullStringAndResetDisplayForStep(ReviewAtomStep step)
 {
-    clearFullString();
+    reset_ui();
     Transfer *transfer = nextTransfer();
     switch (step)
     {
@@ -110,21 +31,21 @@ static void copyOverTransferDataToFullStringAndResetDisplayForStep(ReviewAtomSte
     {
         size_t number_of_chars_to_copy = RADIX_ADDRESS_BASE58_CHAR_COUNT_MAX + 1;
         assert(number_of_chars_to_copy <= MAX_LENGTH_FULL_STR_DISPLAY);
-        ctx->lengthOfFullString = to_string_radix_address(&(transfer->address), ctx->fullString, number_of_chars_to_copy);
+       G_ui_state.lengthOfFullString = to_string_radix_address(&(transfer->address), G_ui_state.fullString, number_of_chars_to_copy);
         break;
     }
     case ReviewAmount:
     {
         size_t number_of_chars_to_copy = UINT256_DEC_STRING_MAX_LENGTH + 1;
         assert(number_of_chars_to_copy <= MAX_LENGTH_FULL_STR_DISPLAY);
-        ctx->lengthOfFullString = to_string_uint256(&(transfer->amount), ctx->fullString, number_of_chars_to_copy);
+       G_ui_state.lengthOfFullString = to_string_uint256(&(transfer->amount), G_ui_state.fullString, number_of_chars_to_copy);
         break;
     }
     case ReviewRRI: {
 
         size_t offset = to_string_rri_null_term_or_not(
             &(transfer->tokenDefinitionReference), 
-            ctx->fullString, 
+            G_ui_state.fullString, 
             RADIX_RRI_MAX_LENGTH_SYMBOL, 
             true,
             false
@@ -132,7 +53,7 @@ static void copyOverTransferDataToFullStringAndResetDisplayForStep(ReviewAtomSte
 
         size_t length_of_string___comma_space_Full_Identifier_color_space = 19;
         os_memcpy(
-            ctx->fullString + offset,
+            G_ui_state.fullString + offset,
             ", Full Identifier: ",
             length_of_string___comma_space_Full_Identifier_color_space
         );
@@ -140,20 +61,20 @@ static void copyOverTransferDataToFullStringAndResetDisplayForStep(ReviewAtomSte
 
         offset += to_string_rri_null_term_or_not(
             &(transfer->tokenDefinitionReference), 
-            ctx->fullString + offset, 
+            G_ui_state.fullString + offset, 
             MAX_LENGTH_FULL_STR_DISPLAY - offset,
             false,
             true
         );
 
-        ctx->lengthOfFullString = offset;
+       G_ui_state.lengthOfFullString = offset;
         break;
     }
     default:
         FATAL_ERROR("Unknown step: %d", step);
     }
 
-    resetDisplay();
+    ui_fullStr_to_partial();
 }
 // ===== END ===== HELPERS =========
 
@@ -187,13 +108,13 @@ static unsigned int ui_sign_approve_hash_compare_button(
 
 static void prepareForDisplayingHash()
 {
-    clearFullString();
+    reset_ui();
     size_t lengthOfHashString = HASH256_BYTE_COUNT * 2 + 1; // + 1 for NULL
 
-    hexadecimal_string_from(ctx->hash, HASH256_BYTE_COUNT, ctx->fullString);
+    hexadecimal_string_from(ctx->hash, HASH256_BYTE_COUNT, G_ui_state.fullString);
 
-    ctx->lengthOfFullString = lengthOfHashString;
-    resetDisplay();
+    G_ui_state.lengthOfFullString = lengthOfHashString;
+    ui_fullStr_to_partial();
 
     UX_DISPLAY(ui_sign_approve_hash_compare, preprocessor_for_seeking);
 }
@@ -236,23 +157,24 @@ static void prepareForApprovalOfRRI()
 
 // ==== START ======= STEP 3/4: Amount ========
 
-static const bagl_element_t ui_sign_approve_tx_step3of4_amount_no_seek[] = APPROVAL_SCREEN("Amount:");
-static unsigned int ui_sign_approve_tx_step3of4_amount_no_seek_button(unsigned int button_mask, unsigned int button_mask_counter) {
-    return reject_or_approve(button_mask, button_mask_counter, prepareForApprovalOfRRI);
-}
+// static const bagl_element_t ui_sign_approve_tx_step3of4_amount_no_seek[] = APPROVAL_SCREEN("Amount:");
+// static unsigned int ui_sign_approve_tx_step3of4_amount_no_seek_button(unsigned int button_mask, unsigned int button_mask_counter) {
+//     return reject_or_approve(button_mask, button_mask_counter, prepareForApprovalOfRRI);
+// }
 
-static const bagl_element_t ui_sign_approve_tx_step3of4_amount_seek[] = SEEK_SCREEN("Amount:");
-static unsigned int ui_sign_approve_tx_step3of4_amount_seek_button(unsigned int button_mask, unsigned int button_mask_counter) {
-    return seek_left_right_or_approve(button_mask, button_mask_counter, prepareForApprovalOfRRI);
-}
+// static const bagl_element_t ui_sign_approve_tx_step3of4_amount_seek[] = SEEK_SCREEN("Amount:");
+// static unsigned int ui_sign_approve_tx_step3of4_amount_seek_button(unsigned int button_mask, unsigned int button_mask_counter) {
+//     return seek_left_right_or_approve(button_mask, button_mask_counter, prepareForApprovalOfRRI);
+// }
 
 static void prepareForApprovalOfAmount() {
     copyOverTransferDataToFullStringAndResetDisplayForStep(ReviewAmount);
-    if (ctx->lengthOfFullString > DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE) {
-        UX_DISPLAY(ui_sign_approve_tx_step3of4_amount_seek, preprocessor_for_seeking);
-    } else {
-        UX_DISPLAY(ui_sign_approve_tx_step3of4_amount_no_seek, NULL);
-    }
+    // if (G_ui_state.lengthOfFullString > DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE) {
+    //     UX_DISPLAY(ui_sign_approve_tx_step3of4_amount_seek, preprocessor_for_seeking);
+    // } else {
+    //     UX_DISPLAY(ui_sign_approve_tx_step3of4_amount_no_seek, NULL);
+    // }
+    display_seek_if_needed("Amount:", prepareForApprovalOfRRI);
 }
 // ==== END ======= STEP 3/4: Amount ========
 
@@ -286,13 +208,13 @@ static unsigned int ui_sign_approve_tx_step1of4_txid_button(
 static void proceedWithNextTransfer() {
     assert(ctx->numberOfTransfersToNotMyAddressApproved < ctx->numberOfTransfersToNotMyAddress);
 
-    clearFullString();
+    reset_ui();
     size_t lengthOfTransferAtIndexString = DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE;
-    snprintf(ctx->fullString, lengthOfTransferAtIndexString, "tx@index: %d", ctx->numberOfTransfersToNotMyAddressApproved);
-    ctx->lengthOfFullString = lengthOfTransferAtIndexString;
-    resetDisplay();
+    snprintf(G_ui_state.fullString, lengthOfTransferAtIndexString, "tx@index: %d", ctx->numberOfTransfersToNotMyAddressApproved);
+   G_ui_state.lengthOfFullString = lengthOfTransferAtIndexString;
+   ui_fullStr_to_partial();
 
-    UX_DISPLAY(ui_sign_approve_tx_step1of4_txid, NULL);
+   UX_DISPLAY(ui_sign_approve_tx_step1of4_txid, NULL);
 }
 // ==== END ==== APPROVE TX DETAILS STEP 1/4: Transfer number =====
 
@@ -348,7 +270,7 @@ static void proceedToDisplayingTransfersIfAny() {
             prepareForApprovalOfAddress();
         } else {
             snprintf(
-                ctx->partialString12Char,
+                G_ui_state.partialString12Char,
                 DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE, 
                 "no of tx:%2d", 
                 ctx->numberOfTransfersToNotMyAddress

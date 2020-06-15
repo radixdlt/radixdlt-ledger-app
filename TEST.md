@@ -27,6 +27,25 @@ Should result in this BIP path: `44'/536'/2'/1/3`. And using the mnemonic mentio
 
 You can try the sign atom action using the small Python script [`sign_example_atom.py`](sign_example_atom.py)
 
+To try signing a small atom you can just run
+
 ```sh
 python sign_example_atom.py
+```
+
+Which will default to a smaller simpler atom.
+
+If you wanna test specific atom, you can select a specific atom with `--inputAtomVector` (or `--i` for short)
+
+```sh
+python sign_example_atom.py --i vectors/data_no_transfer_burn_action.json
+```
+
+Have a look
+
+
+You can also run test all atoms with the command:
+
+```sh
+python sign_example_atom.py --all
 ```
