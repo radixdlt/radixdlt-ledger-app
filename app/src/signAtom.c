@@ -597,13 +597,13 @@ static bool parseParticlesAndUpdateHash()
 
 // ==== START ==== UI PROGRESS UPDATE ========
 static const ux_menu_entry_t ui_hack_as_menu_progress_update[] = {
-	{NULL, NULL, 0, NULL, "Parsing TX..", global.signAtomContext.partialString12Char, 0, 0},
+	{NULL, NULL, 0, NULL, "Parsing TX..", G_ui_state.partialString12Char, 0, 0},
 	UX_MENU_END,
 };
 
 static void updateProgressDisplay() {
     snprintf(
-        ctx->partialString12Char, 
+        G_ui_state.partialString12Char, 
         DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE, 
         "Part: %02d/%02d",
         (ctx->atomByteCountParsed/MAX_CHUNK_SIZE),
@@ -765,8 +765,6 @@ void handleSignAtom(
 
     os_memset(ctx->transfers, 0x00, MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP * sizeof(Transfer));
     os_memset(ctx->indiciesTransfersToNotMyAddress, 0x00, MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP * sizeof(uint8_t));
-    os_memset(ctx->partialString12Char, 0x00, DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE);
-    os_memset(ctx->fullString, 0x00, MAX_LENGTH_FULL_STR_DISPLAY);
 
     zeroOutAddress();
     zeroOutAmount();
@@ -775,8 +773,8 @@ void handleSignAtom(
     ctx->numberOfTransferrableTokensParticlesParsed = 0;
     ctx->numberOfTransfersToNotMyAddressApproved = 0;
     ctx->numberOfTransfersToNotMyAddress = 0;
-    ctx->lengthOfFullString = 0;
 
+    reset_ui();
 
     UX_MENU_DISPLAY(0, ui_hack_as_menu_progress_update, NULL);
     ux_visible_element_index = G_ux.stack[0].element_index;
