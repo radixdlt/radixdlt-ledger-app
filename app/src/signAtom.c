@@ -6,11 +6,13 @@
 #include <os.h>
 #include <os_io_seproxyhal.h>
 #include "key_and_signatures.h"
-#include "ux.h"
+#include "ui.h"
+#include "global_state.h"
 #include "sha256_hash.h"
 #include "cbor.h"
 #include "base_conversion.h"
 #include "signAtomUI.h"
+#include "common_macros.h"
 
 static signAtomContext_t *ctx = &global.signAtomContext;
 

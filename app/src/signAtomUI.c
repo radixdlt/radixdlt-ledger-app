@@ -1,5 +1,8 @@
-#include "ux.h"
+#include "ui.h"
+#include "global_state.h"
+#include "key_and_signatures.h"
 #include "base_conversion.h"
+#include "common_macros.h"
 
 static signAtomContext_t *ctx = &global.signAtomContext;
 

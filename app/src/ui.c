@@ -1,6 +1,9 @@
+#include "ui.h"
 #include <os_io_seproxyhal.h>
+#include "common_macros.h"
 
-#include "ux.h"
+#define APPROVAL_SCREEN(textLine1) APPROVAL_SCREEN_TWO_LINES(textLine1, G_ui_state.partialString12Char)
+#define SEEK_SCREEN(textLine1) SEEK_SCREEN_TWO_LINES(textLine1, G_ui_state.partialString12Char)
 
 ui_state_t G_ui_state;
 

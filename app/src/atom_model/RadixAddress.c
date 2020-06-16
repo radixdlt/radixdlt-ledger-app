@@ -1,6 +1,7 @@
 #include "RadixAddress.h"
 #include "stdint.h"
 #include "base_conversion.h"
+#include "common_macros.h"
 
 // Returns the de-facto length of the address copied over to `output_buffer` (including the null terminator).
 size_t to_string_radix_address(

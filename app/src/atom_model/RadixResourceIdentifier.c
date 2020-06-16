@@ -4,8 +4,7 @@
 #include <stdbool.h>
 #include <os.h>
 #include "key_and_signatures.h"
-// #include <os_io_seproxyhal.h>
-
+#include "common_macros.h"
 
 size_t to_string_rri(
     RadixResourceIdentifier *rri,

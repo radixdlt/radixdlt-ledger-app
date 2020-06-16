@@ -3,7 +3,9 @@
 #include <os.h>
 #include <os_io_seproxyhal.h>
 #include "key_and_signatures.h"
-#include "ux.h"
+#include "ui.h"
+#include "global_state.h"
+#include "common_macros.h"
 
 static signHashContext_t *ctx = &global.signHashContext;
 

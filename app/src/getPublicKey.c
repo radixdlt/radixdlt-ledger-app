@@ -3,9 +3,11 @@
 #include <os.h>
 #include <os_io_seproxyhal.h>
 #include "key_and_signatures.h"
-#include "ux.h"
+#include "ui.h"
+#include "global_state.h"
 #include "stringify_bip32_path.h"
 #include "base_conversion.h"
+#include "common_macros.h"
 
 static getPublicKeyContext_t *ctx = &global.getPublicKeyContext;
 
