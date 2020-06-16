@@ -16,23 +16,18 @@ void ui_fullStr_to_partial() {
     G_ui_state.partialString12Char[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE] = '\0';
 }
 
-const bagl_element_t* preprocessor_for_seeking(const bagl_element_t *element) {
-    if (
-        (element->component.userid == 1 && G_ui_state.displayIndex == 0) 
-        ||
-        (element->component.userid == 2 
-        && 
-        (G_ui_state.displayIndex == (G_ui_state.lengthOfFullString - DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE)))) 
-    {
-        return NULL;
-    }
-    return element;
-}
+static callback_t function_pointer;
+
+static char title_row_12_chars[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE];
+
+static const bagl_element_t ui_generic_approve[] = APPROVAL_SCREEN(title_row_12_chars);
+
+static const bagl_element_t ui_generic_seek[] = SEEK_SCREEN(title_row_12_chars);
 
 unsigned int reject_or_approve(
     unsigned int button_mask, 
     unsigned int button_mask_counter,
-    void (*didApproveCallback)(void)
+    callback_t didApproveCallback
 ) {
     switch (button_mask) {
         case BUTTON_EVT_RELEASED | BUTTON_LEFT: { // REJECT
@@ -51,7 +46,7 @@ unsigned int reject_or_approve(
 unsigned int seek_left_right_or_approve(
     unsigned int button_mask, 
     unsigned int button_mask_counter,
-    void (*didApproveCallback)(void)
+    callback_t didApproveCallback
 ) {
 	switch (button_mask) {
 	case BUTTON_LEFT:
@@ -79,4 +74,44 @@ unsigned int seek_left_right_or_approve(
         break;
     }
 	return 0;
+}
+
+
+static unsigned int ui_generic_approve_button(unsigned int button_mask, unsigned int button_mask_counter) {
+    return reject_or_approve(button_mask, button_mask_counter, function_pointer);
+}
+
+static unsigned int ui_generic_seek_button(unsigned int button_mask, unsigned int button_mask_counter) {
+    return seek_left_right_or_approve(button_mask, button_mask_counter, function_pointer);
+}
+
+const bagl_element_t* preprocessor_for_seeking(const bagl_element_t *element) {
+    if (
+        (element->component.userid == 1 && G_ui_state.displayIndex == 0) 
+        ||
+        (element->component.userid == 2 
+        && 
+        (G_ui_state.displayIndex == (G_ui_state.lengthOfFullString - DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE)))) 
+    {
+        return NULL;
+    }
+    return element;
+}
+
+void display_seek_if_needed(
+    char* title_row_max_12_chars,
+    size_t number_of_chars,
+    callback_t didApproveCallback
+) {
+    assert(number_of_chars <= 12);
+    os_memcpy(title_row_12_chars, title_row_max_12_chars, number_of_chars);
+    title_row_12_chars[number_of_chars] = '\0';
+    function_pointer = didApproveCallback;
+
+    if (G_ui_state.lengthOfFullString > DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE) {
+        UX_DISPLAY(ui_generic_seek, preprocessor_for_seeking);
+    } 
+    else {
+        UX_DISPLAY(ui_generic_approve, NULL);
+    }
 }
