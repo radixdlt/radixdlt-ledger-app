@@ -20,9 +20,9 @@ static callback_t function_pointer;
 
 static char title_row_12_chars[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE];
 
-static const bagl_element_t ui_generic_approve[] = APPROVAL_SCREEN(title_row_12_chars);
+static const bagl_element_t ui_generic_single_line_approve[] = APPROVAL_SCREEN(title_row_12_chars);
 
-static const bagl_element_t ui_generic_seek[] = SEEK_SCREEN(title_row_12_chars);
+static const bagl_element_t ui_generic_single_line_seek[] = SEEK_SCREEN(title_row_12_chars);
 
 unsigned int reject_or_approve(
     unsigned int button_mask, 
@@ -77,11 +77,11 @@ unsigned int seek_left_right_or_approve(
 }
 
 
-static unsigned int ui_generic_approve_button(unsigned int button_mask, unsigned int button_mask_counter) {
+static unsigned int ui_generic_single_line_approve_button(unsigned int button_mask, unsigned int button_mask_counter) {
     return reject_or_approve(button_mask, button_mask_counter, function_pointer);
 }
 
-static unsigned int ui_generic_seek_button(unsigned int button_mask, unsigned int button_mask_counter) {
+static unsigned int ui_generic_single_line_seek_button(unsigned int button_mask, unsigned int button_mask_counter) {
     return seek_left_right_or_approve(button_mask, button_mask_counter, function_pointer);
 }
 
@@ -99,19 +99,36 @@ const bagl_element_t* preprocessor_for_seeking(const bagl_element_t *element) {
 }
 
 void display_seek_if_needed(
-    char* title_row_max_12_chars,
-    size_t number_of_chars,
+    
+    // expect to be a string literal of max 12 chars excluding expected NULL terminator (which string literal implictally contains)
+    const char* title_row_max_12_chars, 
+    
     callback_t didApproveCallback
 ) {
-    assert(number_of_chars <= 12);
-    os_memcpy(title_row_12_chars, title_row_max_12_chars, number_of_chars);
-    title_row_12_chars[number_of_chars] = '\0';
+
+    int length_of_string = strlen(title_row_max_12_chars);
+    assert(length_of_string <= 12);
+    os_memset(title_row_12_chars, 0x00, 12);
+    os_memcpy(title_row_12_chars, title_row_max_12_chars, length_of_string);
     function_pointer = didApproveCallback;
 
     if (G_ui_state.lengthOfFullString > DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE) {
-        UX_DISPLAY(ui_generic_seek, preprocessor_for_seeking);
+        UX_DISPLAY(ui_generic_single_line_seek, preprocessor_for_seeking);
     } 
     else {
-        UX_DISPLAY(ui_generic_approve, NULL);
+        UX_DISPLAY(ui_generic_single_line_approve, NULL);
     }
 }
+
+// static const bagl_element_t ui_sign_confirm_signing[] = APPROVAL_SCREEN_TWO_LINES("Sign content", "Confirm?");
+// static unsigned int ui_sign_confirm_signing_button(
+//     unsigned int button_mask,
+//     unsigned int button_mask_counter)
+// {
+//     return reject_or_approve(button_mask, button_mask_counter, didFinishSignAtomFlow);
+// }
+
+// static void askUserForFinalConfirmation() {
+//     UX_DISPLAY(ui_sign_confirm_signing, NULL);
+// }
+
