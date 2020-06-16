@@ -156,25 +156,9 @@ static void prepareForApprovalOfRRI()
 
 
 // ==== START ======= STEP 3/4: Amount ========
-
-static const bagl_element_t ui_sign_approve_tx_step3of4_amount_no_seek[] = APPROVAL_SCREEN("Amount:");
-static unsigned int ui_sign_approve_tx_step3of4_amount_no_seek_button(unsigned int button_mask, unsigned int button_mask_counter) {
-    return reject_or_approve(button_mask, button_mask_counter, prepareForApprovalOfRRI);
-}
-
-static const bagl_element_t ui_sign_approve_tx_step3of4_amount_seek[] = SEEK_SCREEN("Amount:");
-static unsigned int ui_sign_approve_tx_step3of4_amount_seek_button(unsigned int button_mask, unsigned int button_mask_counter) {
-    return seek_left_right_or_approve(button_mask, button_mask_counter, prepareForApprovalOfRRI);
-}
-
 static void prepareForApprovalOfAmount() {
-    copyOverTransferDataToFullStringAndResetDisplayForStep(ReviewAmount);
-    if (G_ui_state.lengthOfFullString > DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE) {
-        UX_DISPLAY(ui_sign_approve_tx_step3of4_amount_seek, preprocessor_for_seeking);
-    } else {
-        UX_DISPLAY(ui_sign_approve_tx_step3of4_amount_no_seek, NULL);
-    }
-    // display_seek_if_needed("Amount:", prepareForApprovalOfRRI);
+    (ReviewAmount);
+    display_seek_if_needed("Amount:", 7, prepareForApprovalOfRRI);
 }
 // ==== END ======= STEP 3/4: Amount ========
 
