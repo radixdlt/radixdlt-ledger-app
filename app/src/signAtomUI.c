@@ -78,7 +78,6 @@ static void prepare_display_with_transfer_data_step(ReviewAtomStep step)
 }
 // ===== END ===== HELPERS =========
 
-// ===== START ====== APPROVE HASH->SIGN =================
 static void didFinishSignAtomFlow()
 {
     int tx = derive_sign_move_to_global_buffer(ctx->bip32Path, ctx->hash);
@@ -86,18 +85,9 @@ static void didFinishSignAtomFlow()
     ui_idle();
 }
 
-static const bagl_element_t ui_sign_confirm_signing[] = APPROVAL_SCREEN_TWO_LINES("Sign content", "Confirm?");
-static unsigned int ui_sign_confirm_signing_button(
-    unsigned int button_mask,
-    unsigned int button_mask_counter)
-{
-    return reject_or_approve(button_mask, button_mask_counter, didFinishSignAtomFlow);
-}
-
 static void askUserForFinalConfirmation() {
-    UX_DISPLAY(ui_sign_confirm_signing, NULL);
+    display_lines("Sign content", "Confirm?", didFinishSignAtomFlow);
 }
-
 
 static void prepareForDisplayingHash()
 {
@@ -109,13 +99,11 @@ static void prepareForDisplayingHash()
     G_ui_state.lengthOfFullString = lengthOfHashString;
     ui_fullStr_to_partial();
 
-    display_seek_if_needed("Verify Hash", askUserForFinalConfirmation);
+    display_value("Verify Hash", askUserForFinalConfirmation);
 }
-// ===== END ====== APPROVE HASH->SIGN =================
 
 
 
-// ===== START ====== APPROVE DETAILS OF EACH TRANSFER  =================
 static void proceedWithNextTransfer();
 
 static void proceedWithNextTransferIfAnyElseDisplayHash()
@@ -136,17 +124,17 @@ static void proceedWithNextTransferIfAnyElseDisplayHash()
 static void prepareForApprovalOfRRI()
 {
     prepare_display_with_transfer_data_step(ReviewRRI);
-    display_seek_if_needed("Token:", proceedWithNextTransferIfAnyElseDisplayHash);
+    display_value("Token:", proceedWithNextTransferIfAnyElseDisplayHash);
 }
 
 static void prepareForApprovalOfAmount() {
     prepare_display_with_transfer_data_step(ReviewAmount);
-    display_seek_if_needed("Amount:", prepareForApprovalOfRRI);
+    display_value("Amount:", prepareForApprovalOfRRI);
 }
 
 static void prepareForApprovalOfAddress() {
     prepare_display_with_transfer_data_step(ReviewAddress);
-    display_seek_if_needed("To address:", prepareForApprovalOfAmount);
+    display_value("To address:", prepareForApprovalOfAmount);
 }
 
 static void proceedWithNextTransfer()
@@ -159,7 +147,7 @@ static void proceedWithNextTransfer()
     G_ui_state.lengthOfFullString = lengthOfTransferAtIndexString;
     ui_fullStr_to_partial();
 
-    display_seek_if_needed("Approve TX:", prepareForApprovalOfAddress);
+    display_value("Approve TX:", prepareForApprovalOfAddress);
 }
 
 static void filterOutTransfersBackToMeFromAllTransfers() {
@@ -206,24 +194,14 @@ static void proceedToDisplayingTransfersIfAny() {
                 ctx->numberOfTransfersToNotMyAddress
             );
             
-            display_seek_if_needed("Found #TX:", proceedWithNextTransfer);
+            display_value("Found #TX:", proceedWithNextTransfer);
         }
     }
 }
 
-// ===== START ====== APPROVE NON-TRANSFER DATA =================
-static const bagl_element_t ui_sign_approve_nonTransferData[] = APPROVAL_SCREEN_TWO_LINES("Non-transfer", "data found!!");
-
-static unsigned int ui_sign_approve_nonTransferData_button(unsigned int button_mask, unsigned int button_mask_counter) {
-    return reject_or_approve(button_mask, button_mask_counter, proceedToDisplayingTransfersIfAny);
+static void notifyNonTransferDataFound() {
+    display_lines("Non-Transfer", "data found!!", proceedToDisplayingTransfersIfAny);
 }
-
-static void notifyNonTransferDataFound() {    
-    UX_DISPLAY(ui_sign_approve_nonTransferData, NULL);
-}
-// ===== END ====== APPROVE NON-TRANSFER DATA =================
-
-
 
 void presentAtomContentsOnDisplay() {
     if (ctx->numberOfNonTransferrableTokensParticlesIdentified > 0)
