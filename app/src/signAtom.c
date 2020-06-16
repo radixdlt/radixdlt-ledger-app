@@ -18,6 +18,13 @@ static signAtomContext_t *ctx = &global.signAtomContext;
 
 static unsigned short ux_visible_element_index = 0;
 
+typedef enum {
+    AddressField = 0,
+    AmountField,
+    SerializerField,
+    TokenDefinitionReferenceField
+} ParticleField;
+
 static bool isZeroByteInterval(ByteInterval *byteInterval)
 {
     if (byteInterval->byteCount > 0)
