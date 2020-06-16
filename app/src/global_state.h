@@ -22,8 +22,7 @@ extern ui_state_t G_ui_state;
 typedef void (*callback_t)(void);
 
 void display_seek_if_needed(
-	char *title_row_max_12_chars,
-	size_t number_of_chars,
+	const char *title_row_max_12_chars,
 	callback_t didApproveCallback);
 
 void reset_ui();

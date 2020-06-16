@@ -109,7 +109,7 @@ static void prepareForDisplayingHash()
     G_ui_state.lengthOfFullString = lengthOfHashString;
     ui_fullStr_to_partial();
 
-    display_seek_if_needed("Verify Hash", 11, askUserForFinalConfirmation);
+    display_seek_if_needed("Verify Hash", askUserForFinalConfirmation);
 }
 // ===== END ====== APPROVE HASH->SIGN =================
 
@@ -136,17 +136,17 @@ static void proceedWithNextTransferIfAnyElseDisplayHash()
 static void prepareForApprovalOfRRI()
 {
     prepare_display_with_transfer_data_step(ReviewRRI);
-    display_seek_if_needed("Token:", 6, proceedWithNextTransferIfAnyElseDisplayHash);
+    display_seek_if_needed("Token:", proceedWithNextTransferIfAnyElseDisplayHash);
 }
 
 static void prepareForApprovalOfAmount() {
     prepare_display_with_transfer_data_step(ReviewAmount);
-    display_seek_if_needed("Amount:", 7, prepareForApprovalOfRRI);
+    display_seek_if_needed("Amount:", prepareForApprovalOfRRI);
 }
 
 static void prepareForApprovalOfAddress() {
     prepare_display_with_transfer_data_step(ReviewAddress);
-    display_seek_if_needed("To address:", 11, prepareForApprovalOfAmount);
+    display_seek_if_needed("To address:", prepareForApprovalOfAmount);
 }
 
 static void proceedWithNextTransfer()
@@ -159,7 +159,7 @@ static void proceedWithNextTransfer()
     G_ui_state.lengthOfFullString = lengthOfTransferAtIndexString;
     ui_fullStr_to_partial();
 
-    display_seek_if_needed("Approve TX:", 11, prepareForApprovalOfAddress);
+    display_seek_if_needed("Approve TX:", prepareForApprovalOfAddress);
 }
 
 static void filterOutTransfersBackToMeFromAllTransfers() {
@@ -206,7 +206,7 @@ static void proceedToDisplayingTransfersIfAny() {
                 ctx->numberOfTransfersToNotMyAddress
             );
             
-            display_seek_if_needed("Found #TX:", 10, proceedWithNextTransfer);
+            display_seek_if_needed("Found #TX:", proceedWithNextTransfer);
         }
     }
 }
