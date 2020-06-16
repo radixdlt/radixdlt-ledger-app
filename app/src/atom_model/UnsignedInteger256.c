@@ -3,6 +3,7 @@
 #include <os.h>
 #include "key_and_signatures.h"
 #include "base_conversion.h"
+#include "common_macros.h"
 
 size_t to_string_uint256(
     UnsignedInteger256 *uint256,

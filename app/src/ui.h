@@ -1,9 +1,28 @@
 #ifndef RADIX_TOKEN_NANOS_UX_H
 #define RADIX_TOKEN_NANOS_UX_H
 
-#include "key_and_signatures.h"
-#include "global_state.h"
+#include "stdint.h"
+#include <seproxyhal_protocol.h>
+#include <os_io_seproxyhal.h>
 
+// assuming a font size of 11 (`BAGL_FONT_OPEN_SANS_REGULAR_11px`)
+#define DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE 12
+
+// Size of some string used for displaying long text on disaply
+#define MAX_LENGTH_FULL_STR_DISPLAY 103 // "ABCD0123456789E, Full Identifier: /9hTaTtgqxhAGRryeMs5htePmJA53tpjDgJK1FY3H1tLrmiZjv6j/ABCD0123456789E\0"
+
+typedef struct {
+	uint8_t displayIndex;
+	uint8_t fullString[MAX_LENGTH_FULL_STR_DISPLAY]; // the RRI is the longest data we wanna display
+	uint8_t lengthOfFullString;
+	uint8_t partialString12Char[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE + 1]; //+1 for NULL
+} ui_state_t;
+
+extern ui_state_t G_ui_state;
+
+typedef void (*callback_t)(void);
+
+// BOLOS stuff
 extern ux_state_t ux;
 
 #define UI_BACKGROUND() {{BAGL_RECTANGLE,0,0,0,128,32,0,0,BAGL_FILL,0,0xFFFFFF,0,0},NULL}
@@ -111,5 +130,30 @@ void ui_idle(void);
 // io_exchange with the IO_RETURN_AFTER_TX flag. tx is the current offset
 // within G_io_apdu_buffer (before the code is appended).
 void io_exchange_with_code(uint16_t code, uint16_t tx);
+
+void display_lines(
+	const char *row_1_max_12_chars,
+	const char *row_2_max_12_chars,
+	callback_t didApproveCallback);
+
+void display_value(
+	const char *title_max_12_chars,
+	callback_t didApproveCallback);
+
+void reset_ui();
+
+void ui_fullStr_to_partial();
+
+const bagl_element_t *preprocessor_for_seeking(const bagl_element_t *element);
+
+unsigned int reject_or_approve(
+	unsigned int button_mask,
+	unsigned int button_mask_counter,
+	void (*didApproveCallback)(void));
+
+unsigned int seek_left_right_or_approve(
+	unsigned int button_mask,
+	unsigned int button_mask_counter,
+	void (*didApproveCallback)(void));
 
 #endif

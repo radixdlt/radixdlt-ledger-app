@@ -4,7 +4,7 @@
 #include <os.h>
 #include <os_io_seproxyhal.h>
 #include "key_and_signatures.h"
-#include "ux.h"
+#include "ui.h"
 
 bool sha256_hash(
     cx_sha256_t *hash_context,

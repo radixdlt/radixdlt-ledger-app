@@ -3,7 +3,8 @@
 #include <os.h>
 #include <os_io_seproxyhal.h>
 #include "key_and_signatures.h"
-#include "ux.h"
+#include "ui.h"
+#include "common_macros.h"
 
 // handleGetVersion is the entry point for the getVersion command. It
 // unconditionally sends the app version.

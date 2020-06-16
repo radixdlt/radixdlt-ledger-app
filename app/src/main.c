@@ -104,8 +104,9 @@
 #include <stdbool.h>
 #include <os_io_seproxyhal.h>
 #include "glyphs.h"
-#include "ux.h"
+#include "ui.h"
 #include "key_and_signatures.h"
+#include "global_state.h"
 
 // These are global variables declared in ux.h. They can't be defined there
 // because multiple files include ux.h; they need to be defined in exactly one

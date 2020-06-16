@@ -5,6 +5,7 @@
 #include "key_and_signatures.h"
 #include "os_io_seproxyhal.h"
 #include "stringify_bip32_path.h"
+#include "common_macros.h"
 
 #define KEY_SEED_BYTE_COUNT 32
 
