@@ -1,134 +1,10 @@
 #include "key_and_signatures.h"
 #include "Transfer.h"
+#include "common_macros.h"
+#include "ParticleMetaData.h"
+#include "RadixParticleTypes.h"
 
 #define NUMBER_OF_BIP32_COMPONENTS_IN_PATH 5
-
-// Size of some string used for displaying long text on disaply
-#define MAX_LENGTH_FULL_STR_DISPLAY 103 // "ABCD0123456789E, Full Identifier: /9hTaTtgqxhAGRryeMs5htePmJA53tpjDgJK1FY3H1tLrmiZjv6j/ABCD0123456789E\0"
-
-typedef struct {
-	uint8_t displayIndex;
-	uint8_t fullString[MAX_LENGTH_FULL_STR_DISPLAY]; // the RRI is the longest data we wanna display
-	uint8_t lengthOfFullString;
-	uint8_t partialString12Char[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE + 1]; //+1 for NULL
-} ui_state_t;
-
-extern ui_state_t G_ui_state;
-
-#define APPROVAL_SCREEN(textLine1) APPROVAL_SCREEN_TWO_LINES(textLine1, G_ui_state.partialString12Char)
-
-#define SEEK_SCREEN(textLine1) SEEK_SCREEN_TWO_LINES(textLine1, G_ui_state.partialString12Char)
-
-typedef void (*callback_t)(void);
-
-void display_seek_if_needed(
-	char *title_row_max_12_chars,
-	size_t number_of_chars,
-	callback_t didApproveCallback);
-
-void reset_ui();
-
-void ui_fullStr_to_partial();
-
-const bagl_element_t *preprocessor_for_seeking(const bagl_element_t *element);
-
-unsigned int reject_or_approve(
-	unsigned int button_mask,
-	unsigned int button_mask_counter,
-	void (*didApproveCallback)(void));
-
-unsigned int seek_left_right_or_approve(
-	unsigned int button_mask,
-	unsigned int button_mask_counter,
-	void (*didApproveCallback)(void));
-
-
-typedef enum {
-    AddressField = 0,
-    AmountField,
-    SerializerField,
-    TokenDefinitionReferenceField
-} ParticleField;
-
-typedef enum {
-    NoParticleTypeParsedYet = 0,
-    MessageParticleType = 1,
-    RRIParticleType,
-    FixedSupplyTokenDefinitionParticleType,
-    MutableSupplyTokenDefinitionParticleType,
-    UnallocatedTokensParticleType,
-    TransferrableTokensParticleType,
-    UniqueParticleType,
-
-    ParticleType_is_unknown
-} RadixParticleTypes;
-
-typedef struct {
-	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
-	
-	// If set to `true` the Ledger will not generate a public key until user has confirmed on her Ledger
-	// after confirmation the Ledger emits the pubkey in an APDU *response*. UX flow is now done iff
-	// `requireConfirmationOfDisplayedPubKey` is set to `false`, otherwise a second confirmation is needed,
-	bool requireConfirmationBeforeGeneration;
-
-	// Disregarding of this value, a Public Key should already have been generated and sent back
-	// via an APDU response, but if this bool is set to `true`, then said public key is displayed
-	// on the Ledger and user needs to confirm on the Ledger that she acknowledges that she sees
-	// the same public key in her wallet.
-	bool requireConfirmationOfDisplayedPubKey;
-
-	uint8_t displayIndex;
-	// NUL-terminated strings for display
-	uint8_t typeStr[40]; // variable-length
-	uint8_t bip32PathString[BIP32_PATH_STRING_MAX_LENGTH]; // variable-length
-	uint8_t fullStr[77]; // variable length
-	// partialStr contains 12 characters of a longer string. This allows text
-	// to be scrolled.
-	uint8_t partialStr[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE + 1]; //+1 for NULL
-} getPublicKeyContext_t;
-
-#define HASH256_BYTE_COUNT 32
-
-typedef struct {
-	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
-	uint8_t bip32PathString[BIP32_PATH_STRING_MAX_LENGTH]; // variable-length
-	uint8_t hash[HASH256_BYTE_COUNT];
-
-	uint8_t hexHash[(2 * HASH256_BYTE_COUNT) + 1]; // 1 for null
-
-	uint8_t displayIndex;
-	// NUL-terminated strings for display
-	uint8_t partialHashStr[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE + 1]; //+1 for NULL
-} signHashContext_t;
-
-typedef struct {
-	uint16_t startsAt;
-	uint16_t byteCount;
-} ByteInterval;
-
-// A 16 byte struct, containing byte intervals (offset + count) to 
-// fields (values) of interest inside of a Particle. The byte offsets are
-// measured from the start of the Atom (that the particle is part of).
-// In case of a Non-TransferrableTokensParticle the byte interval tuple
-// will have value (0, 0), thus we can distinquish between this ParticleMetaData
-// being meta data for a `TransferrableTokensParticle` of other particle type
-// by looking at `[addressOfRecipientByteInterval, amountByteInterval,
-// tokenDefinitionReferenceByteInterval]` and check if all zero or not.
-typedef struct {
-
-	// In case of Non-TransferrableTokensParticle this will have value (0, 0)
-	ByteInterval addressOfRecipientByteInterval;
-
-	// In case of Non-TransferrableTokensParticle this will have value (0, 0)
-	ByteInterval amountByteInterval;
-
-	// Always present, disregarding of particle type
-	ByteInterval serializerValueByteInterval;
-
-	// In case of Non-TransferrableTokensParticle this will have value (0, 0)
-	ByteInterval tokenDefinitionReferenceByteInterval;
-} ParticleMetaData;
-
 #define MAX_CHUNK_SIZE 255 
 
 #define MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP 6
@@ -136,6 +12,18 @@ typedef struct {
 
 // The biggest of a value split across chunks might be the `rri`
 #define MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS (RADIX_RRI_MAX_BYTE_COUNT - 1)
+
+#define HASH256_BYTE_COUNT 32
+
+typedef struct {
+	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
+    bool requireConfirmationOfDisplayedPubKey;
+} getPublicKeyContext_t;
+
+typedef struct {
+	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
+	uint8_t hash[HASH256_BYTE_COUNT];
+} signHashContext_t;
 
 typedef struct {
 	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
