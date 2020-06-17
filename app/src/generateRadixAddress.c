@@ -13,8 +13,6 @@
 static generateRadixAddressContext_t *ctx = &global.generateRadixAddressContext;
 
 static void user_did_confirm_address() {
-    int length_of_radix_address_string_b58 = strlen(G_io_apdu_buffer);
-    io_exchange_with_code(SW_OK, length_of_radix_address_string_b58);
     ui_idle();
 }
 
@@ -30,8 +28,9 @@ static void generate_and_respond_with_radix_address() {
         ctx->radixUniverseMagicByte, publicKey.W, G_io_apdu_buffer,
         RADIX_ADDRESS_BASE58_CHAR_COUNT_MAX + 1);
 
-    if (!ctx->requireConfirmationOfAddress) {
         io_exchange_with_code(SW_OK, length_of_radix_address_string_b58);
+
+    if (!ctx->requireConfirmationOfAddress) {
         ui_idle();
     } else {
         G_ui_state.lengthOfFullString = length_of_radix_address_string_b58;
