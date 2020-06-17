@@ -62,7 +62,7 @@ The general structure of commands and responses is as follows:
 
 --------------
 
-### INS_GET_ADDR_SECP256K1
+### INS_GEN_RADIX_ADDR
 
 #### Command
 
@@ -70,9 +70,11 @@ The general structure of commands and responses is as follows:
 | ---------- | -------------- | ------------------------------ | -------------- |
 | CLA        | byte (1)       | Application Identifier         | 0xAA           |
 | INS        | byte (1)       | Instruction ID                 | 0x01           |
-| P1         | byte (1)       | Display address/path on device | 0x00 No        |
-|            |                |                                | 0x01 Yes       |
-| P2         | byte (1)       | Parameter 2                    | ignored        |
+| P1         | byte (1)       | Display address/path on device | 0x00 No confirmation |
+|            |                |                                | 0x01 Require confirm of just address      |
+|            |                |                                | 0x02 Require confirm of just BIP32 path      |
+|            |                |                                | 0x03 Require confirm of both address and BIP32 Path  |
+| P2         | byte (1)       | Radix Universe Magic Byte      | ?        |
 | L          | byte (1)       | Length of Payload              | 12<sup id="ga1">[1](#ga1)</sup>             |
 | |
 | DEFINITION OF PAYLOAD |
