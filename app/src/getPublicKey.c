@@ -2,7 +2,6 @@
 #include <os_io_seproxyhal.h>
 #include <stdbool.h>
 #include <stdint.h>
-
 #include "base_conversion.h"
 #include "common_macros.h"
 #include "global_state.h"
@@ -18,12 +17,12 @@ static void user_did_confirm_pub_key() {
 }
 
 static void genPubKey() {
+
     cx_ecfp_public_key_t publicKey;
 
     derive_radix_key_pair(ctx->bip32Path, &publicKey,
                           NULL  // dont write private key
     );
-
     assert(publicKey.W_len == PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
 
     os_memmove(G_io_apdu_buffer, publicKey.W,
@@ -71,11 +70,12 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
         THROW(SW_INVALID_PARAM);
     }
 
+
     ctx->requireConfirmationOfDisplayedPubKey =
         (p2 == P2_REQUIRE_CONFIRMATION_OF_DISPLAYED_PUBKEY);
-    G_ui_state.lengthOfFullString = parse_bip32_path_from_apdu_command(
-        dataBuffer, ctx->bip32Path, G_ui_state.fullString,
-        MAX_LENGTH_FULL_STR_DISPLAY);
+    
+    // READ BIP 32 path
+    G_ui_state.lengthOfFullString = parse_bip32_path_from_apdu_command(dataBuffer, ctx->bip32Path, G_ui_state.fullString, BIP32_PATH_STRING_MAX_LENGTH);
 
     *flags |= IO_ASYNCH_REPLY;
 
