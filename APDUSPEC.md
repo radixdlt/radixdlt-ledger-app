@@ -179,10 +179,9 @@ Streaming of Atom data in multiple chunks/packets, first chunk will contain meta
 | --------- | ------------- | ----------------------------- | ------------- |
 | CLA		| byte (1)   	| Application Identifier        | 0xAA      	|
 | INS		| byte (1)   	| Instruction ID                | 0x08      	|
-| P1 		| byte (1)   	| Confirm before generation     | 0x00 No confirmation needed |
-|    		|            	|                               | 0x01 Confirmation needed before generation of pub key  |
-| P2 		| byte (1)   	| Confirm after displayed PubKey| 0x00 No confirmation needed |
-|    		|            	|                               | 0x01 Confirmation needed before UX flow is done  |
+| P1 		| byte (1)   	| Confirm before generation     | 0x00 No confirmation of BIP32 path needed |
+|    		|            	|                               | 0x01 Confirmation of BIP 32 path needed before generation of pub key  |
+| P2 	    | byte (1)		| -----							| Not used |
 | L         | byte (1)		| Number of bytes in Payload 	| 12<sup id="gpk1">[1](#gpk1)</sup>			|
 | Payload 	| byte (L)		| BIP32 derivation path 		| (depends)	    |
 	

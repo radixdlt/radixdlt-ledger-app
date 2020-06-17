@@ -6,7 +6,6 @@
 
 typedef struct {
 	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
-    bool requireConfirmationOfDisplayedPubKey;
 } getPublicKeyContext_t;
 
 typedef struct {
