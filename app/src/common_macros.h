@@ -36,7 +36,6 @@
     }
 
 // Constants
-#define SHA256_HASH_DIGEST_BYTE_COUNT 32
 #define PUBLIC_KEY_COMPRESSEED_BYTE_COUNT 33
 
 // exception codes
