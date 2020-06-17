@@ -611,6 +611,12 @@ static const ux_menu_entry_t ui_hack_as_menu_progress_update[] = {
 };
 
 static void updateProgressDisplay() {
+    os_memset(G_ui_state.fullString, 0x00,
+              MAX_LENGTH_FULL_STR_DISPLAY);
+
+    os_memset(G_ui_state.partialString12Char, 0x00,
+              DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE);
+
     snprintf(
         G_ui_state.partialString12Char, 
         DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE, 
@@ -782,8 +788,6 @@ void handleSignAtom(
     ctx->numberOfTransferrableTokensParticlesParsed = 0;
     ctx->numberOfTransfersToNotMyAddressApproved = 0;
     ctx->numberOfTransfersToNotMyAddress = 0;
-
-    reset_ui();
 
     UX_MENU_DISPLAY(0, ui_hack_as_menu_progress_update, NULL);
     ux_visible_element_index = G_ux.stack[0].element_index;

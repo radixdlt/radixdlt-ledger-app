@@ -5,45 +5,6 @@
 #include "RadixParticleTypes.h"
 
 #define NUMBER_OF_BIP32_COMPONENTS_IN_PATH 5
-
-typedef struct {
-	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
-	
-	// If set to `true` the Ledger will not generate a public key until user has confirmed on her Ledger
-	// after confirmation the Ledger emits the pubkey in an APDU *response*. UX flow is now done iff
-	// `requireConfirmationOfDisplayedPubKey` is set to `false`, otherwise a second confirmation is needed,
-	bool requireConfirmationBeforeGeneration;
-
-	// Disregarding of this value, a Public Key should already have been generated and sent back
-	// via an APDU response, but if this bool is set to `true`, then said public key is displayed
-	// on the Ledger and user needs to confirm on the Ledger that she acknowledges that she sees
-	// the same public key in her wallet.
-	bool requireConfirmationOfDisplayedPubKey;
-
-	uint8_t displayIndex;
-	// NUL-terminated strings for display
-	uint8_t typeStr[40]; // variable-length
-	uint8_t bip32PathString[BIP32_PATH_STRING_MAX_LENGTH]; // variable-length
-	uint8_t fullStr[77]; // variable length
-	// partialStr contains 12 characters of a longer string. This allows text
-	// to be scrolled.
-	uint8_t partialStr[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE + 1]; //+1 for NULL
-} getPublicKeyContext_t;
-
-#define HASH256_BYTE_COUNT 32
-
-typedef struct {
-	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
-	uint8_t bip32PathString[BIP32_PATH_STRING_MAX_LENGTH]; // variable-length
-	uint8_t hash[HASH256_BYTE_COUNT];
-
-	uint8_t hexHash[(2 * HASH256_BYTE_COUNT) + 1]; // 1 for null
-
-	uint8_t displayIndex;
-	// NUL-terminated strings for display
-	uint8_t partialHashStr[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE + 1]; //+1 for NULL
-} signHashContext_t;
-
 #define MAX_CHUNK_SIZE 255 
 
 #define MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP 6
@@ -51,6 +12,18 @@ typedef struct {
 
 // The biggest of a value split across chunks might be the `rri`
 #define MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS (RADIX_RRI_MAX_BYTE_COUNT - 1)
+
+#define HASH256_BYTE_COUNT 32
+
+typedef struct {
+	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
+    bool requireConfirmationOfDisplayedPubKey;
+} getPublicKeyContext_t;
+
+typedef struct {
+	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
+	uint8_t hash[HASH256_BYTE_COUNT];
+} signHashContext_t;
 
 typedef struct {
 	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];

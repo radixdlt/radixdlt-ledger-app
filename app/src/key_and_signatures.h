@@ -1,6 +1,6 @@
 #include "stdint.h"
 
-void parse_bip32_path_from_apdu_command(
+int parse_bip32_path_from_apdu_command(
     uint8_t *dataBuffer,
     uint32_t *output_bip32path,
     uint8_t *output_bip32String, // might be null

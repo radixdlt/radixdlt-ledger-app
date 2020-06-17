@@ -9,15 +9,13 @@
 
 #define KEY_SEED_BYTE_COUNT 32
 
-void parse_bip32_path_from_apdu_command(
+int parse_bip32_path_from_apdu_command(
     uint8_t *dataBuffer,
     uint32_t *output_bip32path,
     uint8_t *output_bip32String, // might be null
     unsigned short output_bip32PathString_length
 ) {
-    // uint16_t expected_number_of_bip32_compents = 3;
     uint16_t byte_count_bip_component = 4;
-    // uint16_t expected_data_length = expected_number_of_bip32_compents * byte_count_bip_component;
     
     uint32_t bip32Path[5];
 
@@ -61,6 +59,10 @@ void parse_bip32_path_from_apdu_command(
 
         os_memset(output_bip32String, 0, BIP32_PATH_STRING_MAX_LENGTH);
     	os_memmove(output_bip32String, bip32PathString_null_terminated, length_of_bip32_string_path);
+
+        return length_of_bip32_string_path;
+    } else {
+        return 0;
     }
 }
 

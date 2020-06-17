@@ -26,7 +26,7 @@ static Transfer* nextTransfer() {
 
 static void prepare_display_with_transfer_data_step(ReviewAtomStep step)
 {
-    reset_ui();
+    clear_fullString();
     Transfer *transfer = nextTransfer();
     switch (step)
     {
@@ -76,8 +76,6 @@ static void prepare_display_with_transfer_data_step(ReviewAtomStep step)
     default:
         FATAL_ERROR("Unknown step: %d", step);
     }
-
-    ui_fullStr_to_partial();
 }
 // ===== END ===== HELPERS =========
 
@@ -94,13 +92,11 @@ static void askUserForFinalConfirmation() {
 
 static void prepareForDisplayingHash()
 {
-    reset_ui();
     size_t lengthOfHashString = HASH256_BYTE_COUNT * 2 + 1; // + 1 for NULL
 
     hexadecimal_string_from(ctx->hash, HASH256_BYTE_COUNT, G_ui_state.fullString);
 
     G_ui_state.lengthOfFullString = lengthOfHashString;
-    ui_fullStr_to_partial();
 
     display_value("Verify Hash", askUserForFinalConfirmation);
 }
@@ -144,11 +140,9 @@ static void proceedWithNextTransfer()
 {
     assert(ctx->numberOfTransfersToNotMyAddressApproved < ctx->numberOfTransfersToNotMyAddress);
 
-    reset_ui();
     size_t lengthOfTransferAtIndexString = DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE;
     snprintf(G_ui_state.fullString, lengthOfTransferAtIndexString, "tx@index: %d", ctx->numberOfTransfersToNotMyAddressApproved);
     G_ui_state.lengthOfFullString = lengthOfTransferAtIndexString;
-    ui_fullStr_to_partial();
 
     display_value("Approve TX:", prepareForApprovalOfAddress);
 }
@@ -190,8 +184,8 @@ static void proceedToDisplayingTransfersIfAny() {
         } else if (ctx->numberOfTransfersToNotMyAddress == 1) {
             prepareForApprovalOfAddress();
         } else {
-            snprintf(
-                G_ui_state.partialString12Char,
+            G_ui_state.lengthOfFullString = snprintf(
+                G_ui_state.fullString,
                 DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE, 
                 "no of tx:%2d", 
                 ctx->numberOfTransfersToNotMyAddress
