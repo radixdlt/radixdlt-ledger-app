@@ -21,3 +21,7 @@ void printRadixAddress(RadixAddress *address);
 
 bool matchesPublicKey(RadixAddress *address, cx_ecfp_public_key_t *compressedPublicKey);
 bool matchesPublicKeyBytes(RadixAddress *address, uint8_t *compressedPublicKeyBytes);
+
+int generate_public_address_from_pub_key_and_universe_magic(
+    uint8_t magicByte, uint8_t *compressedPublicKeyBytes,
+    char *output_radix_addr_str, const size_t length_of_output_radix_addr_str);

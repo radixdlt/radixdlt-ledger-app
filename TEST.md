@@ -5,13 +5,15 @@ Using [Python program 'ledgerblue'](https://github.com/LedgerHQ/blue-loader-pyth
 
 
 ### Generate Public Key
-Example of generation of public key (`INS_GET_PUB_KEY_SECP256K1`), you can use CLI and send a command to the ledger useing
+Example of generation of Radix Address key (`INS_GEN_RADIX_ADDR`), you can use CLI and send a command to the ledger using
+
+Which uses a Radix Universe Magic byte of `0x01` and mode `0x03` (Require confirm of both address and BIP32 Path).
 
 ```sh
-echo 'AA0801010C800000020000000100000003' | python -m ledgerblue.runScript --targetId 0x31100004 --apdu
+echo 'AA0103010C800000020000000100000003' | python -m ledgerblue.runScript --targetId 0x31100004 --apdu
 ```
 
-Should result in this BIP path: `44'/536'/2'/1/3`. And using the mnemonic mentioned below (`equip will roof....`), ought to result in this compressed public key `026d5e07cfde5df84b5ef884b629d28d15b0f6c66be229680699767cd57c618288` and private key: `f423ae3097703022b86b87c15424367ce827d11676fae5c7fe768de52d9cce2e`
+Should result in this BIP path: `44'/536'/2'/1/3`. And using the mnemonic mentioned below (`equip will roof....`), ought to result in RadixAddress `9fMEA1LNS2AmrSxAi1oDXKfMc3RGk6zoXZJ9hKmwkuZNJnD1Vnq`
 
 ### SIGN HASH
 
@@ -19,7 +21,7 @@ Should result in this BIP path: `44'/536'/2'/1/3`. And using the mnemonic mentio
 echo 'AA0400002C800000020000000100000003deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef' | python -m ledgerblue.runScript --targetId 0x31100004 --apdu
 ```
 
-Should result in this BIP path: `44'/536'/2'/1/3`. And using the mnemonic mentioned below (`equip will roof....`), ought to result in the ECDSA signature (DER decoded to just `R | S`): 
+Should result in this BIP path: `44'/536'/2'/1/3`. And using the mnemonic mentioned below (`equip will roof....`), ought to result in the ECDSA signature (DER decoded to just `R | S`):
 
 `098c1526d623f61a1adc1d42b818e668fdb3c6b99a0055435731221211b1cd11324b979a56c9ded9f5b645389e575dc7fc3c9b3aa180bc379fa6cb3d912503e1`
 
@@ -49,3 +51,13 @@ You can also run test all atoms with the command:
 ```sh
 python sign_example_atom.py --all
 ```
+
+
+### Generate Public Key
+Example of generation of public key (`INS_GET_PUB_KEY_SECP256K1`), you can use CLI and send a command to the ledger using
+
+```sh
+echo 'AA0801010C800000020000000100000003' | python -m ledgerblue.runScript --targetId 0x31100004 --apdu
+```
+
+Should result in this BIP path: `44'/536'/2'/1/3`. And using the mnemonic mentioned below (`equip will roof....`), ought to result in this compressed public key `026d5e07cfde5df84b5ef884b629d28d15b0f6c66be229680699767cd57c618288` and private key: `f423ae3097703022b86b87c15424367ce827d11676fae5c7fe768de52d9cce2e`

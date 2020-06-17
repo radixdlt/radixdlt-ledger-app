@@ -4,7 +4,6 @@
 
 #include "global_state.h"
 #include "glyphs.h"
-#include "key_and_signatures.h"
 #include "ui.h"
 
 commandContext global;
@@ -55,7 +54,8 @@ void io_exchange_with_code(uint16_t code, uint16_t tx) {
 // The APDU protocol uses a single-byte instruction code (INS) to specify
 // which command should be executed. We'll use this code to dispatch on a
 // table of function pointers.
-#define INS_GET_VERSION 0x01
+#define INS_GET_VERSION 0x00
+#define INS_GEN_RADIX_ADDR 0x01
 #define INS_SIGN_ATOM 0x02
 #define INS_SIGN_HASH 0x04
 #define INS_GET_PUBLIC_KEY 0x08
@@ -69,20 +69,23 @@ typedef void handler_fn_t(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
                           volatile unsigned int *tx);
 
 handler_fn_t handleGetVersion;
-handler_fn_t handleGetPublicKey;
+handler_fn_t handleGenerateRadixAddress;
 handler_fn_t handleSignAtom;
 handler_fn_t handleSignHash;
+handler_fn_t handleGetPublicKey;
 
 static handler_fn_t *lookupHandler(uint8_t ins) {
     switch (ins) {
         case INS_GET_VERSION:
             return handleGetVersion;
-        case INS_GET_PUBLIC_KEY:
-            return handleGetPublicKey;
+        case INS_GEN_RADIX_ADDR:
+            return handleGenerateRadixAddress;
         case INS_SIGN_ATOM:
             return handleSignAtom;
         case INS_SIGN_HASH:
             return handleSignHash;
+        case INS_GET_PUBLIC_KEY:
+            return handleGetPublicKey;
         default:
             return NULL;
     }

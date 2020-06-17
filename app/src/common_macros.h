@@ -17,6 +17,17 @@
 
 #define ECSDA_SIGNATURE_BYTE_COUNT 64
 
+#define NUMBER_OF_BIP32_COMPONENTS_IN_PATH 5
+#define MAX_CHUNK_SIZE 255 
+
+#define MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP 6
+#define MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP 15 // 240/16, where 16 is size of `ParticleMetaData` and 240 is MAX_CHUNK_SIZE-2-12, where 2 is number of bytes to encode AtomSize and 12 is number of bytes for BIP32 path
+
+// The biggest of a value split across chunks might be the `rri`
+#define MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS (RADIX_RRI_MAX_BYTE_COUNT - 1)
+
+#define HASH256_BYTE_COUNT 32
+
 // MACROS
 #define PLOC() PRINTF("\n%s - %s:%d \n", __FILE__, __func__, __LINE__);
 #define assert(x) \

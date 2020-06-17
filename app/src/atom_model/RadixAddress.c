@@ -2,6 +2,8 @@
 #include "stdint.h"
 #include "base_conversion.h"
 #include "common_macros.h"
+#include "sha256_hash.h"
+#include <os_io_seproxyhal.h>
 
 // Returns the de-facto length of the address copied over to `output_buffer` (including the null terminator).
 size_t to_string_radix_address(
@@ -11,6 +13,43 @@ size_t to_string_radix_address(
 ) { 
     assert(size_of_buffer == RADIX_ADDRESS_BASE58_CHAR_COUNT_MAX + 1); // +1 for null
     return convertByteBufferIntoBase58(address->bytes, RADIX_ADDRESS_BYTE_COUNT, output_buffer);
+}
+
+
+#define ADDRESS_CHECKSUM_BYTE_COUNT 4
+
+int generate_public_address_from_pub_key_and_universe_magic(
+    uint8_t magicByte, uint8_t *compressedPublicKeyBytes,
+    char *output_radix_addr_str, const size_t length_of_output_radix_addr_str) 
+{
+    
+    assert(length_of_output_radix_addr_str == RADIX_ADDRESS_BASE58_CHAR_COUNT_MAX + 1); // +1 for null
+    os_memset(output_radix_addr_str, 0x00, length_of_output_radix_addr_str);
+
+    size_t length_unhashed = 1 + PUBLIC_KEY_COMPRESSEED_BYTE_COUNT; // +1 for magic byte
+    uint8_t magic_concat_pubkey[length_unhashed + ADDRESS_CHECKSUM_BYTE_COUNT];
+    os_memcpy(magic_concat_pubkey, &magicByte, 1);
+    os_memcpy(magic_concat_pubkey + 1, compressedPublicKeyBytes, PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
+    uint8_t hash_of_mb_concat_pk[HASH256_BYTE_COUNT];
+
+    cx_sha256_t hasher;        
+    
+    cx_sha256_init(&hasher);
+
+    if (!sha256_hash(&hasher, magic_concat_pubkey, length_unhashed, true, hash_of_mb_concat_pk)) {
+        FATAL_ERROR("ERROR hash creating Radix address");
+    }
+    
+     // re-initiate hasher for second run, since we do hash of hash at Radix
+      cx_sha256_init(&hasher);
+
+    if (!sha256_hash(&hasher, hash_of_mb_concat_pk, HASH256_BYTE_COUNT, true, hash_of_mb_concat_pk)) {
+        FATAL_ERROR("ERROR hash creating Radix address");
+    }
+
+    os_memcpy(magic_concat_pubkey + length_unhashed, hash_of_mb_concat_pk, ADDRESS_CHECKSUM_BYTE_COUNT);
+
+    return convertByteBufferIntoBase58(magic_concat_pubkey, length_unhashed + ADDRESS_CHECKSUM_BYTE_COUNT, output_radix_addr_str);
 }
 
 bool matchesPublicKey(RadixAddress *address, cx_ecfp_public_key_t *compressedPublicKey) {
