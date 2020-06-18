@@ -33,8 +33,8 @@ static void generate_and_respond_with_radix_address() {
     if (!ctx->requireConfirmationOfAddress) {
         ui_idle();
     } else {
-        G_ui_state.lengthOfFullString = length_of_radix_address_string_b58;
-        os_memcpy(G_ui_state.fullString, G_io_apdu_buffer,
+        G_ui_state.length_lower_line_long = length_of_radix_address_string_b58;
+        os_memcpy(G_ui_state.lower_line_long, G_io_apdu_buffer,
                   length_of_radix_address_string_b58);
         display_value("Compare:", user_did_confirm_address);
     }
@@ -87,8 +87,8 @@ void handleGenerateRadixAddress(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
     }
 
     // READ BIP 32 path
-    G_ui_state.lengthOfFullString = parse_bip32_path_from_apdu_command(
-        dataBuffer, ctx->bip32Path, G_ui_state.fullString,
+    G_ui_state.length_lower_line_long = parse_bip32_path_from_apdu_command(
+        dataBuffer, ctx->bip32Path, G_ui_state.lower_line_long,
         BIP32_PATH_STRING_MAX_LENGTH);
 
     *flags |= IO_ASYNCH_REPLY;
