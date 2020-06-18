@@ -59,8 +59,8 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
     }
 
     // READ BIP 32 path
-    G_ui_state.lengthOfFullString = parse_bip32_path_from_apdu_command(
-        dataBuffer, ctx->bip32Path, G_ui_state.fullString,
+    G_ui_state.length_lower_line_long = parse_bip32_path_from_apdu_command(
+        dataBuffer, ctx->bip32Path, G_ui_state.lower_line_long,
         BIP32_PATH_STRING_MAX_LENGTH);
 
     *flags |= IO_ASYNCH_REPLY;
