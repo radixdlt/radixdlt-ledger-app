@@ -606,19 +606,19 @@ static bool parseParticlesAndUpdateHash()
 
 // ==== START ==== UI PROGRESS UPDATE ========
 static const ux_menu_entry_t ui_hack_as_menu_progress_update[] = {
-	{NULL, NULL, 0, NULL, "Parsing TX..", G_ui_state.partialString12Char, 0, 0},
+	{NULL, NULL, 0, NULL, "Parsing TX..", G_ui_state.lower_line_short, 0, 0},
 	UX_MENU_END,
 };
 
 static void updateProgressDisplay() {
-    os_memset(G_ui_state.fullString, 0x00,
+    os_memset(G_ui_state.lower_line_long, 0x00,
               MAX_LENGTH_FULL_STR_DISPLAY);
 
-    os_memset(G_ui_state.partialString12Char, 0x00,
+    os_memset(G_ui_state.lower_line_short, 0x00,
               DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE);
 
     snprintf(
-        G_ui_state.partialString12Char, 
+        G_ui_state.lower_line_short, 
         DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE, 
         "Part: %02d/%02d",
         (ctx->atomByteCountParsed/MAX_CHUNK_SIZE),

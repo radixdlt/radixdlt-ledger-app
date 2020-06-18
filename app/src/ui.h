@@ -12,10 +12,11 @@
 #define MAX_LENGTH_FULL_STR_DISPLAY 103 // "ABCD0123456789E, Full Identifier: /9hTaTtgqxhAGRryeMs5htePmJA53tpjDgJK1FY3H1tLrmiZjv6j/ABCD0123456789E\0"
 
 typedef struct {
-	uint8_t displayIndex;
-	uint8_t fullString[MAX_LENGTH_FULL_STR_DISPLAY]; // the RRI is the longest data we wanna display
-	uint8_t lengthOfFullString;
-	uint8_t partialString12Char[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE + 1]; //+1 for NULL
+
+	uint8_t lower_line_display_offset;
+	uint8_t lower_line_long[MAX_LENGTH_FULL_STR_DISPLAY]; // the RRI is the longest data we wanna display
+	uint8_t length_lower_line_long;
+	uint8_t lower_line_short[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE + 1]; //+1 for NULL
 } ui_state_t;
 
 extern ui_state_t G_ui_state;
@@ -48,6 +49,6 @@ void clear_partialStr();
 
 void reset_ui();
 
-void clear_fullString();
+void clear_lower_line_long();
 
 #endif

@@ -100,34 +100,34 @@
 }
 
 
-#define APPROVAL_SCREEN(textLine1) APPROVAL_SCREEN_TWO_LINES(textLine1, G_ui_state.partialString12Char)
-#define SEEK_SCREEN(textLine1) SEEK_SCREEN_TWO_LINES(textLine1, G_ui_state.partialString12Char)
+#define APPROVAL_SCREEN(textLine1) APPROVAL_SCREEN_TWO_LINES(textLine1, G_ui_state.lower_line_short)
+#define SEEK_SCREEN(textLine1) SEEK_SCREEN_TWO_LINES(textLine1, G_ui_state.lower_line_short)
 
 ui_state_t G_ui_state;
 
-void clear_fullString() {
-    os_memset(G_ui_state.fullString, 0x00, MAX_LENGTH_FULL_STR_DISPLAY);
-    G_ui_state.lengthOfFullString = 0;
+void clear_lower_line_long() {
+    os_memset(G_ui_state.lower_line_long, 0x00, MAX_LENGTH_FULL_STR_DISPLAY);
+    G_ui_state.length_lower_line_long = 0;
 }
 
 void clear_partialStr() {
-    os_memset(G_ui_state.partialString12Char, 0x00,
+    os_memset(G_ui_state.lower_line_short, 0x00,
               DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE);
-    G_ui_state.displayIndex = 0;
+    G_ui_state.lower_line_display_offset = 0;
 }
 
 void reset_ui() { 
-    clear_fullString();
+    clear_lower_line_long();
     clear_partialStr();
  }
 
 static void ui_fullStr_to_partial() {
     clear_partialStr();
 
-    os_memmove(G_ui_state.partialString12Char, G_ui_state.fullString,
+    os_memmove(G_ui_state.lower_line_short, G_ui_state.lower_line_long,
                DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE);
     G_ui_state
-        .partialString12Char[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE] =
+        .lower_line_short[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE] =
         '\0';
 }
 
@@ -156,13 +156,13 @@ unsigned int seek_left_right_or_approve(unsigned int button_mask,
     switch (button_mask) {
         case BUTTON_LEFT:
         case BUTTON_EVT_FAST | BUTTON_LEFT:  // SEEK LEFT
-            // Decrement the displayIndex when the left button is pressed (or
+            // Decrement the lower_line_display_offset when the left button is pressed (or
             // held).
-            if (G_ui_state.displayIndex > 0) {
-                G_ui_state.displayIndex--;
+            if (G_ui_state.lower_line_display_offset > 0) {
+                G_ui_state.lower_line_display_offset--;
             }
-            os_memmove(G_ui_state.partialString12Char,
-                       G_ui_state.fullString + G_ui_state.displayIndex,
+            os_memmove(G_ui_state.lower_line_short,
+                       G_ui_state.lower_line_long + G_ui_state.lower_line_display_offset,
                        DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE);
             // Re-render the screen.
             UX_REDISPLAY();
@@ -170,13 +170,13 @@ unsigned int seek_left_right_or_approve(unsigned int button_mask,
 
         case BUTTON_RIGHT:
         case BUTTON_EVT_FAST | BUTTON_RIGHT:  // SEEK RIGHT
-            if (G_ui_state.displayIndex <
-                (G_ui_state.lengthOfFullString -
+            if (G_ui_state.lower_line_display_offset <
+                (G_ui_state.length_lower_line_long -
                  DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE)) {
-                G_ui_state.displayIndex++;
+                G_ui_state.lower_line_display_offset++;
             }
-            os_memmove(G_ui_state.partialString12Char,
-                       G_ui_state.fullString + G_ui_state.displayIndex,
+            os_memmove(G_ui_state.lower_line_short,
+                       G_ui_state.lower_line_long + G_ui_state.lower_line_display_offset,
                        DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE);
             UX_REDISPLAY();
             break;
@@ -189,10 +189,10 @@ unsigned int seek_left_right_or_approve(unsigned int button_mask,
 }
 
 const bagl_element_t *preprocessor_for_seeking(const bagl_element_t *element) {
-    if ((element->component.userid == 1 && G_ui_state.displayIndex == 0) ||
+    if ((element->component.userid == 1 && G_ui_state.lower_line_display_offset == 0) ||
         (element->component.userid == 2 &&
-         (G_ui_state.displayIndex ==
-          (G_ui_state.lengthOfFullString -
+         (G_ui_state.lower_line_display_offset ==
+          (G_ui_state.length_lower_line_long -
            DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE)))) {
         return NULL;
     }
@@ -263,7 +263,7 @@ static void display(const char *row_1_max_12_chars,
     } else {
         // single line
 
-        if (G_ui_state.lengthOfFullString >
+        if (G_ui_state.length_lower_line_long >
             DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE) {
             UX_DISPLAY(ui_generic_single_line_seek, preprocessor_for_seeking);
         } else {

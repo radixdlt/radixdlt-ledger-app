@@ -21,8 +21,8 @@ static void proceedToFinalSignatureConfirmation() {
 }
 
 static void askUserToConfirmHash() {
-    G_ui_state.lengthOfFullString = hexadecimal_string_from(
-        ctx->hash, HASH256_BYTE_COUNT, G_ui_state.fullString);
+    G_ui_state.length_lower_line_long = hexadecimal_string_from(
+        ctx->hash, HASH256_BYTE_COUNT, G_ui_state.lower_line_long);
     display_value("Verify Hash", proceedToFinalSignatureConfirmation);
 }
 
