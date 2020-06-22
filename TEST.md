@@ -52,6 +52,12 @@ You can also run test all atoms with the command:
 python sign_example_atom.py --all
 ```
 
+You can also skip UI confirmation regarding everything except the actual signing (tried skipping it, results in crash... 🤷‍♂️ ), by passing the `--skipConfirmation` flag. This can of course be combined with the `--i` and/or `--all` flag, like so:
+
+```sh
+python sign_example_atom.py --all --skipConfirmation
+```
+
 
 ### Generate Public Key
 Example of generation of public key (`INS_GET_PUB_KEY_SECP256K1`), you can use CLI and send a command to the ledger using

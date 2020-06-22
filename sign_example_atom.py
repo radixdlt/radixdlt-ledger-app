@@ -82,12 +82,14 @@ class TestVector(object):
 	def contains_non_transfer_data(self) -> bool:
 		return (self.number_of_up_particles() - self.number_of_transferrable_tokens_particles_with_spin_up()) > 0
 
-	def apdu_prefix(self) -> bytearray:
+	def apdu_prefix(self, skipConfirmation: bool) -> bytearray:
 		# https://en.wikipedia.org/wiki/Smart_card_application_protocol_data_unit
 		CLA = bytes.fromhex("AA")
 		INS = b"\x02" # `02` is command "SIGN_ATOM"
 		P1 = struct.pack(">B", self.number_of_up_particles())
 		P2 = b"\x00"
+		if skipConfirmation:
+			P2 = b"\xFF"
 
 		return CLA + INS + P1 + P2
 
@@ -95,7 +97,7 @@ class TestVector(object):
 		return self.atomDescription['particleGroupCount']
 
 
-def send_large_atom_to_ledger_in_many_chunks(vector: TestVector) -> bool:
+def send_large_atom_to_ledger_in_many_chunks(vector: TestVector, skipConfirmation: bool) -> bool:
 	"""
 	Returns true if user did sign the atom and if the signature matches the expected one specified
 	in the TestVector 'vector'
@@ -149,7 +151,7 @@ Contains non transfer data: {}
 
 	atom_byte_count_encoded = struct.pack(">h", atom_byte_count) # `>` means big endian, `h` means `short` -> 2 bytes
 
-	prefix = vector.apdu_prefix()
+	prefix = vector.apdu_prefix(skipConfirmation=skipConfirmation)
 
 	payload = bip_32_path_bytes + atom_byte_count_encoded + particles_meta_data_bytes
 
@@ -230,10 +232,15 @@ if __name__ == "__main__":
 		metavar='FILE'
 	)
 
+
+	parser.add_argument('--skipConfirmation', action='store_true')
+
 	parser.add_argument('--all', action='store_true')
 
 
 	args = parser.parse_args()
+	skipConfirmation = args.skipConfirmation
+	print(f"skipConfirmation: {skipConfirmation}")
 	if args.all:
 		print("🚀 Testing all test vectors...")
 
@@ -244,7 +251,7 @@ if __name__ == "__main__":
 			with open(vector_file_path) as json_file:
 				print(f"Found test vector in file: {json_file.name}")
 				vector = TestVector(json_file.read())
-				did_sign_and_signature_matches = send_large_atom_to_ledger_in_many_chunks(vector=vector)
+				did_sign_and_signature_matches = send_large_atom_to_ledger_in_many_chunks(vector=vector, skipConfirmation=skipConfirmation)
 				if not did_sign_and_signature_matches:
 					print("\n🛑 Interrupting testing of all vectors since you rejected the last atom, or signature did not match the expected one?\bBye bye!")
 					break
@@ -254,4 +261,4 @@ if __name__ == "__main__":
 
 		with open(json_file_path) as json_file:
 			vector = TestVector(json_file.read())
-			send_large_atom_to_ledger_in_many_chunks(vector=vector)
+			send_large_atom_to_ledger_in_many_chunks(vector=vector, skipConfirmation=skipConfirmation)
