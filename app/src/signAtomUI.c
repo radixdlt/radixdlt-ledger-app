@@ -86,7 +86,7 @@ static void didFinishSignAtomFlow()
     ui_idle();
 }
 
-static void askUserForFinalConfirmation() {
+void askUserForFinalConfirmation() {
     display_lines("Sign content", "Confirm?", didFinishSignAtomFlow);
 }
 

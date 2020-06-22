@@ -651,6 +651,8 @@ static void parseAtom()
 }
 
 
+#define SKIP_CONFIRMATION_WHEN_SIGNING_ATOM_FOR_TEST 0xFF
+
 // p1 = #particlesWithSpinUp
 // p2 = NOT USED
 // dataBuffer:
@@ -798,7 +800,10 @@ void handleSignAtom(
     parseAtom();
 
     *flags |= IO_ASYNCH_REPLY;
-
-    presentAtomContentsOnDisplay();
-
+    
+    if (p2 == SKIP_CONFIRMATION_WHEN_SIGNING_ATOM_FOR_TEST) {
+        askUserForFinalConfirmation();
+    } else {
+        presentAtomContentsOnDisplay();
+    }
 }
