@@ -63,7 +63,6 @@ static void compress_public_key(cx_ecfp_public_key_t *publicKey) {
 static void format_signature_out(const uint8_t *signature)
 {
     os_memset(G_io_apdu_buffer + 1, 0x00, 64);
-    uint8_t offset = 1;
     uint8_t xoffset = 4; //point to r value
     //copy r
     uint8_t xlength = signature[xoffset - 1];
@@ -72,6 +71,7 @@ static void format_signature_out(const uint8_t *signature)
         xlength = 32;
         xoffset++;
     }
+    uint8_t offset = 0;
     memmove(G_io_apdu_buffer + offset + 32 - xlength, signature + xoffset, xlength);
     offset += 32;
     xoffset += xlength + 2; //move over rvalue and TagLEn
@@ -250,5 +250,5 @@ size_t derive_sign_move_to_global_buffer(uint32_t *bip32path,
     format_signature_out(der_sig);
 
     PRINTF("%.*H", 64, G_io_apdu_buffer);
-    return ECSDA_SIGNATURE_BYTE_COUNT + 1;
+    return ECSDA_SIGNATURE_BYTE_COUNT;
 }

@@ -203,8 +203,7 @@ Contains non transfer data: {}
 		chunk_index += 1
 
 
-	signature_from_ledger_device_raw = result.hex()
-	signature_from_ledger_device = signature_from_ledger_device_raw[2:]
+	signature_from_ledger_device = result.hex()
 	expected_signature_hex = vector.expected_signature_rs_hex()
 
 	if expected_signature_hex == signature_from_ledger_device:
