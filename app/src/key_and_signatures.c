@@ -168,7 +168,7 @@ int parse_bip32_path_from_apdu_command(
     if (output_bip32String) {
         if (output_bip32PathString_length != BIP32_PATH_STRING_MAX_LENGTH) {
             PRINTF("Wrong length of output_bip32PathString_length, is: %d, but expected: %d\n", output_bip32PathString_length, BIP32_PATH_STRING_MAX_LENGTH);
-            THROW(0x9320);
+            THROW(SW_INVALID_PARAM);
         }
         char bip32PathString_null_terminated[BIP32_PATH_STRING_MAX_LENGTH];
     	int length_of_bip32_string_path = stringify_bip32_path(

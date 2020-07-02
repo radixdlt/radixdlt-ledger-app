@@ -130,13 +130,13 @@ static void radix_main(void) {
                 }
                 // Malformed APDU.
                 if (G_io_apdu_buffer[OFFSET_CLA] != CLA) {
-                    THROW(0x6E00);
+                    THROW(SW_INCORRECT_CLA);
                 }
                 // Lookup and call the requested command handler.
                 handler_fn_t *handlerFn =
                     lookupHandler(G_io_apdu_buffer[OFFSET_INS]);
                 if (!handlerFn) {
-                    THROW(0x6D00);
+                    THROW(SW_INVALID_INSTRUCTION);
                 }
                 reset_ui();
                 handlerFn(G_io_apdu_buffer[OFFSET_P1],
@@ -160,6 +160,7 @@ static void radix_main(void) {
                 // codes?
                 PRINTF("main.c error: %d\n", e);
 
+                // Cyon: Added this switch to be able to print e.g. `EXCEPTION_SECURITY`
                 switch (e) {
                     case EXCEPTION: {
                         PRINTF("error %d is 'EXCEPTION'\n", e);
@@ -175,13 +176,13 @@ static void radix_main(void) {
                     }
                     case EXCEPTION_SECURITY: {
                         PRINTF("error %d is 'EXCEPTION_SECURITY'\n", e);
-                        THROW(0x9111);
                         break;
                     }
                     default:
                         break;
                 }
 
+                // Cyon: I have no what these bit masks do/come from. e.g. `(e & 0x7FF)`, is this documented somewhere? This is inherited from sia app... ( https://github.com/LedgerHQ/app-sia/blob/master/src/main.c )
                 switch (e & 0xF000) {
                     case 0x6000:
                     case 0x9000:
