@@ -94,12 +94,13 @@ Radix Address is `public key + magicByte + checksum`. Where the `magicByte` is t
 most significant byte of the `Int32` called "magic", identifying the "Radix Universe". 
 
 The address is 38 bytes: `1 (magic) + 33 (PKc) + 4 (Checksum)`. The checksum is the 4 most signigicant bytes of `SHA2-256bit` digest done _twice_, of `MagicByte | PKc`,
-where `|` denotes concantenation and `PKc` denotes compressed public key.
+where `|` denotes concantenation and `PKc` denotes compressed public key. 
+
+The base58 encoding of the RadixAddress results in a 51-52 b58 characters long string, which is what is the respons of this instruction.
 
 | Field   | Type      | Content               | Note                     |
 | ------- | --------- | --------------------- | ------------------------ |
-| PK      | byte (33) | Compressed Public Key |                          |
-| ADDR    | byte (38) | Radix Address         |                          |
+| ADDR    | byte (max 52) | Radix Address on b58 format  | Variable length 51 or 52 chars |
 | SW1-SW2 | byte (2)  | Return code           | see list of return codes |
 
 
