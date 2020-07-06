@@ -3,7 +3,7 @@
 
 The general structure of commands and responses is as follows:
 
-#### Commands
+### Commands
 
 | Field   | Type     | Content                | Note |
 | :------ | :------- | :--------------------- | ---- |
@@ -14,25 +14,27 @@ The general structure of commands and responses is as follows:
 | L       | byte (1) | Bytes in payload       |      |
 | PAYLOAD | byte (L) | Payload                |      |
 
-#### Response
+### Response
 
 | Field   | Type     | Content     | Note                     |
 | ------- | -------- | ----------- | ------------------------ |
 | ANSWER  | byte (?) | Answer      | depends on the command   |
 | SW1-SW2 | byte (2) | Return code | see list of return codes |
 
-#### Return codes
+### Return codes
+
+#### Ledger's internal return codes
+Please refer to [these codes found in `os.h`](https://github.com/LedgerHQ/nanos-secure-sdk/blob/master/include/os.h#L828-L846)
+
+#### Radix Ledger app return codes
 
 | Return code   | Description             |
 | ------------- | ----------------------- |
-| 0x6400        | Execution Error         |
-| 0x6700        | Wrong length            | 
-| 0x6982        | Empty buffer            |
-| 0x6983        | Output buffer too small |
-| 0x6986        | Command not allowed     |
-| 0x6D00        | INS not supported       |
-| 0x6E00        | CLA not supported       |
-| 0x6F00        | Unknown                 |
+| 0x6985 		| User rejected command   |
+| 0x6B00		| Fatal error incorrect implementation |
+| 0x6B01        | Invalid input       |
+| 0x6D00        | Incorrect instruction identifier |
+| 0x6E00        | Incorrect CLA  		  |
 | 0x9000        | Success                 |
 
 ## Command definition
