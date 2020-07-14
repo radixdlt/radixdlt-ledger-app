@@ -127,7 +127,7 @@ Streaming of Atom data in multiple chunks/packets, first chunk will contain meta
 
 <b id="sa1">1:</b> Atom size as 2 bytes => 16 bits => 2^16 = 65536 bytes being MAX size of any Atom signed.
 
-<b id="sa2">2:</b> Any Radix wallet calling this Ledger instruction/command <b>should</b> provide meta data about each particle with spin `UP`. The meta data consists of 4 byte intervals, being a touple (startsAtByte, byteCount) each consisting of 2 bytes => the byte interval is thus 4 bytes. 4*4 bytes => 16 bytes per particle meta data. These byte intervals points to the following fields within the spun `UP` particle (address, amount, serializer, tokenDefinitionReference) - in that order - for being able to parse TransferableTokensParticles (TokenTransfers). In the case of non-TransferrableTokensParticles, e.g. `MessageParticle`, `RRIParticle` etc, you must provide 4 ZERO bytes for (address, amount, tokenDefinition), but still provide the correct byte interval for `serializer` field. Thus BigEndian hex: `0x0000000000000000dead001700000000`, i.e. all fields are zero except for `serializer` having value `0xdead0018` for a MessageParticle, where `0xdead` = 57005<sub>10</sub> is the where (number of bytes from start of Atom) the field `serializer` for this MessageParticle starts, which is bound by 65536 (max size of atom). And where `0x0017` = 23<sub>10</sub> is number of characaters in the string "radix.particles.message" (the serializer value).
+<b id="sa2">2:</b> Please see [SIGN_ATOM.md](SIGN_ATOM.md) docs for detailed info about this metadata.
 
 **First item in the derivation path, data at index 2 (i.e. third component) will be automatically hardened**
 
