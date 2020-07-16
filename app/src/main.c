@@ -59,6 +59,7 @@ void io_exchange_with_code(uint16_t code, uint16_t tx) {
 #define INS_SIGN_ATOM 0x02
 #define INS_SIGN_HASH 0x04
 #define INS_GET_PUBLIC_KEY 0x08
+#define INS_ENCRYPT_OR_DECRYPT_DATA 0x16
 
 // This is the function signature for a command handler. 'flags' and 'tx' are
 // out-parameters that will control the behavior of the next io_exchange call
@@ -73,6 +74,7 @@ handler_fn_t handleGenerateRadixAddress;
 handler_fn_t handleSignAtom;
 handler_fn_t handleSignHash;
 handler_fn_t handleGetPublicKey;
+handler_fn_t handleEncryptOrDecryptData;
 
 static handler_fn_t *lookupHandler(uint8_t ins) {
     switch (ins) {
@@ -86,6 +88,8 @@ static handler_fn_t *lookupHandler(uint8_t ins) {
             return handleSignHash;
         case INS_GET_PUBLIC_KEY:
             return handleGetPublicKey;
+        case INS_ENCRYPT_OR_DECRYPT_DATA:
+            return handleEncryptOrDecryptData;
         default:
             return NULL;
     }
@@ -176,6 +180,10 @@ static void radix_main(void) {
                     }
                     case EXCEPTION_SECURITY: {
                         PRINTF("error %d is 'EXCEPTION_SECURITY'\n", e);
+                        break;
+                    }
+                    case EXCEPTION_CXPORT: {
+                         PRINTF("error %d is 'EXCEPTION_CXPORT'\n", e);
                         break;
                     }
                     default:

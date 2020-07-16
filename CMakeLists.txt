@@ -26,6 +26,11 @@ string(APPEND CMAKE_LINKER_FLAGS " -fsanitize=address -fno-omit-frame-pointer")
 ##############################################################
 #  static libs
 
+file(GLOB_RECURSE TINYAES
+        deps/tiny-AES-c/*.c
+        deps/tiny-AES-c/*.h
+        )
+
 file(GLOB_RECURSE TINYCBOR_SRC
         deps/tinycbor/src/*.c
         deps/tinycbor/src/*.h
@@ -33,10 +38,12 @@ file(GLOB_RECURSE TINYCBOR_SRC
 
 add_library(app_lib STATIC
         ${LIB_SRC}
+        ${TINYAES}
         ${TINYCBOR_SRC}
         )
 
 target_include_directories(app_lib PUBLIC
+        deps/tiny-AES-c
         deps/tinycbor/src
         app/src
         )

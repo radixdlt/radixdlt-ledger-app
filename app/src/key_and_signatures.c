@@ -186,6 +186,36 @@ int parse_bip32_path_from_apdu_command(
     }
 }
 
+bool generate_key_pair(
+    volatile cx_ecfp_public_key_t *publicKey,
+    volatile cx_ecfp_private_key_t *privateKey
+) {
+
+    volatile uint16_t error = 0;
+
+    BEGIN_TRY {
+        TRY {
+            cx_ecfp_generate_pair(
+                CX_CURVE_256K1, 
+                publicKey,
+                privateKey,
+                0 // important, `0` marks "please generate new"
+                );
+        
+        }
+        CATCH_OTHER(e) { error = e; }
+        FINALLY { 
+        }
+    }
+    END_TRY;
+    
+    if (error) {
+        PRINTF("Error? code: %d\n", error);
+        return false;
+    }
+    return true;
+}
+
 void derive_radix_key_pair(
     uint32_t *bip32path, 
     volatile cx_ecfp_public_key_t *publicKey,
