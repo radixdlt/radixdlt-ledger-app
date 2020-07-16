@@ -17,3 +17,6 @@ size_t derive_sign_move_to_global_buffer(
     uint32_t *bip32path, 
     const uint8_t *hash
 );
+
+bool generate_key_pair(volatile cx_ecfp_public_key_t *publicKey,
+                       volatile cx_ecfp_private_key_t *privateKey);

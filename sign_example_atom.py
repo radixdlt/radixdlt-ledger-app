@@ -225,7 +225,7 @@ if __name__ == "__main__":
 	parser.add_argument(
 		'--inputAtomVector', 
 		'-i', 
-		default='./vectors/no_data_single_transfer_small_amount_no_change.json',
+		default='./vectors/sign_atom/no_data_single_transfer_small_amount_no_change.json',
 		type=str, 
 		help='Path to JSON file containing test vector with CBOR encoded Atom, the particle meta data, description of atom contents and expected hash and signature.\n\nDefaults to %(default)',
 		metavar='FILE'
