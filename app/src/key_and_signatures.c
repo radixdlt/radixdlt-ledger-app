@@ -279,6 +279,6 @@ size_t derive_sign_move_to_global_buffer(uint32_t *bip32path,
 
     format_signature_out(der_sig);
 
-    PRINTF("%.*H", 64, G_io_apdu_buffer);
+    PRINTF("%.*h", 64, G_io_apdu_buffer);
     return ECSDA_SIGNATURE_BYTE_COUNT;
 }

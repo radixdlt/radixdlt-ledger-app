@@ -49,11 +49,8 @@ class TestVector(object):
 
 		return CLA + INS + P1 + P2
 
-def crypt_encrypt(vector: TestVector) -> bool:
+def crypt_encrypt(dongle, vector: TestVector) -> bool:
 	print(f"🚀 vector:\niv: {vector.iv_hex()}\nkeyE: {vector.keyE_hex()}\ndata: {vector.data_hex()}\n🧩\n")
-
-	letDongleOutputDebugPrintStatements = False
-	dongle = getDongle(debug=letDongleOutputDebugPrintStatements)
 
 	prefix = vector.apdu_prefix()
 
@@ -82,19 +79,28 @@ def crypt_encrypt(vector: TestVector) -> bool:
 		print(f"But got cipherText from ledger: {cipherText_from_ledger_hex}")
 		return False
 
-	print("⭐️ DONE! ⭐️")
-	dongle.close()
+	print("💡 done with this vector...")
 	return True
 
 
 if __name__ == "__main__":
 	# json_filepath = Path('./vectors/crypt/crypt_aes_cbc_vectors.json')
 	json_filepath = os.path.join('.', 'vectors', 'crypt', 'crypt_aes_cbc_vectors.json')
+
+
+	letDongleOutputDebugPrintStatements = False
+	dongle = getDongle(debug=letDongleOutputDebugPrintStatements)
+
 	with open(json_filepath, 'r') as json_file:
 		json_array_of_vectors = json.load(json_file)
-
+		success_count = 0
 		for vector_json in json_array_of_vectors:
 			vector = TestVector(vector_json)
-			crypt_encrypt(vector=vector)	
+			if crypt_encrypt(dongle, vector):
+				success_count += 1
 
-	print("Bye bye")
+		print(f"Success count: {success_count}")
+		assert success_count == len(json_array_of_vectors), "Expected all vectors to pass"
+
+	dongle.close()
+	print("⭐️ DONE! ⭐️")

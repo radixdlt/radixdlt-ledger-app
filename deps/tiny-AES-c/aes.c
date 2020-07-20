@@ -36,6 +36,7 @@ NOTE:   String length must be evenly divisible by 16byte (str_len % 16 == 0)
 /* Includes:                                                                 */
 /*****************************************************************************/
 #include <string.h> // CBC mode, for memset
+#include <stdlib.h>
 #include "aes.h"
 
 /*****************************************************************************/
@@ -63,6 +64,7 @@ NOTE:   String length must be evenly divisible by 16byte (str_len % 16 == 0)
 #endif
 
 
+static void phex_len(uint8_t* str, uint8_t len);
 
 
 /*****************************************************************************/
@@ -241,12 +243,17 @@ void AES_ctx_set_iv(struct AES_ctx* ctx, const uint8_t* iv)
 // The round key is added to the state by an XOR function.
 static void AddRoundKey(uint8_t round, state_t* state, const uint8_t* RoundKey)
 {
+
+  // PRINTF("Nb: %d\n", Nb);
+  // PRINTF("Nr: %d\n", Nr);
+
   uint8_t i,j;
   for (i = 0; i < 4; ++i)
   {
     for (j = 0; j < 4; ++j)
     {
       (*state)[i][j] ^= RoundKey[(round * Nb * 4) + (i * Nb) + j];
+      // PRINTF("[i=%d][j=%d] := %u\n", i, j, (*state)[i][j]);
     }
   }
 }
@@ -411,8 +418,11 @@ static void Cipher(state_t* state, const uint8_t* RoundKey)
 {
   uint8_t round = 0;
 
+  phex_len(state, 16);
+
   // Add the First round key to the state before starting the rounds.
   AddRoundKey(0, state, RoundKey);
+  phex_len(state, 16);
 
   // There will be Nr rounds.
   // The first Nr-1 rounds are identical.
@@ -421,12 +431,22 @@ static void Cipher(state_t* state, const uint8_t* RoundKey)
   for (round = 1; ; ++round)
   {
     SubBytes(state);
+    // phex_len(state, 16);
     ShiftRows(state);
+    // phex_len(state, 16);
     if (round == Nr) {
+      // PRINTF("round == Nr => breaking\n");
       break;
     }
+    // PRINTF("Mix columns\n");
     MixColumns(state);
+    // phex_len(state, 16);
+    // PRINTF("AddRoundKey\n");
+    // PRINTF("Round: %d\n", round);
+    // PRINTF("RoundKey: \n");
+    // phex_len(RoundKey, AES_KEYLEN);
     AddRoundKey(round, state, RoundKey);
+    // phex_len(state, 16);
   }
   // Add round key to last round
   AddRoundKey(Nr, state, RoundKey);
@@ -501,8 +521,12 @@ void AES_CBC_encrypt_buffer(struct AES_ctx *ctx, uint8_t* buf, uint32_t length)
   uint8_t *Iv = ctx->Iv;
   for (i = 0; i < length; i += AES_BLOCKLEN)
   {
+    uint8_t blockNo1Indexed = (i / AES_BLOCKLEN) + 1;
     XorWithIv(buf, Iv);
+    PRINTF("\nInput Block #%d ", blockNo1Indexed);
+    phex_len(buf, 16);
     Cipher((state_t*)buf, ctx->RoundKey);
+    PRINTF("Output Block #%d ", blockNo1Indexed);
     Iv = buf;
     buf += AES_BLOCKLEN;
   }
@@ -567,3 +591,7 @@ void AES_CTR_xcrypt_buffer(struct AES_ctx* ctx, uint8_t* buf, uint32_t length)
 
 #endif // #if defined(CTR) && (CTR == 1)
 
+void phex_len(uint8_t* str, uint8_t len)
+{
+  PRINTF("%.*h\n", len, str);
+}
