@@ -7,9 +7,6 @@
 
 static encryptDecryptDataContext_t *ctx = &global.encryptDecryptDataContext;
 
-#define AES256 1
-#define CBC 1
-
 void handleEncryptOrDecryptData(
     uint8_t p1, 
     uint8_t p2, 

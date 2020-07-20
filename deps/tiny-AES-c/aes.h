@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+// Copied from: https://github.com/kokke/tiny-AES-c/blob/7a3de7ed01df452c7798dc1936c0d089423989db/aes.h
+
 // #define the macros below to 1/0 to enable/disable the mode of operation.
 //
 // CBC enables AES encryption in CBC-mode of operation.
@@ -24,7 +26,7 @@
 
 
 // #define AES128 1
-// #define AES192 1
+//#define AES192 1
 #define AES256 1
 
 #define AES_BLOCKLEN 16 // Block length in bytes - AES is 128b block only
