@@ -23,9 +23,7 @@
 struct AES_ctx
 {
   uint8_t RoundKey[AES_keyExpSize];
-#if (defined(CBC) && (CBC == 1)) || (defined(CTR) && (CTR == 1))
   uint8_t Iv[AES_BLOCKLEN];
-#endif
 };
 
 void AES_init_ctx(struct AES_ctx* ctx, const uint8_t* key);

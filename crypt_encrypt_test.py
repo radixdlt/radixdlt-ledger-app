@@ -11,6 +11,7 @@ import json
 import hashlib
 import glob
 import os
+import time
 from pathlib import Path
 
 CommExceptionUserRejection = 0x6985
@@ -98,6 +99,9 @@ if __name__ == "__main__":
 			vector = TestVector(vector_json)
 			if crypt_encrypt(dongle, vector):
 				success_count += 1
+			print("sleeping 1 second...")
+			time.sleep(1)
+			print("Wook up after having slept")
 
 		print(f"Success count: {success_count}")
 		assert success_count == len(json_array_of_vectors), "Expected all vectors to pass"

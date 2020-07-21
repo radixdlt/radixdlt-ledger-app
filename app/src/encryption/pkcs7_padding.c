@@ -3,7 +3,12 @@
 // From: https://github.com/bonybrown/tiny-AES128-C/blob/master/pkcs7_padding.c
 // License - Unlicensed: https://github.com/bonybrown/tiny-AES128-C/blob/master/unlicense.txt
 
-int pkcs7_padding_pad_buffer( uint8_t *buffer,  size_t data_length, size_t buffer_size, uint8_t modulus ){
+int pkcs7_padding_pad_buffer(
+  uint8_t *buffer,
+  size_t data_length,
+  size_t buffer_size,
+  uint8_t modulus
+) {
   uint8_t pad_byte = modulus - ( data_length % modulus ) ;
   if( data_length + pad_byte > buffer_size ){
     return -pad_byte;
