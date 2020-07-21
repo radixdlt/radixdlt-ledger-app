@@ -5,7 +5,11 @@
 #include "RadixParticleTypes.h"
 
 typedef struct {
-} encryptDecryptDataContext_t;
+} encryptDataContext_t;
+
+typedef struct {
+	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
+} decryptDataContext_t;
 
 typedef struct {
 	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
@@ -86,6 +90,7 @@ typedef union {
     getPublicKeyContext_t getPublicKeyContext;
     signHashContext_t signHashContext;
     signAtomContext_t signAtomContext;
-	encryptDecryptDataContext_t encryptDecryptDataContext;
+	encryptDataContext_t encryptDataContext;
+	decryptDataContext_t decryptDataContext;
 } commandContext;
 extern commandContext global;
