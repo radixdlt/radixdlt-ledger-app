@@ -7,15 +7,6 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-// int decode_public_point(
-//     const uint8_t *public_key_bytes,
-//     const size_t pk_byte_count
-// ) {
-//     cx_ecfp_public_key_t publicKey;
-//     cx_ecfp_init_public_key(CX_CURVE_SECP256K1, public_key_bytes, public_key_bytes, &publicKey);
-//     return false;
-// }
-
 static bool hmac256(
     const uint8_t* key,
     const size_t key_len,
@@ -116,9 +107,6 @@ size_t ecies_encrypt(
     // 6. `iv := generateBytes(count: 16)`
     size_t iv_len = IV_LEN;
     uint8_t iv[iv_len];
-    // uint8_t iv[] = {0xde, 0xad, 0xbe, 0xef, 0xde, 0xad, 0xbe, 0xef,
-    //                 0xde, 0xad, 0xbe, 0xef, 0xde, 0xad, 0xbe, 0xef};
-
     cx_rng(iv, iv_len);
     return ecies_encrypt_iv(iv, iv_len, data_in, data_in_len, data_out, data_out_len, uncompress_public_key_bytes, pk_byte_count);
 }
@@ -259,29 +247,9 @@ size_t ecies_encrypt_iv(
 
     PRINTF("ECIES encrypted bytes: %.*h\n", offset, data_out);
 
-
     return offset;
 }
 
-
-
-// bool encrypt(const uint8_t *data_in, const size_t data_in_len,
-//              uint8_t *data_out,
-//              size_t data_out_len,  // will be overwritten with actual length
-//              cx_ecfp_public_key_t *public_key) {
-//     return false;
-// }
-
-// bool encrypt(const uint8_t *data_in, const size_t data_in_len,
-//             uint8_t *data_out,
-//             size_t data_out_len,  // will be overwritten with actual length
-//             uint32_t *bip32path
-// ) {
-    
-//     volatile cx_ecfp_public_key_t publicKey;
-//     derive_radix_key_pair(bip32path, &publicKey, NULL);
-//     return 
-// }
 
 
 size_t ecies_decrypt_bipPath(
@@ -293,9 +261,6 @@ size_t ecies_decrypt_bipPath(
 
     uint32_t *bip32Path
 ) {
-    // cx_ecfp_private_key_t privateKey
-
-   
     volatile cx_ecfp_public_key_t publicKey;
     volatile cx_ecfp_private_key_t privateKey;
     derive_radix_key_pair(bip32Path, &publicKey, &privateKey);
@@ -348,6 +313,7 @@ size_t ecies_decrypt(
 
     PLOC();
 
+
     int public_key_init_result = cx_ecfp_init_public_key(
         CX_CURVE_256K1, ephemeralPublicKeyBytes, publicKeyLengthDataEncoded, &ephemeralPublicKey
     );
@@ -383,7 +349,6 @@ size_t ecies_decrypt(
     }
     PLOC();
 
-
     // 4. `hashH := sha512(sha512(pointM.x))`
     size_t hashH_len = 64;
     uint8_t hashH[hashH_len];
@@ -418,6 +383,9 @@ size_t ecies_decrypt(
 
     PRINTF("encrypted (cipher): %.*h\n", cipherText_length, cipherText);
 
+
+  
+
     // 7. Read mac
     uint8_t parsed_macData[MAC_LEN];
     os_memcpy(parsed_macData, data_in + offset, MAC_LEN);
@@ -443,13 +411,14 @@ size_t ecies_decrypt(
    
     PRINTF("calculated mac: %.*h\n", MAC_LEN, compare_macData);
 
-    if (0 == memcmp(compare_macData, parsed_macData, MAC_LEN)) {
-        PRINTF("SUCCESS! Parsed (Expectd) MAC and calculated MAC matches! :D :D\n");
-    } else {
-        printf("FAILURE! MAC mismatch...\n");
+
+   
+    if (os_memcmp(compare_macData, parsed_macData, 32)) {
+        PRINTF("FAILURE! MAC mismatch...\n");
     	return 0;
     }
-
+    PRINTF("SUCCESS! Parsed (Expectd) MAC and calculated MAC matches! :D :D\n");
+     
       // 8. Decrypt the cipher text with AES-256-CBC, using IV as initialization vector, key_e as decryption key and the cipher text as payload. The output is the padded input text.
     size_t length_plaintext = cipherText_length; // plaintext should be shorter than cipher text, so use chiper text as an upperbound... // TODO calc this..
     uint8_t plainTextUTF8Encoded[length_plaintext];
