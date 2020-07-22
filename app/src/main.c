@@ -190,6 +190,11 @@ static void radix_main(void) {
                          PRINTF("error %d is 'EXCEPTION_CXPORT'\n", e);
                         break;
                     }
+
+                    case EXCEPTION_IO_OVERFLOW: {
+                          PRINTF("error %d is 'EXCEPTION_IO_OVERFLOW'\n", e);
+                        break;
+                    }
                     default:
                         break;
                 }

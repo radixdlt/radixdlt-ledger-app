@@ -16,13 +16,16 @@ void handleDecryptData(
     unsigned int *flags,
     unsigned int *tx
  ) {
-     PRINTF("Decrypt data! Cool!\n");
+     PRINTF("handleDecryptData\n");
 
     // DataBuffer: bipPath[12] || cipherText[p1] 
     size_t cipherText_length = p1;
+    PRINTF("Length of CipherText to decrypt: %d\n", cipherText_length);
     uint8_t cipherText[cipherText_length];
     os_memcpy(cipherText, dataBuffer + 12, cipherText_length);
 
+    PRINTF("CipherText to decrypt:\n");
+    PRINTF("%.*h\n", cipherText_length, cipherText);
     // use `cipherText_length` as upperbound, since we know plaintext will be shorter than cipherText.
     size_t plainText_length_upperBound = cipherText_length;
     uint8_t plainText[plainText_length_upperBound]; 
@@ -34,7 +37,9 @@ void handleDecryptData(
     );
 
     PRINTF("BIP 32 path:\n");
-    PRINTF("%.*s", BIP32_PATH_STRING_MAX_LENGTH, G_ui_state.lower_line_long);
+    PRINTF(G_ui_state.lower_line_long);
+    PLOC();
+    PRINTF("Decrypting ciphertext\n");
 
     size_t actual_plainText_length = ecies_decrypt_bipPath(
         cipherText, cipherText_length, 
@@ -43,7 +48,7 @@ void handleDecryptData(
     );
 
     PRINTF("Successfully ECIES decrypted cipher->plainText (length=%d):\n", actual_plainText_length);
-    PRINTF("%.*h", actual_plainText_length, plainText);
+    PRINTF("%.*h\n", actual_plainText_length, plainText);
 
     os_memcpy(G_io_apdu_buffer, plainText, actual_plainText_length);
     io_exchange_with_code(SW_OK, actual_plainText_length);
