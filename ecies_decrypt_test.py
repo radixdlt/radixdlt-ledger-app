@@ -21,8 +21,11 @@ class TestVector(object):
 	def __init__(self, dict):
 		self.__dict__ = dict #json.loads(j)
 
-	def expectedPublicKey_hex(self) -> str:
-		return self.__dict__['expectedPublicKey']
+	def expectedUncompressedEphemeralPublicKey_hex(self) -> str:
+		return self.__dict__['expectedUncompressedEphemeralPublicKey']
+
+	def expectedCompressedEphemeralPublicKey_hex(self) -> str:
+		return self.__dict__['expectedCompressedEphemeralPublicKey']
 
 	def cipherText_hex(self) -> str:
 		return self.__dict__['cipherText']
@@ -44,14 +47,14 @@ class TestVector(object):
 
 	def apdu_prefix(self) -> bytearray:
 		CLA = bytes.fromhex("AA")
-		INS = b"\x32" # `32` is command "DECRYPT"
+		INS = b"\x16" # `16` is command "DECRYPT"
 		P1 = struct.pack(">B", self.cipherText_length())
 		P2 = b"\x00"
 
 		return CLA + INS + P1 + P2
 
 def ecies_decrypt(dongle, vector: TestVector) -> bool:
-	print(f"🚀 vector:\nPlainText: {vector.expected_plainText()}")
+	print(f"🚀 vector:\nPlainText: '{vector.expected_plainText()}', ephemeralPublicKey:\n🔑 uncompressed: {vector.expectedUncompressedEphemeralPublicKey_hex()},\n🔑 compressed: {vector.expectedCompressedEphemeralPublicKey_hex()}\n🔮\n")
 
 	prefix = vector.apdu_prefix()
 
