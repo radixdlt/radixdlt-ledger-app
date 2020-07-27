@@ -89,8 +89,8 @@ void handleDecryptData(
 
 
     plain_text_len = do_decrypt(&privateKey, cipher_text, cipher_text_len, plain_text, plain_text_len);
+    PRINTF("Decryption finished.\nPlain text: %.*h", plain_text_len, plain_text);
     os_memmove(G_io_apdu_buffer, plain_text, plain_text_len);
-    
     io_exchange_with_code(SW_OK, plain_text_len);
-    PRINTF("\nPlain text: %.*h\nDONE.\n", plain_text_len, plain_text);
+    PRINTF("\n\n***** DONE *****\n");
 }
