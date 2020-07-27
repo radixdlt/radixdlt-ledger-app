@@ -7,49 +7,6 @@
 
 static decryptDataContext_t *ctx = &global.decryptDataContext;
 
-static int do_decrypt(
-    cx_ecfp_private_key_t *privateKey,
-    const uint8_t *cipher_text,
-    const size_t cipher_text_len,
-
-    uint8_t *plain_text_out,
-    const size_t plain_text_len // MAX length in
-) {
-
-    PRINTF("Decrypting with private key: %.*h\n", privateKey->d_len, privateKey->d);
-
-  
-        
-        // // 5. The first 32 bytes of H are called key_e and the last 32 bytes are called key_m.
-        // let keyDataE = hashH.prefix(byteCountHashH/2)
-        // let keyDataM = hashH.suffix(byteCountHashH/2)
-
-    PRINTF("IV: %.*h\n", IV_LEN, ctx->iv);
-    PRINTF("MAC: %.*h\n", MAC_LEN, ctx->mac_data);
-    PRINTF("Ephemeral PubKey Uncomp: %.*h\n", UNCOM_PUB_KEY_LEN, ctx->pubkey_uncompressed);
-    PRINTF("Cipher text to decrypt: %.*h\n", cipher_text_len, cipher_text);
-
-    // 1. Do an EC point multiply with `privateKey` and ephemeral public key. Call it `pointM` 
-    // "PointM" is now in `ctx->pubkey_uncompressed`
-    cx_ecfp_scalar_mult(
-        CX_CURVE_256K1, 
-        ctx->pubkey_uncompressed, UNCOM_PUB_KEY_LEN, 
-        privateKey->d, privateKey->d_len
-    );
-
-    PRINTF("PointM: %.*h", UNCOM_PUB_KEY_LEN, ctx->pubkey_uncompressed);
-       
-        // 2. Use the X component of `pointM` and calculate the SHA512 `hashH`.
-        // let hashH = RadixHash(unhashedData: pointM.x.asData, hashedBy: sha512TwiceHasher).asData
-        // assert(hashH.length == byteCountHashH)
-
-    os_memset(plain_text_out + 0, 0xde, 1);
-    os_memset(plain_text_out + 1, 0xad, 1);
-    os_memset(plain_text_out + 2, 0xbe, 1);
-    os_memset(plain_text_out + 3, 0xef, 1);
-    return 4;
-}
-
 #define BIP32_PATH_LEN 12
 #define MAX_CIPHER_LENGTH (MAX_CHUNK_SIZE - BIP32_PATH_LEN - IV_LEN - UNCOM_PUB_KEY_LEN - MAC_LEN)
 
