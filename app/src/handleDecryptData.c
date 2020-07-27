@@ -8,6 +8,7 @@
 static decryptDataContext_t *ctx = &global.decryptDataContext;
 
 static int do_decrypt(
+    cx_ecfp_private_key_t *privateKey,
     const uint8_t *cipher_text,
     const size_t cipher_text_len,
 
@@ -15,7 +16,8 @@ static int do_decrypt(
     const size_t plain_text_len // MAX length in
 ) {
 
-            
+    PRINTF("Decrypting with private key: %.*h\n", privateKey->d_len, privateKey->d);
+
         // // 3. Do an EC point multiply with this.getPrivateKey() and ephemeral public key. This gives you a point M.
         // let pointM = ephemeralPublicKeyPoint * privateKey
         
@@ -97,9 +99,32 @@ void handleDecryptData(
     // Plain text will in fact be shorter than cipher, but we ignore that
     size_t plain_text_len = cipher_text_len;
     uint8_t plain_text[plain_text_len];
-    plain_text_len = do_decrypt(cipher_text, cipher_text_len, plain_text, plain_text_len);
+
+
+    PRINTF("deriving key from seed and BIP\n");
+    int KEY_SEED_BYTE_COUNT = 32;
+    volatile uint8_t keySeed[KEY_SEED_BYTE_COUNT];
+    volatile uint16_t error = 0;
+    volatile cx_ecfp_private_key_t privateKey;
+    BEGIN_TRY {
+        TRY {
+            os_perso_derive_node_bip32(CX_CURVE_256K1, ctx->bip32Path, 5, keySeed, NULL);
+            PRINTF("Finished deriving seed from BIP32\n");
+            cx_ecfp_init_private_key(CX_CURVE_SECP256K1, keySeed, 32, &privateKey);
+        }
+        CATCH_OTHER(e) { error = e; }
+        FINALLY { explicit_bzero(keySeed, KEY_SEED_BYTE_COUNT); }
+    }
+    END_TRY;
+
+    if (error) {
+        FATAL_ERROR("Error? code: %d\n", error);
+    }
+
+
+    plain_text_len = do_decrypt(&privateKey, cipher_text, cipher_text_len, plain_text, plain_text_len);
     os_memmove(G_io_apdu_buffer, plain_text, plain_text_len);
     
     io_exchange_with_code(SW_OK, plain_text_len);
-
+    PRINTF("\nPlain text: %.*h\nDONE.\n", plain_text_len, plain_text);
 }
