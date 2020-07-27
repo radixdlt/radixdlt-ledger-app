@@ -18,12 +18,7 @@ static int do_decrypt(
 
     PRINTF("Decrypting with private key: %.*h\n", privateKey->d_len, privateKey->d);
 
-        // // 3. Do an EC point multiply with this.getPrivateKey() and ephemeral public key. This gives you a point M.
-        // let pointM = ephemeralPublicKeyPoint * privateKey
-        
-        // // 4. Use the X component of point M and calculate the SHA512 hash H.
-        // let hashH = RadixHash(unhashedData: pointM.x.asData, hashedBy: sha512TwiceHasher).asData
-        // assert(hashH.length == byteCountHashH)
+  
         
         // // 5. The first 32 bytes of H are called key_e and the last 32 bytes are called key_m.
         // let keyDataE = hashH.prefix(byteCountHashH/2)
@@ -34,8 +29,22 @@ static int do_decrypt(
     PRINTF("Ephemeral PubKey Uncomp: %.*h\n", UNCOM_PUB_KEY_LEN, ctx->pubkey_uncompressed);
     PRINTF("Cipher text to decrypt: %.*h\n", cipher_text_len, cipher_text);
 
+    // 1. Do an EC point multiply with `privateKey` and ephemeral public key. Call it `pointM` 
+    // "PointM" is now in `ctx->pubkey_uncompressed`
+    cx_ecfp_scalar_mult(
+        CX_CURVE_256K1, 
+        ctx->pubkey_uncompressed, UNCOM_PUB_KEY_LEN, 
+        privateKey->d, privateKey->d_len
+    );
+
+    PRINTF("PointM: %.*h", UNCOM_PUB_KEY_LEN, ctx->pubkey_uncompressed);
+       
+        // 2. Use the X component of `pointM` and calculate the SHA512 `hashH`.
+        // let hashH = RadixHash(unhashedData: pointM.x.asData, hashedBy: sha512TwiceHasher).asData
+        // assert(hashH.length == byteCountHashH)
+
     os_memset(plain_text_out + 0, 0xde, 1);
-    os_memset(plain_text_out + 1, 0xea, 1);
+    os_memset(plain_text_out + 1, 0xad, 1);
     os_memset(plain_text_out + 2, 0xbe, 1);
     os_memset(plain_text_out + 3, 0xef, 1);
     return 4;
