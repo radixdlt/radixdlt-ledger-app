@@ -4,11 +4,18 @@
 #include "ParticleMetaData.h"
 #include "RadixParticleTypes.h"
 
-typedef struct {
-} encryptDataContext_t;
+#define IV_LEN 16
+#define MAC_LEN 32
+#define ECIES_KEY_DATA_PART_LEN 32
+#define HASH512_LEN 64
+#define UNCOM_PUB_KEY_LEN 65
 
 typedef struct {
 	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
+
+	uint8_t pubkey_uncompressed[UNCOM_PUB_KEY_LEN];
+	uint8_t iv[IV_LEN];
+	uint8_t mac_data[MAC_LEN];
 } decryptDataContext_t;
 
 typedef struct {
@@ -90,7 +97,6 @@ typedef union {
     getPublicKeyContext_t getPublicKeyContext;
     signHashContext_t signHashContext;
     signAtomContext_t signAtomContext;
-	encryptDataContext_t encryptDataContext;
 	decryptDataContext_t decryptDataContext;
 } commandContext;
 extern commandContext global;

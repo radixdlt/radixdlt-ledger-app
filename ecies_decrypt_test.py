@@ -27,14 +27,38 @@ class TestVector(object):
 	def expectedCompressedEphemeralPublicKey_hex(self) -> str:
 		return self.__dict__['expectedCompressedEphemeralPublicKey']
 
-	def cipherText_hex(self) -> str:
-		return self.__dict__['cipherText']
+	def fullECIESEncryptionText_hex(self) -> str:
+		return self.__dict__['fullECIESEncryptionText']
 
-	def cipherText_bytearray(self) -> bytearray:
+	def fullECIESEncryptionText_bytearray(self) -> bytearray:
 		return bytearray.fromhex(self.cipherText_hex())
 
-	def cipherText_length(self) -> int:
-		return len(self.cipherText_bytearray())
+	def cipherText_just_cipher_hex(self) -> str:
+		return self.__dict__['cipherText']
+
+	def cipherText_just_cipher_bytearray(self) -> bytearray:
+		return bytearray.fromhex(self.cipherText_just_cipher_hex())
+
+	def cipherText_just_cipher_length(self) -> int:
+		return len(self.cipherText_just_cipher_bytearray())
+
+	def MAC_hex(self) -> str:
+		return self.__dict__['MAC']
+
+	def MAC_bytearray(self) -> bytearray:
+		return bytearray.fromhex(self.MAC_hex())
+
+	def MAC_length(self) -> int:
+		return len(self.MAC_bytearray())
+
+	def IV_hex(self) -> str:
+		return self.__dict__['IV']
+
+	def IV_bytearray(self) -> bytearray:
+		return bytearray.fromhex(self.IV_hex())
+
+	def IV_length(self) -> int:
+		return len(self.IV_bytearray())
 
 	def bip32Path_hex(self) -> str:
 		return self.__dict__['bip32Path']
@@ -42,23 +66,34 @@ class TestVector(object):
 	def bip32Path_bytearray(self) -> bytearray:
 		return bytearray.fromhex(self.bip32Path_hex())
 
+	def expectedUncompressedEphemeralPublicKey_bytearray(self) -> bytearray:
+		return bytearray.fromhex(self.expectedUncompressedEphemeralPublicKey_hex())
+
+	def ephemeralPubKey_length(self) -> int:
+		return len(self.expectedUncompressedEphemeralPublicKey_bytearray())
+
 	def expected_plainText(self) -> str:
 		return self.__dict__['expectedPlainText']
 
 	def apdu_prefix(self) -> bytearray:
 		CLA = bytes.fromhex("AA")
 		INS = b"\x16" # `16` is command "DECRYPT"
-		P1 = struct.pack(">B", self.cipherText_length())
+		P1 = struct.pack(">B", self.cipherText_just_cipher_length())
 		P2 = b"\x00"
 
 		return CLA + INS + P1 + P2
 
 def ecies_decrypt(dongle, vector: TestVector) -> bool:
-	print(f"🚀 vector:\nPlainText: '{vector.expected_plainText()}', ephemeralPublicKey:\n🔑 uncompressed: {vector.expectedUncompressedEphemeralPublicKey_hex()},\n🔑 compressed: {vector.expectedCompressedEphemeralPublicKey_hex()}\n🔮\n")
+	print(f"🚀 vector:\nPlainText: '{vector.expected_plainText()}'\n💉IV: {vector.IV_hex()}\n🔑ephemeralPublicKey uncompressed: {vector.expectedUncompressedEphemeralPublicKey_hex()}\n🔐cipher: {vector.cipherText_just_cipher_hex()}\n💻 MAC: {vector.MAC_hex()}\n🔮\n")
 
 	prefix = vector.apdu_prefix()
 
-	payload = vector.bip32Path_bytearray() + vector.cipherText_bytearray()
+	# BIPPath(12) || IV(16) || EphemeralPubKeyUncomp(65) || CipherText(P1) || MAC(32) 
+	assert vector.IV_length() == 16
+	assert vector.ephemeralPubKey_length() == 65
+	assert vector.MAC_length() == 32
+	payload = vector.bip32Path_bytearray() + vector.IV_bytearray() + vector.expectedUncompressedEphemeralPublicKey_bytearray() + vector.cipherText_just_cipher_bytearray() + vector.MAC_bytearray()
+
 	print(f"payload: {payload.hex()}")
 
 	payload_size = len(payload)
@@ -71,9 +106,8 @@ def ecies_decrypt(dongle, vector: TestVector) -> bool:
 
 	print(f"Sending APDU: {apdu.hex()}")
 	result = dongle.exchange(apdu)
-
-	plainTextEnc_from_ledger_hex = result.hex()
-	plainText_from_ledger = plainTextEnc_from_ledger_hex.decode('utf8')
+	print(f"Hex result from dongle: {result.hex()}")
+	plainText_from_ledger = result.decode('utf8')
 	expectedPlainText = vector.expected_plainText()
 
 	if plainText_from_ledger == expectedPlainText:

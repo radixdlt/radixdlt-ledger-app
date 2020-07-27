@@ -1,42 +1,52 @@
 [
-	{
-		"expectedUncompressedEphemeralPublicKey": "04ca2b25d4425731f20f99b4869f8cb2c65655b64b659a1144e7dd19d85b698c4be9a56747cfe94effa0f49e6f04a669d23b23a987a1ba3dba69cbdd8a01bc07f4",
-		"cipherText": "fa6413f962640e64b401b2a6bd1f419e2102ca2b25d4425731f20f99b4869f8cb2c65655b64b659a1144e7dd19d85b698c4b00000010f042594ba736792c775cc576cbe66203b7b9d4a381802715ae326b8df70066f4dd2b6efd1014fde2bd709cbb0e412962",
-		"expectedPlainText": "Hello Radix",
-		"expectedCompressedEphemeralPublicKey": "02ca2b25d4425731f20f99b4869f8cb2c65655b64b659a1144e7dd19d85b698c4b",
-		"bip32Path": "800000020000000100000003",
-		"expectedPublicKeyWhenBIP32PathIsDerived": "026d5e07cfde5df84b5ef884b629d28d15b0f6c66be229680699767cd57c618288"
-	},
-	{
-		"expectedUncompressedEphemeralPublicKey": "043c0d5912c7532ce64cfdb55f03f10a73ec87676c2a08bae3726fca0615b7c3aad342c2e981c06925e7e2b9cd601dd9ee1ab56ef1d08aea6ece9c0a8e42270ee1",
-		"cipherText": "2b6de731e19857c122f063bb519784b421033c0d5912c7532ce64cfdb55f03f10a73ec87676c2a08bae3726fca0615b7c3aa0000005094eaacf59a9f5ddae0ee3398cc67c85925eb42cb0b4784f1d67c65dfcefaca307a026ab6167bc35b0582ce2d3c824abbe3754afa5cd000245f8a0adae7d4a55c3bf85e40e1fae1615c4f7ad49f6ac0c2467be552b9f5d03b8643206440203a4970cd9f4b6be4127e002adb06ec934f5e",
-		"expectedPlainText": "Computer Science is no more about computers than astronomy is about telescopes.",
-		"expectedCompressedEphemeralPublicKey": "033c0d5912c7532ce64cfdb55f03f10a73ec87676c2a08bae3726fca0615b7c3aa",
-		"bip32Path": "800000020000000100000003",
-		"expectedPublicKeyWhenBIP32PathIsDerived": "026d5e07cfde5df84b5ef884b629d28d15b0f6c66be229680699767cd57c618288"
-	},
-	{
-		"expectedUncompressedEphemeralPublicKey": "045f86220808705bd281793cdd8f542c5c7789bafcd3d2b38b1c5ae1ee2a2577c19cb91bd13e0b1279254d1213eff527a55f048b65cf78faff1c43d6b0ea82f16f",
-		"cipherText": "ae4d197e91ce0b8b47707f2935cafe8c21035f86220808705bd281793cdd8f542c5c7789bafcd3d2b38b1c5ae1ee2a2577c100000030803b2861205659e5585ad63ca5b8c950f3f00ca1d78f28fb686c4ec0948207224a0009091ff6ae73961cfb774a4780c9d6da7b7042cc726215fad33e06c42a90c5e9d8f79da11d3511a9417f9bfe1304",
-		"expectedPlainText": "I do not fear computers. I fear lack of them.",
-		"expectedCompressedEphemeralPublicKey": "035f86220808705bd281793cdd8f542c5c7789bafcd3d2b38b1c5ae1ee2a2577c1",
-		"bip32Path": "800000020000000100000003",
-		"expectedPublicKeyWhenBIP32PathIsDerived": "026d5e07cfde5df84b5ef884b629d28d15b0f6c66be229680699767cd57c618288"
-	},
-	{
-		"expectedUncompressedEphemeralPublicKey": "048cc6f95b3f90e62ec5471bd8eb76dee73d3dc8557d6238dbc19e3f4a6638dece6403dcc6ff9b1e2004e32d9b386db6357eae227c4158702fc7b8c1ba0a322d4b",
-		"cipherText": "7028908b2eb07136f363c686401ae03021038cc6f95b3f90e62ec5471bd8eb76dee73d3dc8557d6238dbc19e3f4a6638dece000000f08d2c6bb8c31584f81e708a222db4b44f9adca77ad971700769b96c1ec76a41c6eec49e1c0a2b7a8e9e89a2b1d2c151b780ff0fdfee70edaeac2769d79b5189f77babcaf4a6e9fe97456e640a040dc9734a844a5cd156a0448b1657ce5c1b62742d7552f7617b6678e3bfd7fce771ee0dc3c1a567cc1fd08d1344e2b77a3b641e2785b087c6b44d6486f5bfd62fe7afe6840c6aebd137a5ceac36be1656e61a9326d8275fd4a13ad7b76919c9298f4195550c2e20a032d42e012db271ee84f150a2f10a67ec719ffc3b1255bcdad993decbf182ee3d8f5fff210bddc63bca8559db7c8cfeefbc3a7be6f40ee51f6332bd8211b30bdd3c9da35821c78e809e06156da039e44144faa66e80df51a9dc088e",
-		"expectedPlainText": "Let us change our traditional attitude to the construction of programs: Instead of imagining that our main task is to instruct a computer what to do, let us concentrate rather on explaining to human beings what we want a computer to do.",
-		"expectedCompressedEphemeralPublicKey": "038cc6f95b3f90e62ec5471bd8eb76dee73d3dc8557d6238dbc19e3f4a6638dece",
-		"bip32Path": "800000020000000100000003",
-		"expectedPublicKeyWhenBIP32PathIsDerived": "026d5e07cfde5df84b5ef884b629d28d15b0f6c66be229680699767cd57c618288"
-	},
-	{
-		"expectedUncompressedEphemeralPublicKey": "04e2ecd6a287bdf264e1982e1bdb051272161db7eda1abcf871b92f25024caa36765393ec24229645aae8800fcc97d1358a545060ef5e7d07ab4cfb1b072f2738b",
-		"cipherText": "bf6ec55a11c9164beb1e2e9380ea25c22103e2ecd6a287bdf264e1982e1bdb051272161db7eda1abcf871b92f25024caa36700000010cb48585935bb73e64084344f0f312bf2cbbc46582099578e549064b197b1bbe585da1f2e8588ff732c37953ee8731bb0",
-		"expectedPlainText": "",
-		"expectedCompressedEphemeralPublicKey": "03e2ecd6a287bdf264e1982e1bdb051272161db7eda1abcf871b92f25024caa367",
-		"bip32Path": "800000020000000100000003",
-		"expectedPublicKeyWhenBIP32PathIsDerived": "026d5e07cfde5df84b5ef884b629d28d15b0f6c66be229680699767cd57c618288"
-	}
+  {
+    "fullECIESEncryptionText": "81a7805d335a8f2743033773f67589ca2102ffb24d280b24d101d101c478861eb52d5378569e59f24369a6f0d231d3408c890000001097e578e3ba3cc09fcae9428da8e19c0ab963bbfd9d2125412cd9a80b8dd30a46a34fb1e728c2f905650e3157d228d387",
+    "expectedUncompressedEphemeralPublicKey": "04ffb24d280b24d101d101c478861eb52d5378569e59f24369a6f0d231d3408c893ac8f4cb98dd788cd266c2db784386c74931b4019c593476fb0d94e0d2609dde",
+    "cipherText": "97e578e3ba3cc09fcae9428da8e19c0a",
+    "expectedPlainText": "Hello Radix",
+    "expectedCompressedEphemeralPublicKey": "02ffb24d280b24d101d101c478861eb52d5378569e59f24369a6f0d231d3408c89",
+    "bip32Path": "800000020000000100000003",
+    "MAC": "b963bbfd9d2125412cd9a80b8dd30a46a34fb1e728c2f905650e3157d228d387",
+    "IV": "81a7805d335a8f2743033773f67589ca"
+  },
+  {
+    "fullECIESEncryptionText": "5212e01bcf5e0c964c2cb376903d7f54210269a973fb0ab75de54a64e11a501c7f4714b1d8cb316e18e3d99008a50632600600000050ab71faa7460f077afc565db93e2082a8858f35c64f159146b29fae830014e871d8993d5931ed5bb366a08c6c482c5414e04181a382d8e95d5caa8468dc99fa8c54162acc0bf19dc0b4dd8520e37fdfe3442db4eb2020b075126f52321032974f0478144dc756858a8cc34aa12ca1c3fa",
+    "expectedUncompressedEphemeralPublicKey": "0469a973fb0ab75de54a64e11a501c7f4714b1d8cb316e18e3d99008a5063260066c6867ccfaf4f6f65fed687a158b949f0009f6b553457b5acc03ca82c78334da",
+    "cipherText": "ab71faa7460f077afc565db93e2082a8858f35c64f159146b29fae830014e871d8993d5931ed5bb366a08c6c482c5414e04181a382d8e95d5caa8468dc99fa8c54162acc0bf19dc0b4dd8520e37fdfe3",
+    "expectedPlainText": "Computer Science is no more about computers than astronomy is about telescopes.",
+    "expectedCompressedEphemeralPublicKey": "0269a973fb0ab75de54a64e11a501c7f4714b1d8cb316e18e3d99008a506326006",
+    "bip32Path": "800000020000000100000003",
+    "MAC": "442db4eb2020b075126f52321032974f0478144dc756858a8cc34aa12ca1c3fa",
+    "IV": "5212e01bcf5e0c964c2cb376903d7f54"
+  },
+  {
+    "fullECIESEncryptionText": "4600deb2da1ea55a2f470979f3d7e9092103b9de023a1bd1ada1ee5f297bad5491e7ac02db4eee7f34c742d8630e0b996221000000305e37309ae7c029669c20bdff30724c31ca0e3c3c002f6774fd22c19c17d1861886672e71049e34ff02c80c97f5493f7ac8d320b289ca5ab597b29bb4ff7387aa6839fe41331d01bf2a5895f5a4c59759",
+    "expectedUncompressedEphemeralPublicKey": "04b9de023a1bd1ada1ee5f297bad5491e7ac02db4eee7f34c742d8630e0b996221e6d042abc51748c0fc78a7e1dd84a4135d3fdcac63f60f7b402846b7454e63e3",
+    "cipherText": "5e37309ae7c029669c20bdff30724c31ca0e3c3c002f6774fd22c19c17d1861886672e71049e34ff02c80c97f5493f7a",
+    "expectedPlainText": "I do not fear computers. I fear lack of them.",
+    "expectedCompressedEphemeralPublicKey": "03b9de023a1bd1ada1ee5f297bad5491e7ac02db4eee7f34c742d8630e0b996221",
+    "bip32Path": "800000020000000100000003",
+    "MAC": "c8d320b289ca5ab597b29bb4ff7387aa6839fe41331d01bf2a5895f5a4c59759",
+    "IV": "4600deb2da1ea55a2f470979f3d7e909"
+  },
+  {
+    "fullECIESEncryptionText": "07026f769ec5cef491195adba5f79b902102d9a40cdf55d37dcdb8bbccc95e8b140dfd5203fb5cc0e83d9dd56b36ff60c80d000000f07c20c59c9281476cf1be1debe95ffa570081e6bfdee52acd9f4df1ff03fa351b805a0ece21f403f0c89c536241cd5b96d2a183d05299e28a90ca8050d4a0a3611fbc33ccb8ad645cadbbe6139eadf77ea8113530806e068b3db16d003a643e86d94af873165fe0fbc980df55f9b7a93d3a5a942e3acd2e7f548310097ebcefe7ab0d5b7e20c209fe23372b4ae8a0eed2e3a7d4e720b9a4db52effb75f5f97ed37d78adb9e717a472d01c84c0a962bb667ef858141e4fe379851eb8273f0c75b3baa216a0743e94101e156cfaa78cea3ff0611e038bd4c5f5e1d44b3ac6b9072dcaded9c31385e8299039cb2007cf54f73a003e628888420f160a91990050bb59fd194e236eef01d2958aab75c388981a",
+    "expectedUncompressedEphemeralPublicKey": "04d9a40cdf55d37dcdb8bbccc95e8b140dfd5203fb5cc0e83d9dd56b36ff60c80de0d75b40f91aec9eca872e9037e643982d98e5a34bdbbc722abc92442bb8b368",
+    "cipherText": "7c20c59c9281476cf1be1debe95ffa570081e6bfdee52acd9f4df1ff03fa351b805a0ece21f403f0c89c536241cd5b96d2a183d05299e28a90ca8050d4a0a3611fbc33ccb8ad645cadbbe6139eadf77ea8113530806e068b3db16d003a643e86d94af873165fe0fbc980df55f9b7a93d3a5a942e3acd2e7f548310097ebcefe7ab0d5b7e20c209fe23372b4ae8a0eed2e3a7d4e720b9a4db52effb75f5f97ed37d78adb9e717a472d01c84c0a962bb667ef858141e4fe379851eb8273f0c75b3baa216a0743e94101e156cfaa78cea3ff0611e038bd4c5f5e1d44b3ac6b9072dcaded9c31385e8299039cb2007cf54f7",
+    "expectedPlainText": "Let us change our traditional attitude to the construction of programs: Instead of imagining that our main task is to instruct a computer what to do, let us concentrate rather on explaining to human beings what we want a computer to do.",
+    "expectedCompressedEphemeralPublicKey": "02d9a40cdf55d37dcdb8bbccc95e8b140dfd5203fb5cc0e83d9dd56b36ff60c80d",
+    "bip32Path": "800000020000000100000003",
+    "MAC": "3a003e628888420f160a91990050bb59fd194e236eef01d2958aab75c388981a",
+    "IV": "07026f769ec5cef491195adba5f79b90"
+  },
+  {
+    "fullECIESEncryptionText": "ddcbfd18e7d083e551c6eab02140de202103058d021ebd4e3e3183f5bddecfcabb2f752210bb6bd9cbf7c51cb7944ef2bf8a00000010bcb3f471d340a1d1c7ea4187be1a32c39891526bdcf048c75db86a01574b0848a3739e0af419bc212a1e99d70ce9e719",
+    "expectedUncompressedEphemeralPublicKey": "04058d021ebd4e3e3183f5bddecfcabb2f752210bb6bd9cbf7c51cb7944ef2bf8a503ea39fdf71fb88037d45560f4e1cdacd6ff0d2d05022deb1588a08b9eedb03",
+    "cipherText": "bcb3f471d340a1d1c7ea4187be1a32c3",
+    "expectedPlainText": "",
+    "expectedCompressedEphemeralPublicKey": "03058d021ebd4e3e3183f5bddecfcabb2f752210bb6bd9cbf7c51cb7944ef2bf8a",
+    "bip32Path": "800000020000000100000003",
+    "MAC": "9891526bdcf048c75db86a01574b0848a3739e0af419bc212a1e99d70ce9e719",
+    "IV": "ddcbfd18e7d083e551c6eab02140de20"
+  }
 ]
