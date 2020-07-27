@@ -2,28 +2,11 @@
 #include "stdint.h"
 #include "os.h"
 
-size_t ecies_decrypt_bipPath(
-    const uint8_t* data_in,
-    const size_t data_in_len,
+int do_decrypt(
+    cx_ecfp_private_key_t *privateKey,
+    const uint8_t *cipher_text,
+    const size_t cipher_text_len,
 
-    const uint8_t* ephemeralUncompressedPublicKeyBytes,
-    const size_t ephemeral_public_key_uncompressed_len,
-
-    uint8_t* data_out,
-    size_t data_out_len,
-
-    uint32_t *bip32Path
-);
-
-size_t ecies_decrypt(
-    const uint8_t* data_in,
-    const size_t data_in_len,
-
-    const uint8_t* ephemeralUncompressedPublicKeyBytes,
-    const size_t ephemeral_public_key_uncompressed_len,
-
-    uint8_t* data_out,
-    size_t data_out_len,
-
-    cx_ecfp_private_key_t *privateKey
+    uint8_t *plain_text_out,
+    const size_t plain_text_len // MAX length in
 );

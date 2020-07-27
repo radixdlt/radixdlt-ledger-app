@@ -7,6 +7,9 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <strings.h>
+#include "global_state.h"
+
+static decryptDataContext_t *ctx = &global.decryptDataContext;
 
 static bool hmac256(
     const uint8_t* key,
@@ -94,172 +97,45 @@ static bool sha512Twice(
 
 }
 
-size_t ecies_decrypt_bipPath(
-    const uint8_t* data_in,
-    const size_t data_in_len,
+int do_decrypt(
+    cx_ecfp_private_key_t *privateKey,
+    const uint8_t *cipher_text,
+    const size_t cipher_text_len,
 
-    const uint8_t* ephemeralUncompressedPublicKeyBytes,
-    const size_t ephemeral_public_key_uncompressed_len,
-
-    uint8_t* data_out,
-    size_t data_out_len,
-
-    uint32_t *bip32Path
+    uint8_t *plain_text_out,
+    const size_t plain_text_len // MAX length in
 ) {
-    volatile cx_ecfp_public_key_t publicKey;
-    volatile cx_ecfp_private_key_t privateKey;
-    derive_radix_key_pair(bip32Path, &publicKey, &privateKey);
 
-    return ecies_decrypt(
-        data_in, data_in_len,
-        ephemeralUncompressedPublicKeyBytes, ephemeral_public_key_uncompressed_len,
-        data_out, data_out_len,
-        &privateKey
-    );
-}
-
-size_t ecies_decrypt(
-    const uint8_t* data_in,
-    const size_t data_in_len,
-
-    const uint8_t* ephemeralUncompressedPublicKeyBytes,
-    const size_t ephemeral_public_key_uncompressed_len,
-
-    uint8_t* data_out,
-    size_t data_out_len,
-
-    cx_ecfp_private_key_t *privateKey
-) {
-    FATAL_ERROR("foobar");
-    // assert(ephemeral_public_key_uncompressed_len == UNCOM_PUB_KEY_LEN);
-
-    // // 1: Read the IV
-    // size_t offset = 0;
-    // os_memcpy(ctx->iv, data_in + offset, IV_LEN);
-    // offset += IV_LEN;
-
-    // // 2. Read `ephemeralPublicKey`
-
-    // // VALIDATION ONLY  
-    // cx_ecfp_public_key_t ephemeralPublicKey;
-    // int actual_length_ephemeral_public_key_uncompressed_len = cx_ecfp_init_public_key(
-    //     CX_CURVE_256K1, 
-    //     ephemeralUncompressedPublicKeyBytes, 
-    //     UNCOM_PUB_KEY_LEN, 
-    //     &ephemeralPublicKey
-    // );
-    // assert(actual_length_ephemeral_public_key_uncompressed_len == ephemeral_public_key_uncompressed_len);
-
-    // PLOC();
-   
-    // // 3. Do an EC point multiply with `privateKey` and `ephemeralPublicKeyPoint`. This gives you a point M.
-    // // LAST CHECKPOINT ✅ ✅ ✅
-    // os_memmove(ctx->pointM, ephemeralUncompressedPublicKeyBytes, ephemeral_public_key_uncompressed_len);
-
-    // THROW(39203);
-
-    // PLOC();
-    // cx_ecfp_scalar_mult(
-    //     CX_CURVE_256K1, 
-    //     ctx->pointM, UNCOM_PUB_KEY_LEN, 
-    //     privateKey->d, privateKey->d_len
-    // );
-    // PLOC();
-
-    // int pointM_validation_res = cx_ecfp_is_valid_point(CX_CURVE_256K1, pointM, pointM_len);
-    // PRINTF("pointM_validation_res: %d\n", pointM_validation_res);
-    // // if ( != 1) {
-    // //     PRINTF("Invalid ECPoint\n");
-    // //     return 0;
-    // // }
-    // PLOC();
-
-    // // 4. `hashH := sha512(sha512(pointM.x))`
-    // size_t hashH_len = 64;
-    // uint8_t hashH[hashH_len];
-    // PLOC();
-    // sha512Twice(pointM + 1, 32,  // copy over `pointM.x` (32 bytes)
-    //             hashH, hashH_len);
-    // PLOC();
-
-    // // 5. `keyDataE := hashH[0..<32]`, `keyDataM := hashH[32..<64]`
-    // size_t keyDataE_len = 32;
-    // uint8_t keyDataE[keyDataE_len];
-    // os_memcpy(keyDataE, hashH, keyDataE_len);
-    // size_t keyDataM_len = 32;
-    // uint8_t keyDataM[keyDataM_len];
-    // os_memcpy(keyDataM, hashH + keyDataE_len, keyDataM_len);
-
-    // PRINTF("iv: %.*h\n", IV_LEN, iv);
-    // PRINTF("keyE: %.*h\n", keyDataE_len, keyDataE);
-    // PRINTF("keyM: %.*h\n", keyDataM_len, keyDataM);
-
-    // // 6. Read cipherText data
-    // size_t encodedCipherText_length = sizeof(uint32_t); // four bytes
-    // uint8_t cipherText_length_encoded[encodedCipherText_length];
-
-    // os_memcpy(cipherText_length_encoded, data_in + offset, encodedCipherText_length);
-    // offset += encodedCipherText_length;
-    // uint32_t cipherText_length = U4BE(cipherText_length_encoded, 0);
-
-    // uint8_t cipherText[cipherText_length];
-    // os_memcpy(cipherText, data_in + offset, cipherText_length);
-    // offset += cipherText_length;
-
-    // PRINTF("encrypted (cipher): %.*h\n", cipherText_length, cipherText);
-
+    PRINTF("Decrypting with private key: %.*h\n", privateKey->d_len, privateKey->d);
 
   
+        
+        // // 5. The first 32 bytes of H are called key_e and the last 32 bytes are called key_m.
+        // let keyDataE = hashH.prefix(byteCountHashH/2)
+        // let keyDataM = hashH.suffix(byteCountHashH/2)
 
-    // // 7. Read mac
-    // uint8_t parsed_macData[MAC_LEN];
-    // os_memcpy(parsed_macData, data_in + offset, MAC_LEN);
-    // offset += MAC_LEN;
+    PRINTF("IV: %.*h\n", IV_LEN, ctx->iv);
+    PRINTF("MAC: %.*h\n", MAC_LEN, ctx->mac_data);
+    PRINTF("Ephemeral PubKey Uncomp: %.*h\n", UNCOM_PUB_KEY_LEN, ctx->pubkey_uncompressed);
+    PRINTF("Cipher text to decrypt: %.*h\n", cipher_text_len, cipher_text);
 
-    // PRINTF("expected (parsed) mac: %.*h\n", MAC_LEN, parsed_macData);
+    // 1. Do an EC point multiply with `privateKey` and ephemeral public key. Call it `pointM` 
+    // "PointM" is now in `ctx->pubkey_uncompressed`
+    cx_ecfp_scalar_mult(
+        CX_CURVE_256K1, 
+        ctx->pubkey_uncompressed, UNCOM_PUB_KEY_LEN, 
+        privateKey->d, privateKey->d_len
+    );
 
-    // // 8. calculate MAC and compare MAC
+    PRINTF("PointM: %.*h", UNCOM_PUB_KEY_LEN, ctx->pubkey_uncompressed);
+       
+        // 2. Use the X component of `pointM` and calculate the SHA512 `hashH`.
+        // let hashH = RadixHash(unhashedData: pointM.x.asData, hashedBy: sha512TwiceHasher).asData
+        // assert(hashH.length == byteCountHashH)
 
-    // uint8_t compare_macData[MAC_LEN];
-    // bool was_mac_successful = calculateMAC(
-    //     iv, IV_LEN, 
-    //     keyDataM, keyDataM_len,
-    //     ephemeralPublicKey.W, ephemeralPublicKey.W_len,
-    //     cipherText, cipherText_length,
-    //     compare_macData, MAC_LEN
-    // );
-
-    // if (!was_mac_successful) {
-    //     PRINTF("Mac failed");
-    //     return 0;
-    // }
-   
-    // PRINTF("calculated mac: %.*h\n", MAC_LEN, compare_macData);
-
-
-   
-    // if (os_memcmp(compare_macData, parsed_macData, 32)) {
-    //     PRINTF("FAILURE! MAC mismatch...\n");
-    // 	return 0;
-    // }
-    // PRINTF("SUCCESS! Parsed (Expectd) MAC and calculated MAC matches! :D :D\n");
-     
-    //   // 8. Decrypt the cipher text with AES-256-CBC, using IV as initialization vector, key_e as decryption key and the cipher text as payload. The output is the padded input text.
-    // size_t length_plaintext = cipherText_length; // plaintext should be shorter than cipher text, so use chiper text as an upperbound... // TODO calc this..
-    // uint8_t plainTextUTF8Encoded[length_plaintext];
-
-    // size_t actual_length_plaintext = crypt_decrypt(
-    //     iv, IV_LEN, 
-    //     cipherText, cipherText_length, 
-    //     keyDataE, keyDataE_len, 
-    //     plainTextUTF8Encoded, length_plaintext
-    // );
-
-    // PRINTF("ECIES decrypted plaintext (utf8 encoded): %.*h\n", actual_length_plaintext, plainTextUTF8Encoded);
-
-    // assert(data_out_len >= actual_length_plaintext);
-
-    // os_memcpy(data_out, plainTextUTF8Encoded, actual_length_plaintext);
-
-    // return actual_length_plaintext;
+    os_memset(plain_text_out + 0, 0xde, 1);
+    os_memset(plain_text_out + 1, 0xad, 1);
+    os_memset(plain_text_out + 2, 0xbe, 1);
+    os_memset(plain_text_out + 3, 0xef, 1);
+    return 4;
 }
