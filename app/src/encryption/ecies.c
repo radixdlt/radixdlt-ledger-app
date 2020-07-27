@@ -127,15 +127,15 @@ int do_decrypt(
         privateKey->d, privateKey->d_len
     );
 
-    PRINTF("PointM: %.*h", UNCOM_PUB_KEY_LEN, ctx->pubkey_uncompressed);
+    PRINTF("PointM: %.*h\n", UNCOM_PUB_KEY_LEN, ctx->pubkey_uncompressed);
        
-        // 2. Use the X component of `pointM` and calculate the SHA512 `hashH`.
-        // let hashH = RadixHash(unhashedData: pointM.x.asData, hashedBy: sha512TwiceHasher).asData
+    // 2. Use the X component of `pointM` and calculate the SHA512 `hashH`.
+    // let hashH = RadixHash(unhashedData: pointM.x.asData, hashedBy: sha512TwiceHasher).asData
         // assert(hashH.length == byteCountHashH)
-
-    os_memset(plain_text_out + 0, 0xde, 1);
-    os_memset(plain_text_out + 1, 0xad, 1);
-    os_memset(plain_text_out + 2, 0xbe, 1);
-    os_memset(plain_text_out + 3, 0xef, 1);
-    return 4;
+    PRINTF("EXPECTED sha512 twice hash: '8f4faa6c319cf556e94bf845a1a48089afce5a2ae42243d46cba29805f0ac4308d3e1667b63cb5db8ce6d5395df8b713cbe2f084a6973f4456413e4fcbe68b24'\n");
+    uint8_t hashH[64];
+    sha512Twice(ctx->pubkey_uncompressed + 1, 32, hashH, 64);
+    PRINTF("hashH: %.*h\n", 64, hashH);
+    os_memmove(plain_text_out, hashH, plain_text_len);
+    return plain_text_len;
 }
