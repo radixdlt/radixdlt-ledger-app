@@ -32,9 +32,10 @@ void handleDecryptData(
     // READ BIP32Path (12 bytes)
     size_t offset = 0;
     size_t copy_byte_count = BIP32_PATH_LEN;
+    uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
     PRINTF("Reading BIP32 path\n");
     parse_bip32_path_from_apdu_command(
-        dataBuffer + offset, ctx->bip32Path, G_ui_state.lower_line_long,
+        dataBuffer + offset, bip32Path, G_ui_state.lower_line_long,
         BIP32_PATH_STRING_MAX_LENGTH
     );
     offset += copy_byte_count;
@@ -74,7 +75,7 @@ void handleDecryptData(
     volatile cx_ecfp_private_key_t privateKey;
     BEGIN_TRY {
         TRY {
-            os_perso_derive_node_bip32(CX_CURVE_256K1, ctx->bip32Path, 5, keySeed, NULL);
+            os_perso_derive_node_bip32(CX_CURVE_256K1, bip32Path, 5, keySeed, NULL);
             PRINTF("Finished deriving seed from BIP32\n");
             cx_ecfp_init_private_key(CX_CURVE_SECP256K1, keySeed, 32, &privateKey);
         }
@@ -87,8 +88,12 @@ void handleDecryptData(
         FATAL_ERROR("Error? code: %d\n", error);
     }
 
+    plain_text_len = do_decrypt(
+        &privateKey, 
+        cipher_text, cipher_text_len, 
+        plain_text, plain_text_len
+    );
 
-    plain_text_len = do_decrypt(&privateKey, cipher_text, cipher_text_len, plain_text, plain_text_len);
     PRINTF("Decryption finished.\nPlain text: %.*h", plain_text_len, plain_text);
     os_memmove(G_io_apdu_buffer, plain_text, plain_text_len);
     io_exchange_with_code(SW_OK, plain_text_len);
