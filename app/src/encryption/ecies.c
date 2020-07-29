@@ -11,65 +11,6 @@
 
 static decryptDataContext_t *ctx = &global.decryptDataContext;
 
-static bool hmac256(
-    const uint8_t* key,
-    const size_t key_len,
-
-    const uint8_t* data_in,
-    const size_t data_in_len,
-
-    uint8_t* mac_out,
-    const size_t mac_out_len
-) {
-    cx_hmac_sha256_t hmac256;
-    cx_hmac_sha256_init(&hmac256, key, key_len);
-    int res = cx_hmac(
-        &hmac256, 
-        CX_LAST | CX_NO_REINIT,
-        data_in, data_in_len,
-        mac_out, mac_out_len
-    );
-
-    if (res == 0) {
-        return false; // failure
-    }
-
-    return true;
-}
-
-static bool calculateMAC(
-    const uint8_t* iv,
-    const size_t iv_len,
-
-    const uint8_t* salt,
-    const size_t salt_len,
-
-    const uint8_t* ephemeralPublicKeyBytes,
-    const size_t ephemeralPublicKeyBytes_len,
-
-    const uint8_t* cipherText,
-    const size_t cipherText_len,
-
-    uint8_t* mac_out,
-    const size_t mac_out_len
-) {
-    size_t message_len = iv_len + ephemeralPublicKeyBytes_len + cipherText_len;
-    uint8_t message[message_len];
-    size_t offset = 0;
-
-    os_memcpy(message + offset, iv, iv_len);
-    offset += iv_len;
-
-    os_memcpy(message + offset, ephemeralPublicKeyBytes, ephemeralPublicKeyBytes_len);
-    offset += ephemeralPublicKeyBytes_len;
-
-    os_memcpy(message + offset, cipherText, cipherText_len);
-
-    bool was_successful = hmac256(salt, salt_len, message, message_len, mac_out, mac_out_len);
-
-    return was_successful;
-}
-
 static bool sha512Twice(
      const uint8_t *data_in, const size_t data_in_len,
      uint8_t *data_out, const size_t data_out_len
@@ -108,12 +49,6 @@ int do_decrypt(
 
     PRINTF("Decrypting with private key: %.*h\n", privateKey->d_len, privateKey->d);
 
-  
-        
-        // // 5. The first 32 bytes of H are called key_e and the last 32 bytes are called key_m.
-        // let keyDataE = hashH.prefix(byteCountHashH/2)
-        // let keyDataM = hashH.suffix(byteCountHashH/2)
-
     PRINTF("IV: %.*h\n", IV_LEN, ctx->iv);
     PRINTF("MAC: %.*h\n", MAC_LEN, ctx->mac_data);
     PRINTF("Ephemeral PubKey Uncomp: %.*h\n", UNCOM_PUB_KEY_LEN, ctx->pubkey_uncompressed);
@@ -134,14 +69,50 @@ int do_decrypt(
 
     PRINTF("hashH: %.*h\n", HASH512_LEN, ctx->hashH);
 
-    PRINTF("EXPECTED sha512 twice hash: '8f4faa6c319cf556e94bf845a1a48089afce5a2ae42243d46cba29805f0ac4308d3e1667b63cb5db8ce6d5395df8b713cbe2f084a6973f4456413e4fcbe68b24'\n");
-
     size_t actual_message_for_mac_len = IV_LEN + COM_PUB_KEY_LEN + cipher_text_len;
     assert(actual_message_for_mac_len <= MESSAGE_FOR_CALC_MAC_MAX_LEN);
 
     cx_hmac_sha256_init(&(ctx->hmac), ctx->hashH + 32, 32);
 
-    os_memset(ctx->message_for_mac, 0xFF, actual_message_for_mac_len);
+    size_t msg_for_mac_offset = 0;
+    size_t byte_count_to_copy = 0;
+    
+    byte_count_to_copy = IV_LEN;
+    os_memcpy(
+        ctx->message_for_mac + msg_for_mac_offset, 
+        ctx->iv, 
+        byte_count_to_copy
+    );
+    msg_for_mac_offset += byte_count_to_copy;
+
+    uint8_t byte = 0x03;
+    if ((*(ctx->pubkey_uncompressed + 64)) % 2 == 0) {
+        byte = 0x02;
+    }
+    byte_count_to_copy = 1;
+    os_memcpy(
+        ctx->message_for_mac + msg_for_mac_offset, 
+        &byte, 
+        byte_count_to_copy
+    );
+    msg_for_mac_offset += byte_count_to_copy;
+
+    byte_count_to_copy = 32;
+    os_memcpy(
+        ctx->message_for_mac + msg_for_mac_offset,
+        ctx->pubkey_uncompressed + 1,
+        byte_count_to_copy
+    );
+    msg_for_mac_offset += byte_count_to_copy;
+
+    byte_count_to_copy = cipher_text_len;
+    os_memcpy(
+        ctx->message_for_mac + msg_for_mac_offset,
+        cipher_text,
+        byte_count_to_copy
+    );
+    msg_for_mac_offset += byte_count_to_copy;
+    assert(msg_for_mac_offset == actual_message_for_mac_len)
 
     cx_hmac(
         (cx_hmac_t *)&(ctx->hmac), 
@@ -153,6 +124,13 @@ int do_decrypt(
     );
 
     PRINTF("CALC mac: %.*h\n", MAC_LEN, ctx->mac_calculated);
+
+    if (0 == memcmp(ctx->mac_calculated, ctx->mac_data, MAC_LEN)) {
+        PRINTF("SUCCESS! MAC matches\n");
+    } else {
+        PRINTF("FAILURE! MAC mismatch\n");
+	    return 0;
+    }
 
     os_memcpy(plain_text_out, ctx->hashH, plain_text_len);
     return plain_text_len;
