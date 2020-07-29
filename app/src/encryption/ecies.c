@@ -120,22 +120,24 @@ int do_decrypt(
     PRINTF("Cipher text to decrypt: %.*h\n", cipher_text_len, cipher_text);
 
     // 1. Do an EC point multiply with `privateKey` and ephemeral public key. Call it `pointM` 
-    // "PointM" is now in `ctx->pubkey_uncompressed`
+    os_memcpy(ctx->pointM, ctx->pubkey_uncompressed, UNCOM_PUB_KEY_LEN);
     cx_ecfp_scalar_mult(
         CX_CURVE_256K1, 
-        ctx->pubkey_uncompressed, UNCOM_PUB_KEY_LEN, 
+        ctx->pointM, UNCOM_PUB_KEY_LEN, 
         privateKey->d, privateKey->d_len
     );
 
-    PRINTF("PointM: %.*h\n", UNCOM_PUB_KEY_LEN, ctx->pubkey_uncompressed);
+    PRINTF("PointM: %.*h\n", UNCOM_PUB_KEY_LEN, ctx->pointM);
        
     // 2. Use the X component of `pointM` and calculate the SHA512 `hashH`.
-    // let hashH = RadixHash(unhashedData: pointM.x.asData, hashedBy: sha512TwiceHasher).asData
-        // assert(hashH.length == byteCountHashH)
+    sha512Twice(ctx->pointM + 1, 32, ctx->hashH, HASH512_LEN);
+
+    PRINTF("hashH: %.*h\n", HASH512_LEN, ctx->hashH);
+
     PRINTF("EXPECTED sha512 twice hash: '8f4faa6c319cf556e94bf845a1a48089afce5a2ae42243d46cba29805f0ac4308d3e1667b63cb5db8ce6d5395df8b713cbe2f084a6973f4456413e4fcbe68b24'\n");
-    uint8_t hashH[64];
-    sha512Twice(ctx->pubkey_uncompressed + 1, 32, hashH, 64);
-    PRINTF("hashH: %.*h\n", 64, hashH);
-    os_memmove(plain_text_out, hashH, plain_text_len);
+
+    cx_hmac_sha256_init(&(ctx->hmac), ctx->hashH + 32, 32);
+
+    os_memcpy(plain_text_out, ctx->hashH, plain_text_len);
     return plain_text_len;
 }
