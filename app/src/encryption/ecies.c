@@ -136,7 +136,23 @@ int do_decrypt(
 
     PRINTF("EXPECTED sha512 twice hash: '8f4faa6c319cf556e94bf845a1a48089afce5a2ae42243d46cba29805f0ac4308d3e1667b63cb5db8ce6d5395df8b713cbe2f084a6973f4456413e4fcbe68b24'\n");
 
+    size_t actual_message_for_mac_len = IV_LEN + COM_PUB_KEY_LEN + cipher_text_len;
+    assert(actual_message_for_mac_len <= MESSAGE_FOR_CALC_MAC_MAX_LEN);
+
     cx_hmac_sha256_init(&(ctx->hmac), ctx->hashH + 32, 32);
+
+    os_memset(ctx->message_for_mac, 0xFF, actual_message_for_mac_len);
+
+    cx_hmac(
+        (cx_hmac_t *)&(ctx->hmac), 
+        CX_LAST, 
+        ctx->message_for_mac, 
+        actual_message_for_mac_len, 
+        ctx->mac_calculated, 
+        MAC_LEN
+    );
+
+    PRINTF("CALC mac: %.*h\n", MAC_LEN, ctx->mac_calculated);
 
     os_memcpy(plain_text_out, ctx->hashH, plain_text_len);
     return plain_text_len;

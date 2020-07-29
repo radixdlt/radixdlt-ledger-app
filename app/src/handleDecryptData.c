@@ -7,8 +7,7 @@
 
 static decryptDataContext_t *ctx = &global.decryptDataContext;
 
-#define BIP32_PATH_LEN 12
-#define MAX_CIPHER_LENGTH (MAX_CHUNK_SIZE - BIP32_PATH_LEN - IV_LEN - UNCOM_PUB_KEY_LEN - MAC_LEN)
+
 
 void handleDecryptData(
     uint8_t p1, 
