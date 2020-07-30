@@ -19,6 +19,9 @@ typedef struct {
 	cx_hmac_sha256_t hmac;
 	struct AES_ctx aes_ctx;
 	uint8_t pubkey_uncompressed[UNCOM_PUB_KEY_LEN];
+	uint8_t pubkey_compressed[33];
+	uint8_t x[32];
+	uint8_t y[32];
 	uint8_t iv[IV_LEN];
 	uint8_t mac_data[MAC_LEN];
 	uint8_t mac_calculated[MAC_LEN];
