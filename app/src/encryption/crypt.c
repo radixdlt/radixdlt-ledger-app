@@ -74,42 +74,25 @@ size_t crypt_decrypt(
     uint8_t *plain_text_output,
     size_t plain_text_output_max_size
 ) {
+    assert(plain_text_output_max_size >= data_to_decrypt_length);
+    os_memcpy(plain_text_output, data_to_decrypt, data_to_decrypt_length);
 
-    int blocks = (data_to_decrypt_length / AES_BLOCKLEN) + 1; 
-    // int blocksALTERNATIVE_SOLUTION = (data_to_encrypt_length / AES_BLOCKLEN) + 1 + (data_to_encrypt_length % AES_BLOCKLEN ? 1 : 0); 
-    // int blocksALTERNATIVE_SOLUTION2 = (data_to_encrypt_length / AES_BLOCKLEN) + (data_to_encrypt_length % AES_BLOCKLEN ? 1 : 0); 
+    struct AES_ctx aes_ctx;
+    AES_init_ctx_iv(&aes_ctx, key, iv);
+    AES_CBC_decrypt_buffer(&aes_ctx, plain_text_output, data_to_decrypt_length);
 
-    int plain_text_output_len = blocks * AES_BLOCKLEN;
-    assert(plain_text_output_max_size >= plain_text_output_len);
-
-    uint8_t plainTextUTF8Encoded[plain_text_output_len];
-
-    os_memcpy(plainTextUTF8Encoded, data_to_decrypt, sizeof(plainTextUTF8Encoded));
-    os_memset(plainTextUTF8Encoded + data_to_decrypt_length, 0x00, 1);
-
-    PRINTF("AES-256-CBC decryption test\n");
-    PRINTF("Adding PKCS7 padding:...");
-
-    int actual_data_length = pkcs7_padding_pad_buffer(
-        plainTextUTF8Encoded, 
+    int actual_data_length = pkcs7_padding_data_length(
+        plain_text_output, 
         data_to_decrypt_length,
-        sizeof(plainTextUTF8Encoded),
         AES_BLOCKLEN
     );
 
     if (actual_data_length == 0) {
         PRINTF("FAIL\n");
+        return 0;
     } else {
-        PRINTF("SUCCESS %d\n", actual_data_length);
+        PRINTF("SUCCESS, plain text without padding is: %d\n", actual_data_length);
     }
 
-    struct AES_ctx aes_ctx;
-    AES_init_ctx_iv(&aes_ctx, key, iv);
-    AES_CBC_decrypt_buffer(&aes_ctx, plainTextUTF8Encoded, sizeof(plainTextUTF8Encoded));
-
-    PRINTF("Plain text (UTF8-enc) (length: %d)\n", actual_data_length);
-    PRINTF("%.*h\n", actual_data_length, plainTextUTF8Encoded);
-    assert(plain_text_output_max_size >= actual_data_length);
-    os_memcpy(plain_text_output, plainTextUTF8Encoded, actual_data_length);
     return actual_data_length;
 }
