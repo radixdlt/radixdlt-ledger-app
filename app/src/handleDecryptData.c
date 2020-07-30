@@ -35,32 +35,44 @@ static uint8_t const secp256k1_b[] = {
 };
 
 
+#define FIELD_SCALAR_SIZE 32
 #define MOD (unsigned char *)secp256k1_P, 32
 
 #define ReadBitAt(data,y) ( (data>>y) & 1)      /** Return Data.Y value   **/
 
-void decompressPublicKey() {
+void decompressPublicKey(
+    uint8_t *compressed_pubkey,
+    const size_t compressed_pubkey_len,
 
-    os_memcpy(ctx->x, ctx->pubkey_compressed + 1, 32);
-    cx_math_multm(ctx->y, ctx->x, ctx->x, MOD); // y == x^2 % p
-    cx_math_multm(ctx->y, ctx->y, ctx->x, MOD); // y == x^3 % p
-    cx_math_addm(ctx->y, ctx->y, secp256k1_b, MOD); // y == x^3 + 7 % p
-    cx_math_powm(ctx->y, ctx->y, (unsigned char *)secp256k1_p_plus_1_div_4, 32, MOD); // y == pow(y, (p+1) // 4) % p
+    uint8_t *uncompressed_pubkey_res,
+    const size_t uncompressed_pubkey_len
+) {
+
+    assert(compressed_pubkey_len == COM_PUB_KEY_LEN);
+    assert(uncompressed_pubkey_len >= UNCOM_PUB_KEY_LEN);
+
+    uint8_t x[FIELD_SCALAR_SIZE];
+	uint8_t y[FIELD_SCALAR_SIZE];
+
+    os_memcpy(x, compressed_pubkey + 1, FIELD_SCALAR_SIZE);
+    cx_math_multm(y, x, x, MOD); // y == x^2 % p
+    cx_math_multm(y, y, x, MOD); // y == x^3 % p
+    cx_math_addm(y, y, secp256k1_b, MOD); // y == x^3 + 7 % p
+    cx_math_powm(y, y, (unsigned char *)secp256k1_p_plus_1_div_4, FIELD_SCALAR_SIZE, MOD); // y == pow(y, (p+1) // 4) % p
 
     if (
-        ctx->pubkey_compressed[0] == 0x02 && ReadBitAt(ctx->y[31], 0)
+        compressed_pubkey[0] == 0x02 && ReadBitAt(y[FIELD_SCALAR_SIZE-1], 0)
         ||
-        ctx->pubkey_compressed[0] == 0x03 && !ReadBitAt(ctx->y[31], 0)
+        compressed_pubkey[0] == 0x03 && !ReadBitAt(y[FIELD_SCALAR_SIZE-1], 0)
     ) {
-        PRINTF("IN IF, doing y := p - 1\n");
-        cx_math_sub(ctx->y, secp256k1_P, ctx->y, 32);
+        cx_math_sub(y, secp256k1_P, y, FIELD_SCALAR_SIZE);
     }
 
-    ctx->pubkey_uncompressed[0] = 0x04;
-    os_memcpy(ctx->pubkey_uncompressed + 1, ctx->x, 32);
-    os_memcpy(ctx->pubkey_uncompressed + 1 + 32, ctx->y, 32);
+    os_memset(uncompressed_pubkey_res, 0x04, 1);
+    os_memcpy(uncompressed_pubkey_res + 1, x, FIELD_SCALAR_SIZE);
+    os_memcpy(uncompressed_pubkey_res + 1 + FIELD_SCALAR_SIZE, y, FIELD_SCALAR_SIZE);
     
-    PRINTF("Uncompressed result: %.*h\n", 65, ctx->pubkey_uncompressed);
+    PRINTF("Uncompressed result: %.*h\n", UNCOM_PUB_KEY_LEN, uncompressed_pubkey_res);
 }
 
 static uint8_t const test_1[] = { 
@@ -86,15 +98,17 @@ void handleDecryptData(
     unsigned int *tx
  ) {
     PRINTF("handleDecryptData\n");
+    zero_out_ctx();
 
-    os_memcpy(ctx->pubkey_compressed, test_1, 33);
-    decompressPublicKey();
+    os_memcpy(ctx->pubkey_compressed, test_1, COM_PUB_KEY_LEN);
+    decompressPublicKey(ctx->pubkey_compressed, COM_PUB_KEY_LEN, ctx->pubkey_uncompressed, UNCOM_PUB_KEY_LEN);
+    zero_out_ctx();
 
-    os_memcpy(ctx->pubkey_compressed, test_2, 33);
-    decompressPublicKey();
+    os_memcpy(ctx->pubkey_compressed, test_2, COM_PUB_KEY_LEN);
+    decompressPublicKey(ctx->pubkey_compressed, COM_PUB_KEY_LEN, ctx->pubkey_uncompressed, UNCOM_PUB_KEY_LEN);
+    zero_out_ctx();
 
     FATAL_ERROR("killing program now\n");
-    zero_out_ctx();
 
     *flags |= IO_ASYNCH_REPLY;
 
