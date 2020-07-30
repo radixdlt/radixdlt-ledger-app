@@ -17,6 +17,65 @@ static void zero_out_ctx() {
     explicit_bzero(ctx->cipher_to_plain_text, MAX_CIPHER_LENGTH);
 }
 
+static uint8_t const secp256k1_P[] = { 
+  //p:  0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xfc, 0x2f
+};
+
+// Secp256k1: (p + 1) // 4
+const unsigned char secp256k1_p_plus_1_div_4[] = {
+    0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xbf, 0xff, 0xff, 0x0c
+};
+
+static uint8_t const secp256k1_b[] = { 
+  //b:  0x07
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07
+};
+
+
+#define MOD (unsigned char *)secp256k1_P, 32
+
+#define ReadBitAt(data,y) ( (data>>y) & 1)      /** Return Data.Y value   **/
+
+void decompressPublicKey() {
+
+    os_memcpy(ctx->x, ctx->pubkey_compressed + 1, 32);
+    cx_math_multm(ctx->y, ctx->x, ctx->x, MOD); // y == x^2 % p
+    cx_math_multm(ctx->y, ctx->y, ctx->x, MOD); // y == x^3 % p
+    cx_math_addm(ctx->y, ctx->y, secp256k1_b, MOD); // y == x^3 + 7 % p
+    cx_math_powm(ctx->y, ctx->y, (unsigned char *)secp256k1_p_plus_1_div_4, 32, MOD); // y == pow(y, (p+1) // 4) % p
+
+    if (
+        ctx->pubkey_compressed[0] == 0x02 && ReadBitAt(ctx->y[31], 0)
+        ||
+        ctx->pubkey_compressed[0] == 0x03 && !ReadBitAt(ctx->y[31], 0)
+    ) {
+        PRINTF("IN IF, doing y := p - 1\n");
+        cx_math_sub(ctx->y, secp256k1_P, ctx->y, 32);
+    }
+
+    ctx->pubkey_uncompressed[0] = 0x04;
+    os_memcpy(ctx->pubkey_uncompressed + 1, ctx->x, 32);
+    os_memcpy(ctx->pubkey_uncompressed + 1 + 32, ctx->y, 32);
+    
+    PRINTF("Uncompressed result: %.*h\n", 65, ctx->pubkey_uncompressed);
+}
+
+static uint8_t const test_1[] = { 
+  //test compressed pubkey:  0229b3e0919adc41a316aad4f41444d9bf3a9b639550f2aa735676ffff25ba3898
+  // expected uncompressed pubkey: 0429b3e0919adc41a316aad4f41444d9bf3a9b639550f2aa735676ffff25ba3898d6881e81d2e0163348ff07b3a9a3968401572aa79c79e7edb522f41addc8e6ce
+0x02, 0x29, 0xb3, 0xe0, 0x91, 0x9a, 0xdc, 0x41, 0xa3, 0x16, 0xaa, 0xd4, 0xf4, 0x14, 0x44, 0xd9, 0xbf, 0x3a, 0x9b, 0x63, 0x95, 0x50, 0xf2, 0xaa, 0x73, 0x56, 0x76, 0xff, 0xff, 0x25, 0xba, 0x38, 0x98
+};
+
+static uint8_t const test_2[] = {
+    // compressed: 02f15446771c5c585dd25d8d62df5195b77799aa8eac2f2196c54b73ca05f72f27
+    // expected uncompressed: 04f15446771c5c585dd25d8d62df5195b77799aa8eac2f2196c54b73ca05f72f274d335b71c85e064f80191e1f7e2437afa676a3e2a5a5fafcf0d27940cd33e4b4
+    0x02, 0xf1, 0x54, 0x46, 0x77, 0x1c, 0x5c, 0x58, 0x5d, 0xd2, 0x5d, 0x8d, 0x62, 0xdf, 0x51, 0x95, 0xb7, 0x77, 0x99, 0xaa, 0x8e, 0xac, 0x2f, 0x21, 0x96, 0xc5, 0x4b, 0x73, 0xca, 0x05, 0xf7, 0x2f, 0x27
+};
+
+
 void handleDecryptData(
     uint8_t p1, 
     uint8_t p2, 
@@ -27,6 +86,14 @@ void handleDecryptData(
     unsigned int *tx
  ) {
     PRINTF("handleDecryptData\n");
+
+    os_memcpy(ctx->pubkey_compressed, test_1, 33);
+    decompressPublicKey();
+
+    os_memcpy(ctx->pubkey_compressed, test_2, 33);
+    decompressPublicKey();
+
+    FATAL_ERROR("killing program now\n");
     zero_out_ctx();
 
     *flags |= IO_ASYNCH_REPLY;
@@ -71,8 +138,6 @@ void handleDecryptData(
     offset += copy_byte_count;
 
     // FINISHED PARSING INPUT
-
-
     PRINTF("deriving key from seed and BIP\n");
     int KEY_SEED_BYTE_COUNT = 32;
     volatile uint8_t keySeed[KEY_SEED_BYTE_COUNT];
