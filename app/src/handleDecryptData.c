@@ -40,6 +40,7 @@ static uint8_t const secp256k1_b[] = {
 
 #define ReadBitAt(data,y) ( (data>>y) & 1)      /** Return Data.Y value   **/
 
+/// Decompresses a compressed public key (33 bytes) into a decompressed one (65 bytes).
 void decompressPublicKey(
     uint8_t *compressed_pubkey,
     const size_t compressed_pubkey_len,
@@ -47,6 +48,7 @@ void decompressPublicKey(
     uint8_t *uncompressed_pubkey_res,
     const size_t uncompressed_pubkey_len
 ) {
+    // inspiration: https://bitcoin.stackexchange.com/a/86239/91730
 
     assert(compressed_pubkey_len == COM_PUB_KEY_LEN);
     assert(uncompressed_pubkey_len >= UNCOM_PUB_KEY_LEN);
@@ -60,19 +62,14 @@ void decompressPublicKey(
     cx_math_addm(y, y, secp256k1_b, MOD); // y == x^3 + 7 % p
     cx_math_powm(y, y, (unsigned char *)secp256k1_p_plus_1_div_4, FIELD_SCALAR_SIZE, MOD); // y == pow(y, (p+1) // 4) % p
 
-    if (
-        compressed_pubkey[0] == 0x02 && ReadBitAt(y[FIELD_SCALAR_SIZE-1], 0)
-        ||
-        compressed_pubkey[0] == 0x03 && !ReadBitAt(y[FIELD_SCALAR_SIZE-1], 0)
-    ) {
+    bool y_LSB = ReadBitAt(y[FIELD_SCALAR_SIZE-1], 0);
+    if (compressed_pubkey[0] == 0x02 && y_LSB || compressed_pubkey[0] == 0x03 && !y_LSB) {
         cx_math_sub(y, secp256k1_P, y, FIELD_SCALAR_SIZE);
     }
 
     os_memset(uncompressed_pubkey_res, 0x04, 1);
     os_memcpy(uncompressed_pubkey_res + 1, x, FIELD_SCALAR_SIZE);
     os_memcpy(uncompressed_pubkey_res + 1 + FIELD_SCALAR_SIZE, y, FIELD_SCALAR_SIZE);
-    
-    PRINTF("Uncompressed result: %.*h\n", UNCOM_PUB_KEY_LEN, uncompressed_pubkey_res);
 }
 
 static uint8_t const test_1[] = { 
@@ -102,10 +99,12 @@ void handleDecryptData(
 
     os_memcpy(ctx->pubkey_compressed, test_1, COM_PUB_KEY_LEN);
     decompressPublicKey(ctx->pubkey_compressed, COM_PUB_KEY_LEN, ctx->pubkey_uncompressed, UNCOM_PUB_KEY_LEN);
+    PRINTF("Uncompressed result: %.*h\n", UNCOM_PUB_KEY_LEN, ctx->pubkey_uncompressed);
     zero_out_ctx();
 
     os_memcpy(ctx->pubkey_compressed, test_2, COM_PUB_KEY_LEN);
     decompressPublicKey(ctx->pubkey_compressed, COM_PUB_KEY_LEN, ctx->pubkey_uncompressed, UNCOM_PUB_KEY_LEN);
+    PRINTF("Uncompressed result: %.*h\n", UNCOM_PUB_KEY_LEN, ctx->pubkey_uncompressed);
     zero_out_ctx();
 
     FATAL_ERROR("killing program now\n");
