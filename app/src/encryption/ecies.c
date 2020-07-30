@@ -8,6 +8,9 @@
 #include <inttypes.h>
 #include <strings.h>
 #include "global_state.h"
+#include "pkcs7_padding.h"
+#include "aes.h"
+#include "stddef.h"
 
 static decryptDataContext_t *ctx = &global.decryptDataContext;
 
@@ -40,19 +43,15 @@ static bool sha512Twice(
 
 int do_decrypt(
     cx_ecfp_private_key_t *privateKey,
-    const uint8_t *cipher_text,
-    const size_t cipher_text_len,
-
-    uint8_t *plain_text_out,
-    const size_t plain_text_len // MAX length in
+    const size_t cipher_text_len
 ) {
 
-    PRINTF("Decrypting with private key: %.*h\n", privateKey->d_len, privateKey->d);
+    PRINTF("Decrypting\n");
 
     PRINTF("IV: %.*h\n", IV_LEN, ctx->iv);
     PRINTF("MAC: %.*h\n", MAC_LEN, ctx->mac_data);
     PRINTF("Ephemeral PubKey Uncomp: %.*h\n", UNCOM_PUB_KEY_LEN, ctx->pubkey_uncompressed);
-    PRINTF("Cipher text to decrypt: %.*h\n", cipher_text_len, cipher_text);
+    PRINTF("Cipher text to decrypt: %.*h\n", cipher_text_len, ctx->cipher_to_plain_text);
 
     // 1. Do an EC point multiply with `privateKey` and ephemeral public key. Call it `pointM` 
     os_memcpy(ctx->pointM, ctx->pubkey_uncompressed, UNCOM_PUB_KEY_LEN);
@@ -108,7 +107,7 @@ int do_decrypt(
     byte_count_to_copy = cipher_text_len;
     os_memcpy(
         ctx->message_for_mac + msg_for_mac_offset,
-        cipher_text,
+        ctx->cipher_to_plain_text,
         byte_count_to_copy
     );
     msg_for_mac_offset += byte_count_to_copy;
@@ -132,6 +131,19 @@ int do_decrypt(
 	    return 0;
     }
 
-    os_memcpy(plain_text_out, ctx->hashH, plain_text_len);
-    return plain_text_len;
+    AES_init_ctx_iv(&(ctx->aes_ctx), ctx->hashH, ctx->iv);
+    AES_CBC_decrypt_buffer(&(ctx->aes_ctx), ctx->cipher_to_plain_text, cipher_text_len);
+
+    int actual_plain_text_length = pkcs7_padding_data_length(
+        ctx->cipher_to_plain_text, 
+        cipher_text_len,
+        AES_BLOCKLEN
+    );
+
+    if (actual_plain_text_length == 0) {
+        PRINTF("FAIL\n");
+        return 0;
+    }
+
+    return actual_plain_text_length;
 }

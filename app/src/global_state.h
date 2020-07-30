@@ -3,6 +3,7 @@
 #include "common_macros.h"
 #include "ParticleMetaData.h"
 #include "RadixParticleTypes.h"
+#include "aes.h"
 
 #define IV_LEN 16
 #define MAC_LEN 32
@@ -15,8 +16,8 @@
 #define MESSAGE_FOR_CALC_MAC_MAX_LEN (IV_LEN + COM_PUB_KEY_LEN + MAX_CIPHER_LENGTH)
 
 typedef struct {
-	// uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
 	cx_hmac_sha256_t hmac;
+	struct AES_ctx aes_ctx;
 	uint8_t pubkey_uncompressed[UNCOM_PUB_KEY_LEN];
 	uint8_t iv[IV_LEN];
 	uint8_t mac_data[MAC_LEN];
@@ -24,6 +25,7 @@ typedef struct {
 	uint8_t message_for_mac[MESSAGE_FOR_CALC_MAC_MAX_LEN]; // depends on cipher text
 	uint8_t pointM[UNCOM_PUB_KEY_LEN];
 	uint8_t hashH[HASH512_LEN];
+	uint8_t cipher_to_plain_text[MAX_CIPHER_LENGTH];
 } decryptDataContext_t;
 
 typedef struct {

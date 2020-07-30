@@ -7,7 +7,15 @@
 
 static decryptDataContext_t *ctx = &global.decryptDataContext;
 
-
+static void zero_out_ctx() {
+    explicit_bzero(ctx->iv, IV_LEN);
+    explicit_bzero(ctx->mac_data, MAC_LEN);
+    explicit_bzero(ctx->mac_calculated, MAC_LEN);
+    explicit_bzero(ctx->message_for_mac, MESSAGE_FOR_CALC_MAC_MAX_LEN);
+    explicit_bzero(ctx->pointM, UNCOM_PUB_KEY_LEN);
+    explicit_bzero(ctx->hashH, HASH512_LEN);
+    explicit_bzero(ctx->cipher_to_plain_text, MAX_CIPHER_LENGTH);
+}
 
 void handleDecryptData(
     uint8_t p1, 
@@ -19,6 +27,9 @@ void handleDecryptData(
     unsigned int *tx
  ) {
     PRINTF("handleDecryptData\n");
+    zero_out_ctx();
+
+    *flags |= IO_ASYNCH_REPLY;
 
     // Length of JUST the cipher text, i.e. not the long ECIES enccrypted byte string containing `IV || PubKey || Cipher || MAC`, but rather
     // length of just the cipher, length as in byte count.
@@ -50,9 +61,8 @@ void handleDecryptData(
     offset += copy_byte_count;
 
     // READ CipherText (`P1` bytes)
-    uint8_t cipher_text[cipher_text_len];
     copy_byte_count = cipher_text_len;
-    os_memmove(cipher_text, dataBuffer + offset, copy_byte_count);
+    os_memmove(ctx->cipher_to_plain_text, dataBuffer + offset, copy_byte_count);
     offset += copy_byte_count;
     
     // READ MAC (32 bytes)
@@ -61,10 +71,6 @@ void handleDecryptData(
     offset += copy_byte_count;
 
     // FINISHED PARSING INPUT
-
-    // Plain text will in fact be shorter than cipher, but we ignore that
-    size_t plain_text_len = cipher_text_len;
-    uint8_t plain_text[plain_text_len];
 
 
     PRINTF("deriving key from seed and BIP\n");
@@ -75,7 +81,6 @@ void handleDecryptData(
     BEGIN_TRY {
         TRY {
             os_perso_derive_node_bip32(CX_CURVE_256K1, bip32Path, 5, keySeed, NULL);
-            PRINTF("Finished deriving seed from BIP32\n");
             cx_ecfp_init_private_key(CX_CURVE_SECP256K1, keySeed, 32, &privateKey);
         }
         CATCH_OTHER(e) { error = e; }
@@ -87,14 +92,17 @@ void handleDecryptData(
         FATAL_ERROR("Error? code: %d\n", error);
     }
 
-    plain_text_len = do_decrypt(
+    size_t plain_text_len = do_decrypt(
         &privateKey, 
-        cipher_text, cipher_text_len, 
-        plain_text, plain_text_len
+        cipher_text_len
     );
 
-    PRINTF("Decryption finished.\nPlain text: %.*h", plain_text_len, plain_text);
-    os_memmove(G_io_apdu_buffer, plain_text, plain_text_len);
+    PRINTF("Decryption finished.\n");
+    PRINTF("Actual length of plain text: %d\n", plain_text_len);
+    PRINTF("Plaintext: %.*s", plain_text_len, ctx->cipher_to_plain_text);
+
+    os_memcpy(G_io_apdu_buffer, ctx->cipher_to_plain_text, plain_text_len);
     io_exchange_with_code(SW_OK, plain_text_len);
     PRINTF("\n\n***** DONE *****\n");
+    ui_idle();
 }
