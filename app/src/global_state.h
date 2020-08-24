@@ -97,6 +97,6 @@ typedef union {
     getPublicKeyContext_t getPublicKeyContext;
     signHashContext_t signHashContext;
     signAtomContext_t signAtomContext;
-	decryptDataContext_t decryptDataContext;
+    decryptDataContext_t decryptDataContext;
 } commandContext;
 extern commandContext global;

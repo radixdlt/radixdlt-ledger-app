@@ -106,15 +106,18 @@ if __name__ == "__main__":
 	with open(json_filepath, 'r') as json_file:
 		json_array_of_vectors = json.load(json_file)
 		success_count = 0
+		fail_count = 0
 		for vector_json in json_array_of_vectors:
 			vector = TestVector(vector_json)
 			if ecies_decrypt(dongle, vector):
 				success_count += 1
+			else:
+				fail_count += 1
 			# print("sleeping 1 second...")
 			# time.sleep(1)
 			# print("Wook up after having slept")
 
-		print(f"Success count: {success_count}")
+		print(f"Success count: {success_count}/{success_count + fail_count}")
 		assert success_count == len(json_array_of_vectors), "Expected all vectors to pass"
 
 	dongle.close()
