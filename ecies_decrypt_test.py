@@ -19,8 +19,7 @@ CommExceptionUserRejection = 0x6985
 
 class TestVector(object):
 	def __init__(self, dict):
-		self.__dict__ = dict #json.loads(j)
-
+		self.__dict__ = dict
 
 	def encryped_message_hex(self) -> str:
 		return self.__dict__['encryptedMessage']
@@ -83,16 +82,13 @@ def ecies_decrypt(dongle, vector: TestVector) -> bool:
 	if plainText_from_ledger == expectedPlainText:
 		print(f"""✅ Awesome! Plain text from ledger matches that from Java library ✅
 💡PlainText: '{plainText_from_ledger}'
-"""
-		)
-
+""")
 	else:
 		print("\n☢️ Plain text mismatch ☢️\n")
 		print(f"Expected plainText: {expectedPlainText}") 
 		print(f"But got plainText from ledger: {plainText_from_ledger}")
 		return False
 
-	# print("💡 done with this vector...")
 	return True
 
 
@@ -113,9 +109,6 @@ if __name__ == "__main__":
 				success_count += 1
 			else:
 				fail_count += 1
-			# print("sleeping 1 second...")
-			# time.sleep(1)
-			# print("Wook up after having slept")
 
 		print(f"Success count: {success_count}/{success_count + fail_count}")
 		assert success_count == len(json_array_of_vectors), "Expected all vectors to pass"
