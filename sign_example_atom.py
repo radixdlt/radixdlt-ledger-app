@@ -244,7 +244,7 @@ if __name__ == "__main__":
 		print("🚀 Testing all test vectors...")
 
 		source_file_dir = Path(__file__).parent.absolute()
-		vectors_dir = source_file_dir.joinpath("vectors")
+		vectors_dir = source_file_dir.joinpath("vectors", "sign_atom")
 
 		for vector_file_path in vectors_dir.rglob("*.json"):   
 			with open(vector_file_path) as json_file:
