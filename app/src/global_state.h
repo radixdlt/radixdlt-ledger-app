@@ -3,6 +3,20 @@
 #include "common_macros.h"
 #include "ParticleMetaData.h"
 #include "RadixParticleTypes.h"
+#include "aes.h"
+
+typedef struct {
+	cx_hmac_sha256_t hmac;
+	struct AES_ctx aes_ctx;
+	cx_sha512_t hasher;
+	uint8_t calc_mac[MAC_LEN];
+
+	uint8_t iv[IV_LEN];
+	cx_ecfp_256_public_key_t ephemeral_pubkey;
+	uint8_t mac[MAC_LEN];
+	uint8_t pointM[UNPUBLIC_KEY_COMPRESSEED_BYTE_COUNT];
+	uint8_t hashH[HASH512_LEN];
+} decryptDataContext_t;
 
 typedef struct {
 	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
@@ -83,5 +97,6 @@ typedef union {
     getPublicKeyContext_t getPublicKeyContext;
     signHashContext_t signHashContext;
     signAtomContext_t signAtomContext;
+    decryptDataContext_t decryptDataContext;
 } commandContext;
 extern commandContext global;

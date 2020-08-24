@@ -17,3 +17,13 @@ size_t derive_sign_move_to_global_buffer(
     uint32_t *bip32path, 
     const uint8_t *hash
 );
+
+void compress_public_key(cx_ecfp_public_key_t *publicKey);
+
+void uncompress_public_key(
+    uint8_t *compressed_pubkey,
+    const size_t compressed_pubkey_len,
+
+    uint8_t *uncompressed_pubkey_res,
+    const size_t uncompressed_pubkey_len
+);

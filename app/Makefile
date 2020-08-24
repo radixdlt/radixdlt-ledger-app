@@ -156,6 +156,7 @@ include $(BOLOS_SDK)/Makefile.glyphs
 
 APP_SOURCE_PATH += $(MY_DIR)/src
 APP_SOURCE_PATH += $(MY_DIR)/../deps/tinycbor/src
+APP_SOURCE_PATH += $(MY_DIR)/../deps/tiny-AES-c
 
 SDK_SOURCE_PATH += lib_stusb lib_u2f lib_stusb_impl
 

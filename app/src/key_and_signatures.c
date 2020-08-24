@@ -41,7 +41,63 @@ static void get_key_seed(
     END_TRY;
 }
 
-static void compress_public_key(cx_ecfp_public_key_t *publicKey) {
+
+static uint8_t const secp256k1_P[] = { 
+  //p:  0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xfc, 0x2f
+};
+
+// Secp256k1: (p + 1) // 4
+const unsigned char secp256k1_p_plus_1_div_4[] = {
+    0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xbf, 0xff, 0xff, 0x0c
+};
+
+static uint8_t const secp256k1_b[] = { 
+  //b:  0x07
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07
+};
+
+
+#define FIELD_SCALAR_SIZE 32
+#define MOD (unsigned char *)secp256k1_P, 32
+
+#define ReadBitAt(data,y) ( (data>>y) & 1)      /** Return Data.Y value   **/
+
+/// Uncompresses/Decompresses/Decodes a compressed public key (33 bytes) into a uncompressed one (65 bytes).
+void uncompress_public_key(
+    uint8_t *compressed_pubkey,
+    const size_t compressed_pubkey_len,
+
+    uint8_t *uncompressed_pubkey_res,
+    const size_t uncompressed_pubkey_len
+) {
+    // inspiration: https://bitcoin.stackexchange.com/a/86239/91730
+
+    assert(compressed_pubkey_len == PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
+    assert(uncompressed_pubkey_len >= UNPUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
+
+    uint8_t x[FIELD_SCALAR_SIZE];
+	uint8_t y[FIELD_SCALAR_SIZE];
+
+    os_memcpy(x, compressed_pubkey + 1, FIELD_SCALAR_SIZE);
+    cx_math_multm(y, x, x, MOD); // y == x^2 % p
+    cx_math_multm(y, y, x, MOD); // y == x^3 % p
+    cx_math_addm(y, y, secp256k1_b, MOD); // y == x^3 + 7 % p
+    cx_math_powm(y, y, (unsigned char *)secp256k1_p_plus_1_div_4, FIELD_SCALAR_SIZE, MOD); // y == pow(y, (p+1) // 4) % p
+
+    bool y_LSB = ReadBitAt(y[FIELD_SCALAR_SIZE-1], 0);
+    if (compressed_pubkey[0] == 0x02 && y_LSB || compressed_pubkey[0] == 0x03 && !y_LSB) {
+        cx_math_sub(y, secp256k1_P, y, FIELD_SCALAR_SIZE);
+    }
+
+    os_memset(uncompressed_pubkey_res, 0x04, 1);
+    os_memcpy(uncompressed_pubkey_res + 1, x, FIELD_SCALAR_SIZE);
+    os_memcpy(uncompressed_pubkey_res + 1 + FIELD_SCALAR_SIZE, y, FIELD_SCALAR_SIZE);
+}
+
+void compress_public_key(cx_ecfp_public_key_t *publicKey) {
     // Uncompressed key has 0x04 + X (32 bytes) + Y (32 bytes).
     if (publicKey->W_len != 65 || publicKey->W[0] != 0x04) {
         PRINTF("compressPubKey: Input public key is incorrect\n");
@@ -249,6 +305,6 @@ size_t derive_sign_move_to_global_buffer(uint32_t *bip32path,
 
     format_signature_out(der_sig);
 
-    PRINTF("%.*H", 64, G_io_apdu_buffer);
+    PRINTF("%.*h", 64, G_io_apdu_buffer);
     return ECSDA_SIGNATURE_BYTE_COUNT;
 }

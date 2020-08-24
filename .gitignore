@@ -85,6 +85,7 @@ cmake-build-fuzz/
 \deps/*
 !\deps/nanos-secure-sdk
 !\deps/tinycbor
+!\deps/tiny-AES-c
 
 app/src/glyphs.c
 

@@ -40,7 +40,7 @@ Which will default to a smaller simpler atom.
 If you wanna test specific atom, you can select a specific atom with `--inputAtomVector` (or `--i` for short)
 
 ```sh
-python sign_example_atom.py --i vectors/data_no_transfer_burn_action.json
+python sign_example_atom.py --i vectors/sign_atom/data_no_transfer_burn_action.json
 ```
 
 Have a look
