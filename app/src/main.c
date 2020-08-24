@@ -74,7 +74,6 @@ handler_fn_t handleGenerateRadixAddress;
 handler_fn_t handleSignAtom;
 handler_fn_t handleSignHash;
 handler_fn_t handleGetPublicKey;
-handler_fn_t handleEncryptData;
 handler_fn_t handleDecryptData;
 
 static handler_fn_t *lookupHandler(uint8_t ins) {
