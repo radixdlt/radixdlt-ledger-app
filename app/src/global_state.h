@@ -5,28 +5,17 @@
 #include "RadixParticleTypes.h"
 #include "aes.h"
 
-#define IV_LEN 16
-#define MAC_LEN 32
-#define ECIES_KEY_DATA_PART_LEN 32
-#define HASH512_LEN 64
-#define UNCOM_PUB_KEY_LEN 65
-#define COM_PUB_KEY_LEN 33
-#define BIP32_PATH_LEN 12
-#define MAX_CIPHER_LENGTH (MAX_CHUNK_SIZE - BIP32_PATH_LEN - IV_LEN - UNCOM_PUB_KEY_LEN - MAC_LEN)
-#define MESSAGE_FOR_CALC_MAC_MAX_LEN (IV_LEN + COM_PUB_KEY_LEN + MAX_CIPHER_LENGTH)
-
 typedef struct {
 	cx_hmac_sha256_t hmac;
 	struct AES_ctx aes_ctx;
-	uint8_t pubkey_uncompressed[UNCOM_PUB_KEY_LEN];
-	uint8_t pubkey_compressed[33];
+	cx_sha512_t hasher;
+	uint8_t calc_mac[MAC_LEN];
+
 	uint8_t iv[IV_LEN];
-	uint8_t mac_data[MAC_LEN];
-	uint8_t mac_calculated[MAC_LEN];
-	uint8_t message_for_mac[MESSAGE_FOR_CALC_MAC_MAX_LEN]; // depends on cipher text
-	uint8_t pointM[UNCOM_PUB_KEY_LEN];
+	cx_ecfp_256_public_key_t ephemeral_pubkey;
+	uint8_t mac[MAC_LEN];
+	uint8_t pointM[UNPUBLIC_KEY_COMPRESSEED_BYTE_COUNT];
 	uint8_t hashH[HASH512_LEN];
-	uint8_t cipher_to_plain_text[MAX_CIPHER_LENGTH];
 } decryptDataContext_t;
 
 typedef struct {
