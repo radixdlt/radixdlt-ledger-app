@@ -20,3 +20,13 @@ size_t derive_sign_move_to_global_buffer(
 
 bool generate_key_pair(volatile cx_ecfp_public_key_t *publicKey,
                        volatile cx_ecfp_private_key_t *privateKey);
+
+void compress_public_key(cx_ecfp_public_key_t *publicKey);
+
+void uncompress_public_key(
+    uint8_t *compressed_pubkey,
+    const size_t compressed_pubkey_len,
+
+    uint8_t *uncompressed_pubkey_res,
+    const size_t uncompressed_pubkey_len
+);
