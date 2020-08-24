@@ -8,16 +8,6 @@
 
 static decryptDataContext_t *ctx = &global.decryptDataContext;
 
-// static void zero_out_ctx() {
-//     explicit_bzero(ctx->iv, IV_LEN);
-//     explicit_bzero(ctx->mac_data, MAC_LEN);
-//     explicit_bzero(ctx->mac_calculated, MAC_LEN);
-//     // explicit_bzero(ctx->message_for_mac, MESSAGE_FOR_CALC_MAC_MAX_LEN);
-//     explicit_bzero(ctx->pointM, UNPUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
-//     explicit_bzero(ctx->hashH, HASH512_LEN);
-//     // explicit_bzero(ctx->cipher_to_plain_text, MAX_CIPHER_LENGTH);
-// }
-
 void handleDecryptData(
     uint8_t p1, 
     uint8_t p2, 
@@ -28,7 +18,6 @@ void handleDecryptData(
     unsigned int *tx
  ) {
     PRINTF("handleDecryptData\n");
-    // zero_out_ctx();
 
     *flags |= IO_ASYNCH_REPLY;
 
@@ -67,17 +56,11 @@ void handleDecryptData(
         FATAL_ERROR("Error? code: %d\n", error);
     }
 
-
-
     // Read CipherText Length
     uint32_t cipher_text_length = U4BE(dataBuffer, BIP32_PATH_LEN + IV_LEN + 1 + PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
     // PRINTF("Length of cipher text: %d\n", cipher_text_length);
     size_t message_for_mac_len = IV_LEN + PUBLIC_KEY_COMPRESSEED_BYTE_COUNT + cipher_text_length;
     uint8_t message_for_mac[message_for_mac_len];
-
-
-
-
 
     size_t plain_text_len = do_decrypt(
         &privateKey,
@@ -94,5 +77,4 @@ void handleDecryptData(
 
     io_exchange_with_code(SW_OK, plain_text_len);
     PRINTF("\n\n***** DONE *****\n");
-    // ui_idle();
 }
