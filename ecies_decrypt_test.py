@@ -117,12 +117,8 @@ class TestVector(object):
 	def __hashH(self) -> bytearray:
 		alicePrivateKey = 0xf423ae3097703022b86b87c15424367ce827d11676fae5c7fe768de52d9cce2e
 		point = self.__ephemeral_public_key_point()
-		print("🔮 performing EC mult")
 		pointM = point * alicePrivateKey
-		print("🧩 EC mult done")
-		print(f"pointM: {pointM}")
 		hashH = sha512_twice(pointM.x.to_bytes(32, 'big'))
-		print(f"hashH: {hashH}")
 		return hashH
 
 	def __keyE(self) -> bytearray:
@@ -134,7 +130,6 @@ class TestVector(object):
 		end_index = start_index + length
 		length_bytes = self.encryped_message()[start_index:end_index]
 		length = struct.unpack(">I", length_bytes)[0]
-		print(f"cipher length: {length}")
 		return length
 
 	def __cipher(self) -> bytearray:
@@ -148,22 +143,63 @@ class TestVector(object):
 
 	def ecies_decrypt(self) -> str:
 		IV = self.__iv()
-		mode = AES.MODE_CBC
 		key = self.__keyE()
-		decryptor = AES.new(key, mode, IV=IV)
+		decryptor = AES.new(key, AES.MODE_CBC, IV=IV)
 		cipherText = self.__cipher()
 		plain = unpad(decryptor.decrypt(cipherText), block_size=16, style='pkcs7')
 		plainText = str(plain,'utf-8')
 		return plainText
 
+	def stream_decrypt(self, chunksize=240) -> str:
+		aes256_blocksize = 16
+		assert chunksize % aes256_blocksize == 0, "chunksize must be multiple of AES blocksize (16)" 
+		origsize = self.__cipher_length()
+		IV = self.__iv()
+		key = self.__keyE()
+		decryptor = AES.new(key, AES.MODE_CBC, IV=IV)
+		stream = self.__cipher()
+		decrypted_whole = bytearray()
+		
+		while True:
+			chunk = stream[:chunksize]
+			size_of_chunk = len(chunk)
+			if size_of_chunk == 0:
+				break
+			stream = stream[size_of_chunk:len(stream)]
+			print(f"🌸 Chunk: '{chunk}'\n")
+		
+			decrypted_chunk = decryptor.decrypt(chunk)
+			decrypted_whole.extend(decrypted_chunk)
+
+		plain = unpad(decrypted_whole, block_size=aes256_blocksize, style='pkcs7')
+		plainText = str(plain,'utf-8')
+		return plainText 
+
 def ecies_decrypt(dongle, vector: TestVector) -> bool:
+	decypted_python = vector.ecies_decrypt()
+	decypted_stream_python = vector.stream_decrypt()
+
+	if decypted_python != decypted_stream_python:
+		print("\n☢️ Python ECIES decryption and Stream decryption mismatches ☢️\n")
+		print(f"stream: {decypted_stream_python}\n\nnormal: {decypted_python}") 
+	else:
+		print("\n\n🧩 Awesome STREAM works!!!! 🧩\n")
+
+	os._exit(-1337)
+
 	print(f"""
 
 🚀 vector:
 🔓Expected plain text: '{vector.expected_plainText()}'
 🔐Encrypted msg: '{vector.encryped_message_hex()}'
-🔓Decrypted msg: '{vector.ecies_decrypt()}'
+🔓Decrypted msg: '{decypted_python}'
+🔓Decrypted stream msg: '{decypted_stream_python}'
 🔮""")
+
+	if decypted_python != vector.expected_plainText():
+		print("\n☢️ Python ECIES decryption failed ☢️\n")
+	else:
+		print("\n\n🧩 Awesome plaintexts matches! 🧩\n")
 
 	os._exit(-1337)
 
@@ -206,7 +242,8 @@ if __name__ == "__main__":
 
 
 	letDongleOutputDebugPrintStatements = False
-	dongle = getDongle(debug=letDongleOutputDebugPrintStatements)
+	# dongle = getDongle(debug=letDongleOutputDebugPrintStatements)
+	dongle = None
 
 	with open(json_filepath, 'r') as json_file:
 		json_array_of_vectors = json.load(json_file)
