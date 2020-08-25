@@ -12,28 +12,76 @@ import hashlib
 import glob
 import os
 import time
+from Cryptodome.Cipher import AES
+from Cryptodome.Util.Padding import unpad
 from pathlib import Path
+from fastecdsa import keys, curve as curve_, ecdsa
+from fastecdsa.point import Point as ECPoint
+from fastecdsa.encoding.sec1 import SEC1Encoder
+# from hashlib import sha256, sha512
+import hashlib
+
 
 CommExceptionUserRejection = 0x6985
+
+# STREAM encrypt and decrypt (from year 2019): https://github.com/eliben/code-for-blog/blob/master/2010/aes-encrypt-pycrypto/pycrypto_file.py
+
+secp256k1 = curve_.secp256k1
+
+# def EC_secp256k1_point_mult(scalar, point_bytes) -> ECPoint:
+
+# 	# message = b'Hello, World!'
+# 	# privkey, pubkey = keys.gen_keypair(curve=curve)
+# 	# sign = ecdsa.sign(message, privkey, curve=curve, hashfunc=sha3_256)
+# 	assert len(point_bytes) == 64
+# 	point = Point(point_bytes[:32], point_bytes[32:64], curve=secp256k1)
+# 	pointM = scalar * point  
+# 	return pointM
+
+# def EC_secp256k1_point_mult(scalar, point) -> ECPoint:
+
+# 	# message = b'Hello, World!'
+# 	# privkey, pubkey = keys.gen_keypair(curve=curve)
+# 	# sign = ecdsa.sign(message, privkey, curve=curve, hashfunc=sha3_256)
+# 	# assert len(point_bytes) == 64
+# 	# point = Point(point_bytes[:32], point_bytes[32:64], curve=secp256k1)
+# 	pointM = scalar * point  
+# 	return pointM
+
+def sha512_twice(data) -> bytearray:
+	m = hashlib.sha512()
+	m.update(data)
+	once = m.digest()
+	m = hashlib.sha512()
+	m.update(once)
+	twice = m.digest()
+	return twice
 
 
 class TestVector(object):
 	def __init__(self, dict):
 		self.__dict__ = dict
 
+
 	def encryped_message_hex(self) -> str:
+		"""
+		IV(16) + 0x33(1) + PubKey(33) + L_CipherTextLength(4) + CipherText(L) + MAC(32)
+		"""
 		return self.__dict__['encryptedMessage']
 
-	def encryped_message_bytearray(self) -> bytearray:
+	def encryped_message(self) -> bytearray:
+		"""
+		IV(16) + 0x33(1) + PubKey(33) + L_CipherTextLength(4) + CipherText(L) + MAC(32)
+		"""
 		return bytearray.fromhex(self.encryped_message_hex())
 
 	def encrypted_msg_size(self) -> int:
-		return len(self.encryped_message_bytearray())
+		return len(self.encryped_message())
 
 	def bip32Path_hex(self) -> str:
 		return self.__dict__['bip32Path']
 
-	def bip32Path_bytearray(self) -> bytearray:
+	def bip32Path(self) -> bytearray:
 		return bytearray.fromhex(self.bip32Path_hex())
 
 
@@ -49,19 +97,80 @@ class TestVector(object):
 
 		return CLA + INS + P1 + P2
 
+	def __iv(self) -> bytearray:
+		return self.encryped_message()[:16]
+
+	def __ephemeral_public_key_compressed(self) -> bytearray:
+		start_index = 16 + 1
+		length = 33
+		end_index = start_index + length
+		pubKeyCompBytes = self.encryped_message()[start_index:end_index]
+		print(f"pubKeyBytes: {pubKeyCompBytes}")
+		return pubKeyCompBytes
+
+	def __ephemeral_public_key_point(self) -> ECPoint:
+		return SEC1Encoder.decode_public_key(
+			self.__ephemeral_public_key_compressed(),
+			secp256k1
+		)
+
+	def __hashH(self) -> bytearray:
+		alicePrivateKey = 0xf423ae3097703022b86b87c15424367ce827d11676fae5c7fe768de52d9cce2e
+		point = self.__ephemeral_public_key_point()
+		print("🔮 performing EC mult")
+		pointM = point * alicePrivateKey
+		print("🧩 EC mult done")
+		print(f"pointM: {pointM}")
+		hashH = sha512_twice(pointM.x.to_bytes(32, 'big'))
+		print(f"hashH: {hashH}")
+		return hashH
+
+	def __keyE(self) -> bytearray:
+		return self.__hashH()[:32]
+
+	def __cipher_length(self) -> int:
+		start_index = 16 + 1 + 33
+		length = 4
+		end_index = start_index + length
+		length_bytes = self.encryped_message()[start_index:end_index]
+		length = struct.unpack(">I", length_bytes)[0]
+		print(f"cipher length: {length}")
+		return length
+
+	def __cipher(self) -> bytearray:
+		start_index = 16 + 1 + 33 + 4
+		length = self.__cipher_length()
+		end_index = start_index + length
+		return self.encryped_message()[start_index:end_index]
+
+	def __mac(self) -> bytearray:
+		return self.encryped_message()[-32]
+
+	def ecies_decrypt(self) -> str:
+		IV = self.__iv()
+		mode = AES.MODE_CBC
+		key = self.__keyE()
+		decryptor = AES.new(key, mode, IV=IV)
+		cipherText = self.__cipher()
+		plain = unpad(decryptor.decrypt(cipherText), block_size=16, style='pkcs7')
+		plainText = str(plain,'utf-8')
+		return plainText
+
 def ecies_decrypt(dongle, vector: TestVector) -> bool:
 	print(f"""
 
 🚀 vector:
 🔓Expected plain text: '{vector.expected_plainText()}'
-🔐Encrypted msg: {vector.encryped_message_hex()}
+🔐Encrypted msg: '{vector.encryped_message_hex()}'
+🔓Decrypted msg: '{vector.ecies_decrypt()}'
 🔮""")
 
+	os._exit(-1337)
 
 	prefix = vector.apdu_prefix()
 
 	# BIPPath(12) || EncrypedMessage
-	payload = vector.bip32Path_bytearray() + vector.encryped_message_bytearray()
+	payload = vector.bip32Path() + vector.encryped_message()
 
 	# print(f"payload: {payload.hex()}")
 
