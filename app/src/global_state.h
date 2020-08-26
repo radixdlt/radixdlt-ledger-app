@@ -13,7 +13,6 @@ typedef struct {
 	struct AES_ctx aes_ctx;
 	cx_sha512_t hasher;
 	uint8_t calc_mac[MAC_LEN];
-
 	uint8_t iv[IV_LEN];
 	cx_ecfp_256_public_key_t ephemeral_pubkey;
 	uint8_t mac[MAC_LEN];
