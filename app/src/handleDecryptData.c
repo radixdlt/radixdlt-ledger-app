@@ -168,7 +168,7 @@ static void parse_input_of_first_chunk(
 
 // ==== START ==== UI PROGRESS UPDATE ========
 static const ux_menu_entry_t ui_hack_as_menu_progress_update[] = {
-	{NULL, NULL, 0, NULL, "Parsing msg", G_ui_state.lower_line_short, 0, 0},
+	{NULL, NULL, 0, NULL, "Decrypting..", G_ui_state.lower_line_short, 0, 0},
 	UX_MENU_END,
 };
 
@@ -181,15 +181,16 @@ static void updateProgressDisplay() {
     os_memset(G_ui_state.lower_line_short, 0x00,
               DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE);
 
+    size_t percentage = (100 * ctx->cipher_number_of_parsed_bytes / ctx->cipher_text_byte_count);
+
     snprintf(
         G_ui_state.lower_line_short, 
         DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE, 
-        "Part: %02d/%02d",
-
-        ((ctx->cipher_number_of_parsed_bytes + MAX_CHUNK_SIZE_AES_MULTIPLE - 1) / MAX_CHUNK_SIZE_AES_MULTIPLE),
-        ((ctx->cipher_text_byte_count + MAX_CHUNK_SIZE_AES_MULTIPLE - 1) / MAX_CHUNK_SIZE_AES_MULTIPLE)
+        "%02d%% done.", percentage
     );
     
+    PRINTF("Finished displaing percentage on device\n");
+
     UX_REDISPLAY_IDX(ux_visible_element_index);
 }
 
@@ -291,6 +292,7 @@ void handleDecryptData(
     unsigned int *flags,
     unsigned int *tx
  ) {
+    os_memset(ctx, 0x00, sizeof(decryptDataContext_t));
     PRINTF("\n\nSTART OF 'handleDecryptData'\n");
     PRINTF("Parsing input from first chunk\n");
     parse_input_of_first_chunk(dataBuffer, dataLength);
