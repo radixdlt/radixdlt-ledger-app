@@ -7,33 +7,31 @@ from typing import List
 import argparse
 import struct
 import math
-import binascii
 import json
 import hashlib
 import glob
 import os
 import time
-from Cryptodome.Cipher import AES
 from Cryptodome.Util.Padding import unpad
-from pathlib import Path
-from fastecdsa import keys, curve as curve_, ecdsa
-from fastecdsa.point import Point as ECPoint
-from fastecdsa.encoding.sec1 import SEC1Encoder
-import hashlib
 
+# from Cryptodome.Cipher import AES
+# from pathlib import Path
+# from fastecdsa import keys, curve as curve_, ecdsa
+# from fastecdsa.point import Point as ECPoint
+# from fastecdsa.encoding.sec1 import SEC1Encoder
 
-CommExceptionUserRejection = 0x6985
+# def sha512_twice(data) -> bytearray:
+# 	m = hashlib.sha512()
+# 	m.update(data)
+# 	once = m.digest()
+# 	m = hashlib.sha512()
+# 	m.update(once)
+# 	twice = m.digest()
+# 	return twice
+
 
 aes256_blocksize = 16
-
-def sha512_twice(data) -> bytearray:
-	m = hashlib.sha512()
-	m.update(data)
-	once = m.digest()
-	m = hashlib.sha512()
-	m.update(once)
-	twice = m.digest()
-	return twice
+CommExceptionUserRejection = 0x6985
 
 
 class TestVector(object):
@@ -85,22 +83,6 @@ class TestVector(object):
 		pubKeyCompBytes = self.encryped_message()[start_index:end_index]
 		return pubKeyCompBytes
 
-	def __ephemeral_public_key_point(self) -> ECPoint:
-		return SEC1Encoder.decode_public_key(
-			self.ephemeral_public_key_compressed(),
-			curve_.secp256k1
-		)
-
-	def __hashH(self) -> bytearray:
-		alicePrivateKey = 0xf423ae3097703022b86b87c15424367ce827d11676fae5c7fe768de52d9cce2e
-		point = self.__ephemeral_public_key_point()
-		pointM = point * alicePrivateKey
-		hashH = sha512_twice(pointM.x.to_bytes(32, 'big'))
-		return hashH
-
-	def __keyE(self) -> bytearray:
-		return self.__hashH()[:32]
-
 	def cipher_length(self) -> int:
 		start_index = 16 + 1 + 33
 		length = 4
@@ -118,75 +100,67 @@ class TestVector(object):
 	def mac(self) -> bytearray:
 		return self.encryped_message()[-32:]
 
-	def ecies_decrypt(self) -> str:
-		IV = self.iv()
-		key = self.__keyE()
-		decryptor = AES.new(key, AES.MODE_CBC, IV=IV)
-		cipherText = self.cipher()
-		plain = unpad(decryptor.decrypt(cipherText), block_size=16, style='pkcs7')
-		plainText = str(plain,'utf-8')
-		return plainText
+	# def __ephemeral_public_key_point(self) -> ECPoint:
+	# 	return SEC1Encoder.decode_public_key(
+	# 		self.ephemeral_public_key_compressed(),
+	# 		curve_.secp256k1
+	# 	)
 
-	def stream_decrypt(self, chunksize=240) -> str:
-		assert chunksize % aes256_blocksize == 0, "chunksize must be multiple of AES blocksize (16)" 
-		IV = self.iv()
-		key = self.__keyE()
-		decryptor = AES.new(key, AES.MODE_CBC, IV=IV)
-		stream = self.cipher()
-		decrypted_whole = bytearray()
-		
-		while True:
-			chunk = stream[:chunksize]
-			size_of_chunk = len(chunk)
-			if size_of_chunk == 0:
-				break
-			stream = stream[size_of_chunk:len(stream)]
-			# print(f"🌸 Chunk: '{chunk}'\n")
-		
-			decrypted_chunk = decryptor.decrypt(chunk)
-			# print(f"🏓 decrypted chunk: {decrypted_chunk}")
-			decrypted_whole.extend(decrypted_chunk)
+	# def __hashH(self) -> bytearray:
+	# 	alicePrivateKey = 0xf423ae3097703022b86b87c15424367ce827d11676fae5c7fe768de52d9cce2e
+	# 	point = self.__ephemeral_public_key_point()
+	# 	pointM = point * alicePrivateKey
+	# 	hashH = sha512_twice(pointM.x.to_bytes(32, 'big'))
+	# 	return hashH
 
-		plain = unpad(decrypted_whole, block_size=aes256_blocksize, style='pkcs7')
-		plainText = str(plain,'utf-8')
-		return plainText 
+	# def __keyE(self) -> bytearray:
+	# 	return self.__hashH()[:32]
+
+	# def ecies_decrypt(self) -> str:
+	# 	IV = self.iv()
+	# 	key = self.__keyE()
+	# 	decryptor = AES.new(key, AES.MODE_CBC, IV=IV)
+	# 	cipherText = self.cipher()
+	# 	plain = unpad(decryptor.decrypt(cipherText), block_size=16, style='pkcs7')
+	# 	plainText = str(plain,'utf-8')
+	# 	return plainText
+
+	# def stream_decrypt(self, chunksize=240) -> str:
+	# 	assert chunksize % aes256_blocksize == 0, "chunksize must be multiple of AES blocksize (16)" 
+	# 	IV = self.iv()
+	# 	key = self.__keyE()
+	# 	decryptor = AES.new(key, AES.MODE_CBC, IV=IV)
+	# 	stream = self.cipher()
+	# 	decrypted_whole = bytearray()
+		
+	# 	while True:
+	# 		chunk = stream[:chunksize]
+	# 		size_of_chunk = len(chunk)
+	# 		if size_of_chunk == 0:
+	# 			break
+	# 		stream = stream[size_of_chunk:len(stream)]
+	# 		decrypted_chunk = decryptor.decrypt(chunk)
+	# 		decrypted_whole.extend(decrypted_chunk)
+
+	# 	plain = unpad(decrypted_whole, block_size=aes256_blocksize, style='pkcs7')
+	# 	plainText = str(plain,'utf-8')
+	# 	return plainText 
 
 def ecies_decrypt(dongle, vector: TestVector) -> bool:
-	decypted_python = vector.ecies_decrypt()
-	decypted_stream_python = vector.stream_decrypt()
-
-	if decypted_python != decypted_stream_python:
-		print("\n☢️ Python ECIES decryption and Stream decryption mismatches ☢️\n")
-		print(f"stream: {decypted_stream_python}\n\nnormal: {decypted_python}") 
-	else:
-		print("\n\n🧩 Awesome STREAM works!!!! 🧩\n")
-
 	print(f"""
 
 🚀 vector:
 🔓Expected plain text: '{vector.expected_plainText()}'
 🔐Encrypted msg: '{vector.encryped_message_hex()}'
-🔓Decrypted msg: '{decypted_python}'
-🔓Decrypted stream msg: '{decypted_stream_python}'
 🔮""")
 
-	if decypted_python != vector.expected_plainText():
-		print("\n☢️ Python ECIES decryption failed ☢️\n")
-	else:
-		print("\n\n🧩 Awesome plaintexts matches! 🧩\n")
-
 	prefix = vector.apdu_prefix()
-
-	# BIPPath(12) || EncrypedMessage
 	pubkey_length_encoded = struct.pack(">B", 33)
 	cipher_length_encoded = struct.pack(">i", vector.cipher_length())
-
 	payload = reduce((lambda x, y: bytearray(x) + bytearray(y)), [vector.bip32Path(), vector.iv(), pubkey_length_encoded, vector.ephemeral_public_key_compressed(), cipher_length_encoded, vector.mac()])
 
-	# print(f"payload: {payload.hex()}")
 
 	payload_size = len(payload)
-	
 	assert payload_size <= 255, "Max bytes to send is 255"
 
 	L_c = bytes([payload_size])
@@ -225,25 +199,22 @@ def ecies_decrypt(dongle, vector: TestVector) -> bool:
 			else:
 				raise commException # unknown error, interrupt exection and propage the error.
 
-		print(f"from ledger RAW: '{result}'\n")
-		# payload_response = result[5:]
-		# print(f"from ledger drop first 5: '{payload_response}'\n")
 		decrypted_whole.extend(result)
-
-		chunk_index += 1
 
 		if chunk_index == chunks_to_stream:
 			print(f"🔮 Finished streaming all chunks to the ledger.\n")
+
+		chunk_index += 1
+
 	# END of streaming
 
-	print(f"\n🎸\nMessage from ledger:\n'{str(decrypted_whole,'utf-8')}'\n\n")
 	plain = unpad(decrypted_whole, block_size=aes256_blocksize, style='pkcs7')
 	plainText_from_ledger = str(plain,'utf-8')
 	expectedPlainText = vector.expected_plainText()
 
 	if plainText_from_ledger == expectedPlainText:
 		print(f"""✅ Awesome! Plain text from ledger matches that from Java library ✅
-💡PlainText: '{plainText_from_ledger}'
+💡PlainText:\n'{plainText_from_ledger}\n'
 """)
 	else:
 		print("\n☢️ Plain text mismatch ☢️\n")
