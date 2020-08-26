@@ -194,7 +194,6 @@ def ecies_decrypt(dongle, vector: TestVector) -> bool:
 	result = dongle.exchange(apdu)
 
 
-	chunk_index = 0
 	cipher_byte_count = vector.cipher_length()
 	chunksize = 240 # MUST be a multiple of 16, being AES block size
 	chunks_to_stream = int(math.ceil(cipher_byte_count / chunksize))
@@ -203,7 +202,7 @@ def ecies_decrypt(dongle, vector: TestVector) -> bool:
 	# Keep streaming data into the device till we run out of it.
 	stream = vector.cipher()
 	decrypted_whole = bytearray()
-	chunk_index = 0
+	chunk_index = 1
 	while True:
 		chunk = stream[:chunksize]
 		size_of_chunk = len(chunk)
@@ -226,9 +225,10 @@ def ecies_decrypt(dongle, vector: TestVector) -> bool:
 			else:
 				raise commException # unknown error, interrupt exection and propage the error.
 
-		print(f"from ledger: '{result}'\n")
-		payload_response = result[5:]
-		decrypted_whole.extend(payload_response)
+		print(f"from ledger RAW: '{result}'\n")
+		# payload_response = result[5:]
+		# print(f"from ledger drop first 5: '{payload_response}'\n")
+		decrypted_whole.extend(result)
 
 		chunk_index += 1
 

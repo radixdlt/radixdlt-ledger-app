@@ -249,6 +249,7 @@ static bool decrypt_part_of_msg() {
     update_decryption_data_state(G_io_apdu_buffer + dataOffset, chunkSize, is_last_chunk);
 
     // Sends decrypted chars back to host machine
+    os_memcpy(G_io_apdu_buffer, G_io_apdu_buffer + dataOffset, chunkSize);
     io_exchange_with_code(SW_OK, chunkSize);
 
     ctx->cipher_number_of_parsed_bytes += chunkSize;
