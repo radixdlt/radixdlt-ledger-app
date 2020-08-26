@@ -2,33 +2,16 @@
 
 from ledgerblue.comm import getDongle
 from ledgerblue.commException import CommException
+
 from functools import reduce
 from typing import List
+
 import argparse
 import struct
 import math
 import json
-import hashlib
 import glob
 import os
-import time
-from Cryptodome.Util.Padding import unpad
-
-# from Cryptodome.Cipher import AES
-# from pathlib import Path
-# from fastecdsa import keys, curve as curve_, ecdsa
-# from fastecdsa.point import Point as ECPoint
-# from fastecdsa.encoding.sec1 import SEC1Encoder
-
-# def sha512_twice(data) -> bytearray:
-# 	m = hashlib.sha512()
-# 	m.update(data)
-# 	once = m.digest()
-# 	m = hashlib.sha512()
-# 	m.update(once)
-# 	twice = m.digest()
-# 	return twice
-
 
 aes256_blocksize = 16
 CommExceptionUserRejection = 0x6985
@@ -100,52 +83,6 @@ class TestVector(object):
 	def mac(self) -> bytearray:
 		return self.encryped_message()[-32:]
 
-	# def __ephemeral_public_key_point(self) -> ECPoint:
-	# 	return SEC1Encoder.decode_public_key(
-	# 		self.ephemeral_public_key_compressed(),
-	# 		curve_.secp256k1
-	# 	)
-
-	# def __hashH(self) -> bytearray:
-	# 	alicePrivateKey = 0xf423ae3097703022b86b87c15424367ce827d11676fae5c7fe768de52d9cce2e
-	# 	point = self.__ephemeral_public_key_point()
-	# 	pointM = point * alicePrivateKey
-	# 	hashH = sha512_twice(pointM.x.to_bytes(32, 'big'))
-	# 	return hashH
-
-	# def __keyE(self) -> bytearray:
-	# 	return self.__hashH()[:32]
-
-	# def ecies_decrypt(self) -> str:
-	# 	IV = self.iv()
-	# 	key = self.__keyE()
-	# 	decryptor = AES.new(key, AES.MODE_CBC, IV=IV)
-	# 	cipherText = self.cipher()
-	# 	plain = unpad(decryptor.decrypt(cipherText), block_size=16, style='pkcs7')
-	# 	plainText = str(plain,'utf-8')
-	# 	return plainText
-
-	# def stream_decrypt(self, chunksize=240) -> str:
-	# 	assert chunksize % aes256_blocksize == 0, "chunksize must be multiple of AES blocksize (16)" 
-	# 	IV = self.iv()
-	# 	key = self.__keyE()
-	# 	decryptor = AES.new(key, AES.MODE_CBC, IV=IV)
-	# 	stream = self.cipher()
-	# 	decrypted_whole = bytearray()
-		
-	# 	while True:
-	# 		chunk = stream[:chunksize]
-	# 		size_of_chunk = len(chunk)
-	# 		if size_of_chunk == 0:
-	# 			break
-	# 		stream = stream[size_of_chunk:len(stream)]
-	# 		decrypted_chunk = decryptor.decrypt(chunk)
-	# 		decrypted_whole.extend(decrypted_chunk)
-
-	# 	plain = unpad(decrypted_whole, block_size=aes256_blocksize, style='pkcs7')
-	# 	plainText = str(plain,'utf-8')
-	# 	return plainText 
-
 def ecies_decrypt(dongle, vector: TestVector) -> bool:
 	print(f"""
 
@@ -208,8 +145,7 @@ def ecies_decrypt(dongle, vector: TestVector) -> bool:
 
 	# END of streaming
 
-	plain = unpad(decrypted_whole, block_size=aes256_blocksize, style='pkcs7')
-	plainText_from_ledger = str(plain,'utf-8')
+	plainText_from_ledger = str(decrypted_whole,'utf-8')
 	expectedPlainText = vector.expected_plainText()
 
 	if plainText_from_ledger == expectedPlainText:
@@ -242,7 +178,6 @@ if __name__ == "__main__":
 				success_count += 1
 			else:
 				fail_count += 1
-
 		print(f"Success count: {success_count}/{success_count + fail_count}")
 		assert success_count == len(json_array_of_vectors), "Expected all vectors to pass"
 
