@@ -51,6 +51,12 @@ void io_exchange_with_code(uint16_t code, uint16_t tx) {
     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
 }
 
+void io_exchange_with_code_skip_ret_aft_tx(uint16_t code, uint16_t tx) {
+    G_io_apdu_buffer[tx++] = code >> 8;
+    G_io_apdu_buffer[tx++] = code & 0xFF;
+    io_exchange(CHANNEL_APDU, tx);
+}
+
 // The APDU protocol uses a single-byte instruction code (INS) to specify
 // which command should be executed. We'll use this code to dispatch on a
 // table of function pointers.
@@ -172,6 +178,10 @@ static void radix_main(void) {
                     }
                     case INVALID_PARAMETER: {
                         PRINTF("error %d is 'INVALID_PARAMETER'\n", e);
+                        break;
+                    }
+                    case INVALID_STATE: {
+                        PRINTF("error %d is 'INVALID_STATE'\n", e);
                         break;
                     }
                     case EXCEPTION_OVERFLOW: {

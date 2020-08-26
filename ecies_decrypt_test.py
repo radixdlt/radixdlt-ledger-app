@@ -2,6 +2,7 @@
 
 from ledgerblue.comm import getDongle
 from ledgerblue.commException import CommException
+from functools import reduce
 from typing import List
 import argparse
 import struct
@@ -18,35 +19,12 @@ from pathlib import Path
 from fastecdsa import keys, curve as curve_, ecdsa
 from fastecdsa.point import Point as ECPoint
 from fastecdsa.encoding.sec1 import SEC1Encoder
-# from hashlib import sha256, sha512
 import hashlib
 
 
 CommExceptionUserRejection = 0x6985
 
-# STREAM encrypt and decrypt (from year 2019): https://github.com/eliben/code-for-blog/blob/master/2010/aes-encrypt-pycrypto/pycrypto_file.py
-
-secp256k1 = curve_.secp256k1
-
-# def EC_secp256k1_point_mult(scalar, point_bytes) -> ECPoint:
-
-# 	# message = b'Hello, World!'
-# 	# privkey, pubkey = keys.gen_keypair(curve=curve)
-# 	# sign = ecdsa.sign(message, privkey, curve=curve, hashfunc=sha3_256)
-# 	assert len(point_bytes) == 64
-# 	point = Point(point_bytes[:32], point_bytes[32:64], curve=secp256k1)
-# 	pointM = scalar * point  
-# 	return pointM
-
-# def EC_secp256k1_point_mult(scalar, point) -> ECPoint:
-
-# 	# message = b'Hello, World!'
-# 	# privkey, pubkey = keys.gen_keypair(curve=curve)
-# 	# sign = ecdsa.sign(message, privkey, curve=curve, hashfunc=sha3_256)
-# 	# assert len(point_bytes) == 64
-# 	# point = Point(point_bytes[:32], point_bytes[32:64], curve=secp256k1)
-# 	pointM = scalar * point  
-# 	return pointM
+aes256_blocksize = 16
 
 def sha512_twice(data) -> bytearray:
 	m = hashlib.sha512()
@@ -79,7 +57,8 @@ class TestVector(object):
 		return len(self.encryped_message())
 
 	def bip32Path_hex(self) -> str:
-		return self.__dict__['bip32Path']
+		# return self.__dict__['bip32Path']
+		return "800000020000000100000003"
 
 	def bip32Path(self) -> bytearray:
 		return bytearray.fromhex(self.bip32Path_hex())
@@ -89,29 +68,27 @@ class TestVector(object):
 		return self.__dict__['expectedPlainText']
 
 	def apdu_prefix(self) -> bytearray:
-		assert self.encrypted_msg_size() <= 255, "Max encrypted msg size is 255"
 		CLA = bytes.fromhex("AA")
 		INS = b"\x16" # `16` is command "DECRYPT"
-		P1 = struct.pack(">B", self.encrypted_msg_size())
+		P1 = b"\x00" 
 		P2 = b"\x00"
 
 		return CLA + INS + P1 + P2
 
-	def __iv(self) -> bytearray:
+	def iv(self) -> bytearray:
 		return self.encryped_message()[:16]
 
-	def __ephemeral_public_key_compressed(self) -> bytearray:
+	def ephemeral_public_key_compressed(self) -> bytearray:
 		start_index = 16 + 1
 		length = 33
 		end_index = start_index + length
 		pubKeyCompBytes = self.encryped_message()[start_index:end_index]
-		print(f"pubKeyBytes: {pubKeyCompBytes}")
 		return pubKeyCompBytes
 
 	def __ephemeral_public_key_point(self) -> ECPoint:
 		return SEC1Encoder.decode_public_key(
-			self.__ephemeral_public_key_compressed(),
-			secp256k1
+			self.ephemeral_public_key_compressed(),
+			curve_.secp256k1
 		)
 
 	def __hashH(self) -> bytearray:
@@ -124,7 +101,7 @@ class TestVector(object):
 	def __keyE(self) -> bytearray:
 		return self.__hashH()[:32]
 
-	def __cipher_length(self) -> int:
+	def cipher_length(self) -> int:
 		start_index = 16 + 1 + 33
 		length = 4
 		end_index = start_index + length
@@ -132,32 +109,30 @@ class TestVector(object):
 		length = struct.unpack(">I", length_bytes)[0]
 		return length
 
-	def __cipher(self) -> bytearray:
+	def cipher(self) -> bytearray:
 		start_index = 16 + 1 + 33 + 4
-		length = self.__cipher_length()
+		length = self.cipher_length()
 		end_index = start_index + length
 		return self.encryped_message()[start_index:end_index]
 
-	def __mac(self) -> bytearray:
-		return self.encryped_message()[-32]
+	def mac(self) -> bytearray:
+		return self.encryped_message()[-32:]
 
 	def ecies_decrypt(self) -> str:
-		IV = self.__iv()
+		IV = self.iv()
 		key = self.__keyE()
 		decryptor = AES.new(key, AES.MODE_CBC, IV=IV)
-		cipherText = self.__cipher()
+		cipherText = self.cipher()
 		plain = unpad(decryptor.decrypt(cipherText), block_size=16, style='pkcs7')
 		plainText = str(plain,'utf-8')
 		return plainText
 
 	def stream_decrypt(self, chunksize=240) -> str:
-		aes256_blocksize = 16
 		assert chunksize % aes256_blocksize == 0, "chunksize must be multiple of AES blocksize (16)" 
-		origsize = self.__cipher_length()
-		IV = self.__iv()
+		IV = self.iv()
 		key = self.__keyE()
 		decryptor = AES.new(key, AES.MODE_CBC, IV=IV)
-		stream = self.__cipher()
+		stream = self.cipher()
 		decrypted_whole = bytearray()
 		
 		while True:
@@ -166,9 +141,10 @@ class TestVector(object):
 			if size_of_chunk == 0:
 				break
 			stream = stream[size_of_chunk:len(stream)]
-			print(f"🌸 Chunk: '{chunk}'\n")
+			# print(f"🌸 Chunk: '{chunk}'\n")
 		
 			decrypted_chunk = decryptor.decrypt(chunk)
+			# print(f"🏓 decrypted chunk: {decrypted_chunk}")
 			decrypted_whole.extend(decrypted_chunk)
 
 		plain = unpad(decrypted_whole, block_size=aes256_blocksize, style='pkcs7')
@@ -185,8 +161,6 @@ def ecies_decrypt(dongle, vector: TestVector) -> bool:
 	else:
 		print("\n\n🧩 Awesome STREAM works!!!! 🧩\n")
 
-	os._exit(-1337)
-
 	print(f"""
 
 🚀 vector:
@@ -201,12 +175,13 @@ def ecies_decrypt(dongle, vector: TestVector) -> bool:
 	else:
 		print("\n\n🧩 Awesome plaintexts matches! 🧩\n")
 
-	os._exit(-1337)
-
 	prefix = vector.apdu_prefix()
 
 	# BIPPath(12) || EncrypedMessage
-	payload = vector.bip32Path() + vector.encryped_message()
+	pubkey_length_encoded = struct.pack(">B", 33)
+	cipher_length_encoded = struct.pack(">i", vector.cipher_length())
+
+	payload = reduce((lambda x, y: bytearray(x) + bytearray(y)), [vector.bip32Path(), vector.iv(), pubkey_length_encoded, vector.ephemeral_public_key_compressed(), cipher_length_encoded, vector.mac()])
 
 	# print(f"payload: {payload.hex()}")
 
@@ -216,12 +191,51 @@ def ecies_decrypt(dongle, vector: TestVector) -> bool:
 
 	L_c = bytes([payload_size])
 	apdu = prefix + L_c + payload
-
-
-	# print(f"Sending APDU: {apdu.hex()}")
 	result = dongle.exchange(apdu)
-	# print(f"Hex result from dongle: {result.hex()}")
-	plainText_from_ledger = result.decode('utf8')
+
+
+	chunk_index = 0
+	cipher_byte_count = vector.cipher_length()
+	chunksize = 240 # MUST be a multiple of 16, being AES block size
+	chunks_to_stream = int(math.ceil(cipher_byte_count / chunksize))
+	print(f"Cipher text will be sent in #chunks: {chunks_to_stream}")
+
+	# Keep streaming data into the device till we run out of it.
+	stream = vector.cipher()
+	decrypted_whole = bytearray()
+	chunk_index = 0
+	while True:
+		chunk = stream[:chunksize]
+		size_of_chunk = len(chunk)
+		if size_of_chunk == 0:
+			break
+		stream = stream[size_of_chunk:len(stream)]
+
+		L_c = bytes([chunksize])
+		apdu = prefix + L_c + chunk
+		if (chunk_index+1) == chunks_to_stream:
+			print(f"🔮 Finished streaming all chunks to the ledger.\n")
+
+		print(f"Streaming chunk: {chunk_index}/{chunks_to_stream}")
+
+		try:
+			result = dongle.exchange(apdu)
+		except CommException as commException:
+			if commException.sw == CommExceptionUserRejection:
+				print("🙅🏿‍♀️ You rejected the msg to decrypt...Aborting vector.")
+				dongle.close()
+				return False
+			else:
+				raise commException # unknown error, interrupt exection and propage the error.
+
+		print(f"from ledger: '{result}'\n")
+		payload_response = result[5:]
+		decrypted_whole.extend(payload_response)
+		chunk_index += 1
+	# END of streaming
+
+	plain = unpad(decrypted_whole, block_size=aes256_blocksize, style='pkcs7')
+	plainText_from_ledger = str(plain,'utf-8')
 	expectedPlainText = vector.expected_plainText()
 
 	if plainText_from_ledger == expectedPlainText:
@@ -242,8 +256,7 @@ if __name__ == "__main__":
 
 
 	letDongleOutputDebugPrintStatements = False
-	# dongle = getDongle(debug=letDongleOutputDebugPrintStatements)
-	dongle = None
+	dongle = getDongle(debug=letDongleOutputDebugPrintStatements)
 
 	with open(json_filepath, 'r') as json_file:
 		json_array_of_vectors = json.load(json_file)

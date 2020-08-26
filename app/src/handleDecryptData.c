@@ -14,6 +14,7 @@
 
 static decryptDataContext_t *ctx = &global.decryptDataContext;
 
+static unsigned short ux_visible_element_index = 0;
 
 static void uncompress_and_init_pubkey(
     uint8_t *compressed_pubkey,
@@ -57,7 +58,7 @@ static bool sha512Twice(
 }
 
 static void update_hmac(
-    uint8_t *data, size_t dataLength
+    uint8_t *data, size_t data_length
 ) {
     cx_hmac(
         (cx_hmac_t *)&(ctx->hmac), 
@@ -75,7 +76,7 @@ static void prepare_decryption_data() {
     cx_ecfp_scalar_mult(
         CX_CURVE_256K1, 
         ctx->pointM, UNPUBLIC_KEY_COMPRESSEED_BYTE_COUNT, 
-        privateKey->d, privateKey->d_len
+        ctx->privateKey.d, ctx->privateKey.d_len
     );
 
     // 2. Use the X component of `pointM` and calculate the SHA512 `hashH`.
@@ -84,7 +85,7 @@ static void prepare_decryption_data() {
     AES_init_ctx_iv(&(ctx->aes_ctx), ctx->hashH, ctx->iv);
 
     cx_hmac_sha256_init(&(ctx->hmac), ctx->hashH + 32, 32);
-    update_hmac(ctx->IV, IV_LEN);
+    update_hmac(ctx->iv, IV_LEN);
     compress_public_key(&(ctx->ephemeral_pubkey)); // must be done AFTER `pointM` is calculated
     update_hmac(ctx->ephemeral_pubkey.W, PUBLIC_KEY_COMPRESSEED_BYTE_COUNT); 
     // hmac has now been updated with `IV(16) + PubKey(33)`
@@ -104,7 +105,11 @@ static void parse_input_of_first_chunk(
     uint8_t* dataBuffer,
     uint16_t dataLength
 ) {
+    PRINTF("dataLength: %d\n", dataLength);
     assert(dataLength == 98);
+
+    size_t offset = 0;
+    size_t copy_byte_count = 0;
 
     // READ BIP32Path (12 bytes)
     uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
@@ -113,6 +118,7 @@ static void parse_input_of_first_chunk(
         dataBuffer, bip32Path, G_ui_state.lower_line_long,
         BIP32_PATH_STRING_MAX_LENGTH
     );
+    offset += BIP32_PATH_LEN; // BIP32 path, 3 components, each 4 bytes
    
     // FINISHED PARSING INPUT
     PRINTF("deriving key from seed and BIP\n");
@@ -133,8 +139,7 @@ static void parse_input_of_first_chunk(
         FATAL_ERROR("Error? code: %d\n", error);
     }
 
-    size_t offset = 0;
-    size_t copy_byte_count = 0;
+ 
 
 
      // READ IV (16 bytes)
@@ -143,7 +148,9 @@ static void parse_input_of_first_chunk(
     offset += copy_byte_count;
 
     // SKIP reading length of PubKeyComp, should be 33
-    assert(dataBuffer + BIP32_PATH_LEN + offset == 33);
+    uint8_t pubKeyLength = dataBuffer[offset];
+    PRINTF("pubKeyLength: %d\n", pubKeyLength);
+    assert(pubKeyLength == 33);
     offset += 1;
 
     // READ EphemeralPubKeyComp (33 bytes)
@@ -152,23 +159,18 @@ static void parse_input_of_first_chunk(
     offset += copy_byte_count;
 
     // Read CipherText Length
+    // N.B. not the length of the whole encrypted message, but just the cipher text
     ctx->cipher_text_byte_count = U4BE(dataBuffer, offset);
+    ctx->cipher_number_of_parsed_bytes = 0;
     PRINTF("Length of cipher text: %d\n", ctx->cipher_text_byte_count);
     offset += 4; // length of cipher text is encoded as 4 bytes, hence `U4BE` above
 
-    // size_t offset_cipher_text = offset;
-    // offset += cipher_text_length;
-    // PRINTF("Cipher text to decrypt: %.*h\n", cipher_text_length, dataBuffer + offset_cipher_text);
-    
     // READ MAC (32 bytes)
     copy_byte_count = MAC_LEN;
     os_memcpy(ctx->mac, dataBuffer + offset, copy_byte_count);
     offset += copy_byte_count;
 
     assert(offset == dataLength);
-
-    // size_t message_for_mac_len = IV_LEN + PUBLIC_KEY_COMPRESSEED_BYTE_COUNT + cipher_text_length;
-    // uint8_t message_for_mac[message_for_mac_len];
 }
 
 
@@ -177,6 +179,8 @@ static const ux_menu_entry_t ui_hack_as_menu_progress_update[] = {
 	{NULL, NULL, 0, NULL, "Parsing msg", G_ui_state.lower_line_short, 0, 0},
 	UX_MENU_END,
 };
+
+#define MAX_CHUNK_SIZE_AES_MULTIPLE 240 // multiple of 16 (AES blocksize)
 
 static void updateProgressDisplay() {
     os_memset(G_ui_state.lower_line_long, 0x00,
@@ -189,8 +193,11 @@ static void updateProgressDisplay() {
         G_ui_state.lower_line_short, 
         DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE, 
         "Part: %02d/%02d",
-        (ctx->cipher_number_of_parsed_bytes/MAX_CHUNK_SIZE),
-        (ctx->cipher_text_byte_count/MAX_CHUNK_SIZE)
+        // (ctx->cipher_number_of_parsed_bytes/MAX_CHUNK_SIZE_AES_MULTIPLE),
+        // (ctx->cipher_text_byte_count/MAX_CHUNK_SIZE_AES_MULTIPLE)
+
+        ((ctx->cipher_number_of_parsed_bytes + MAX_CHUNK_SIZE_AES_MULTIPLE - 1) / MAX_CHUNK_SIZE_AES_MULTIPLE),
+        ((ctx->cipher_text_byte_count + MAX_CHUNK_SIZE_AES_MULTIPLE - 1) / MAX_CHUNK_SIZE_AES_MULTIPLE)
     );
     
     UX_REDISPLAY_IDX(ux_visible_element_index);
@@ -201,6 +208,8 @@ static void update_decryption_data_state(
     size_t data_length,
     bool is_last
 ) {
+    PRINTF("Decrypting and updating HMAC with bytes (length: %d): ", data_length);
+    PRINTF("%.*h\n", data_length, data_in_out);
     // update HMAC state
     cx_hmac(
         (cx_hmac_t *)&(ctx->hmac), 
@@ -212,25 +221,28 @@ static void update_decryption_data_state(
 
     // update AES state
     AES_CBC_decrypt_buffer(&(ctx->aes_ctx), data_in_out, data_length);
+    PRINTF("After decryption (length: %d): ", data_length);
+    PRINTF("%.*h\n", data_length, data_in_out);
 }
 
 // READs bytes from host machine and decrypts them (located in `G_io_apdu_buffer`) 
 static bool decrypt_part_of_msg() {
     uint16_t bytesLeftToRead = ctx->cipher_text_byte_count - ctx->cipher_number_of_parsed_bytes;
-    uint16_t chunkSize = MIN(MAX_CHUNK_SIZE, bytesLeftToRead);
+    uint16_t chunkSize = MIN(MAX_CHUNK_SIZE_AES_MULTIPLE, bytesLeftToRead);
 
     os_memset(G_io_apdu_buffer, 0x00, IO_APDU_BUFFER_SIZE);
     G_io_apdu_buffer[0] = 0x90; // 0x9000 == 'SW_OK'
     G_io_apdu_buffer[1] = 0x00; // 0x9000 == 'SW_OK'
     io_exchange(CHANNEL_APDU, 2);
 
-    bool is_last_chunk = (ctx->cipher_number_of_parsed_bytes + chunkSize) >= ctx->cipher_text_byte_count
+    bool is_last_chunk = (ctx->cipher_number_of_parsed_bytes + chunkSize) >= ctx->cipher_text_byte_count;
 
     // `G_io_apdu_buffer` now contains `chunkSize` relevant bytes
-    update_decryption_data_state(G_io_apdu_buffer, chunkSize, is_last_chunk);
+    uint32_t dataOffset = OFFSET_CDATA + 0;
+    update_decryption_data_state(G_io_apdu_buffer + dataOffset, chunkSize, is_last_chunk);
 
     // Sends decrypted chars back to host machine
-    io_exchange_with_code(SW_OK, chunkSize);
+    io_exchange_with_code_skip_ret_aft_tx(SW_OK, chunkSize);
 
     ctx->cipher_number_of_parsed_bytes += chunkSize;
 
@@ -242,11 +254,12 @@ static void stream_decrypt_msg()
     bool finished_decrypting_whole_msg = false;
     while (!finished_decrypting_whole_msg)
     {
+        PRINTF("STREAMING msg - about to read bytes from host machine\n");
         finished_decrypting_whole_msg = decrypt_part_of_msg();
 
         updateProgressDisplay();
 
-        PRINTF("Finished parsing %u/%u bytes of the Atom\n", ctx->cipher_number_of_parsed_bytes, ctx->cipher_text_byte_count);
+        PRINTF("Finished parsing %u/%u bytes\n", ctx->cipher_number_of_parsed_bytes, ctx->cipher_text_byte_count);
     }
 
     assert(ctx->cipher_number_of_parsed_bytes == ctx->cipher_text_byte_count);
@@ -254,8 +267,10 @@ static void stream_decrypt_msg()
     PRINTF("\n\n.-~=*#^^^ FINISHED PARSING ALL CHUNKS ^^^#*=~-.\n\n");
 
     if (os_memcmp(ctx->calc_mac, ctx->mac, MAC_LEN) != 0) {
-        PRINTF("FAILURE! MAC mismatch\n");
-	    return 0;
+        PRINTF("Expected MAC:\n"); PRINTF("%.*h", MAC_LEN, ctx->mac);
+        PRINTF("But got MAC:\n"); PRINTF("%.*h", MAC_LEN, ctx->calc_mac);
+
+        FATAL_ERROR("FAILURE! MAC mismatch\n");
     }
 }
 
@@ -270,20 +285,30 @@ void handleDecryptData(
     unsigned int *tx
  ) {
     PRINTF("handleDecryptData\n");
-
-
-    // ctx->cipher_text_byte_count = p1;
-    ctx->cipher_number_of_parsed_bytes = 0;
-
+    PRINTF("Parsing input from first chunk\n");
     parse_input_of_first_chunk(dataBuffer, dataLength);
+    PRINTF("Finished parsing input from first chunk\n");
+    PRINTF("IV: %.*h\n", IV_LEN, ctx->iv);
+    PRINTF("PubKey: %.*h\n", PUBLIC_KEY_COMPRESSEED_BYTE_COUNT, ctx->ephemeral_pubkey.W);
+    PRINTF("PrivateKey: %.*h\n", ctx->privateKey.d_len, ctx->privateKey.d);
+    PRINTF("CipherTextLength: %d\n", ctx->cipher_text_byte_count);
+    PRINTF("MAC: %.*h\n", MAC_LEN, ctx->mac);
     prepare_decryption_data();
+    PRINTF("PointM: %.*h\n", UNPUBLIC_KEY_COMPRESSEED_BYTE_COUNT, ctx->pointM);
+    PRINTF("hashH: %.*h\n", HASH512_LEN, ctx->hashH);
+    PRINTF("\n\n\nSETUP COMPLETE -> start decryption...\n\n");
+
+    UX_MENU_DISPLAY(0, ui_hack_as_menu_progress_update, NULL);
+    ux_visible_element_index = G_ux.stack[0].element_index;
+    // *flags |= IO_ASYNCH_REPLY;
 
     stream_decrypt_msg();
 
-    // *flags |= IO_ASYNCH_REPLY;
 
     // PRINTF("Decryption finished - plaintext: '%.*s'\n", plain_text_len, dataBuffer + BIP32_PATH_LEN);
     // os_memcpy(G_io_apdu_buffer, dataBuffer + BIP32_PATH_LEN, plain_text_len);
     // io_exchange_with_code(SW_OK, plain_text_len);
     PRINTF("\n\n***** DONE *****\n");
+
+    ui_idle();
 }
