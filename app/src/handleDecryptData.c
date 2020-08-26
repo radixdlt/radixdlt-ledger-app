@@ -281,11 +281,6 @@ void handleDecryptData(
     PRINTF("Parsing input from first chunk\n");
     parse_input_of_first_chunk(dataBuffer, dataLength);
     PRINTF("Finished parsing input from first chunk\n");
-    PRINTF("IV: %.*h\n", IV_LEN, ctx->iv);
-    PRINTF("PubKey: %.*h\n", PUBLIC_KEY_COMPRESSEED_BYTE_COUNT, ctx->ephemeral_pubkey.W);
-    PRINTF("PrivateKey: %.*h\n", ctx->privateKey.d_len, ctx->privateKey.d);
-    PRINTF("CipherTextLength: %d\n", ctx->cipher_text_byte_count);
-    PRINTF("MAC: %.*h\n", MAC_LEN, ctx->mac);
     prepare_decryption_data();
     PRINTF("SETUP COMPLETE -> start decryption...\n");
 
