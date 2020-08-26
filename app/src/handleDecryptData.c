@@ -230,17 +230,30 @@ static bool decrypt_part_of_msg() {
     // `G_io_apdu_buffer` now contains `chunkSize` relevant bytes
 
     bool is_last_chunk = (ctx->cipher_number_of_parsed_bytes + chunkSize) >= ctx->cipher_text_byte_count;
+    ctx->cipher_number_of_parsed_bytes += chunkSize;
 
     uint32_t dataOffset = OFFSET_CDATA + 0;
     update_decryption_data_state(G_io_apdu_buffer + dataOffset, chunkSize, is_last_chunk);
+    os_memcpy(G_io_apdu_buffer, G_io_apdu_buffer + dataOffset, chunkSize);
 
     // Sends decrypted chars back to host machine
-    os_memcpy(G_io_apdu_buffer, G_io_apdu_buffer + dataOffset, chunkSize);
-    io_exchange_with_code(SW_OK, chunkSize);
+    int tx = chunkSize;
+    if (is_last_chunk) {
+        tx = pkcs7_padding_data_length(
+            G_io_apdu_buffer, 
+            chunkSize,
+            AES_BLOCKLEN
+        );
+    }
 
-    ctx->cipher_number_of_parsed_bytes += chunkSize;
+    io_exchange_with_code(SW_OK, tx);
+
 
     return is_last_chunk;
+}
+
+static bool msg_is_split_across_multiple_chunks() {
+    return ctx->cipher_text_byte_count > MAX_CHUNK_SIZE_AES_MULTIPLE;
 }
 
 static void stream_decrypt_msg()
@@ -250,7 +263,9 @@ static void stream_decrypt_msg()
     {
         finished_decrypting_whole_msg = decrypt_part_of_msg();
 
-        updateProgressDisplay();
+        if (msg_is_split_across_multiple_chunks()) {
+            updateProgressDisplay();
+        }
 
         PRINTF("Finished parsing %u/%u bytes\n", ctx->cipher_number_of_parsed_bytes, ctx->cipher_text_byte_count);
     }
@@ -266,7 +281,6 @@ static void stream_decrypt_msg()
         FATAL_ERROR("FAILURE! MAC mismatch\n");
     }
 }
-
 
 void handleDecryptData(
     uint8_t p1, 
@@ -284,12 +298,17 @@ void handleDecryptData(
     prepare_decryption_data();
     PRINTF("SETUP COMPLETE -> start decryption...\n");
 
-    UX_MENU_DISPLAY(0, ui_hack_as_menu_progress_update, NULL);
-    ux_visible_element_index = G_ux.stack[0].element_index;
+    if (msg_is_split_across_multiple_chunks()) {
+        UX_MENU_DISPLAY(0, ui_hack_as_menu_progress_update, NULL);
+        ux_visible_element_index = G_ux.stack[0].element_index;
+        updateProgressDisplay();
+    }
 
     stream_decrypt_msg();
 
     PRINTF("\n***** DONE *****\n");
 
-    ui_idle();
+    if (msg_is_split_across_multiple_chunks()) {
+        ui_idle();
+    }
 }
