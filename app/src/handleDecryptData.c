@@ -230,10 +230,17 @@ static bool decrypt_part_of_msg() {
     uint16_t bytesLeftToRead = ctx->cipher_text_byte_count - ctx->cipher_number_of_parsed_bytes;
     uint16_t chunkSize = MIN(MAX_CHUNK_SIZE_AES_MULTIPLE, bytesLeftToRead);
 
+    bool is_first_chunk = ctx->cipher_number_of_parsed_bytes == 0;
+
     os_memset(G_io_apdu_buffer, 0x00, IO_APDU_BUFFER_SIZE);
     G_io_apdu_buffer[0] = 0x90; // 0x9000 == 'SW_OK'
-    G_io_apdu_buffer[1] = 0x00; // 0x9000 == 'SW_OK'
-    io_exchange(CHANNEL_APDU, 2);
+    G_io_apdu_buffer[1] = 0x00; // 0x9000 == 'SW_OK
+
+    if (is_first_chunk) {
+        io_exchange(CHANNEL_APDU, 2);
+    } else {
+        io_exchange(CHANNEL_APDU | IO_ASYNCH_REPLY, 2);
+    }
 
     bool is_last_chunk = (ctx->cipher_number_of_parsed_bytes + chunkSize) >= ctx->cipher_text_byte_count;
 
@@ -242,7 +249,7 @@ static bool decrypt_part_of_msg() {
     update_decryption_data_state(G_io_apdu_buffer + dataOffset, chunkSize, is_last_chunk);
 
     // Sends decrypted chars back to host machine
-    io_exchange_with_code_skip_ret_aft_tx(SW_OK, chunkSize);
+    io_exchange_with_code(SW_OK, chunkSize);
 
     ctx->cipher_number_of_parsed_bytes += chunkSize;
 

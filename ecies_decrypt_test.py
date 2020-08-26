@@ -213,9 +213,7 @@ def ecies_decrypt(dongle, vector: TestVector) -> bool:
 
 		L_c = bytes([chunksize])
 		apdu = prefix + L_c + chunk
-		if (chunk_index+1) == chunks_to_stream:
-			print(f"🔮 Finished streaming all chunks to the ledger.\n")
-
+		
 		print(f"Streaming chunk: {chunk_index}/{chunks_to_stream}")
 
 		try:
@@ -231,9 +229,14 @@ def ecies_decrypt(dongle, vector: TestVector) -> bool:
 		print(f"from ledger: '{result}'\n")
 		payload_response = result[5:]
 		decrypted_whole.extend(payload_response)
+
 		chunk_index += 1
+
+		if chunk_index == chunks_to_stream:
+			print(f"🔮 Finished streaming all chunks to the ledger.\n")
 	# END of streaming
 
+	print(f"\n🎸\nMessage from ledger:\n'{str(decrypted_whole,'utf-8')}'\n\n")
 	plain = unpad(decrypted_whole, block_size=aes256_blocksize, style='pkcs7')
 	plainText_from_ledger = str(plain,'utf-8')
 	expectedPlainText = vector.expected_plainText()
