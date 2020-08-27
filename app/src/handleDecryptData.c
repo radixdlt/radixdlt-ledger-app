@@ -175,11 +175,12 @@ static const ux_menu_entry_t ui_hack_as_menu_progress_update[] = {
 #define MAX_CHUNK_SIZE_AES_MULTIPLE 240 // multiple of 16 (AES blocksize)
 
 static void updateProgressDisplay() {
-    os_memset(G_ui_state.lower_line_long, 0x00,
-              MAX_LENGTH_FULL_STR_DISPLAY);
+    // os_memset(G_ui_state.lower_line_long, 0x00,
+    //           MAX_LENGTH_FULL_STR_DISPLAY);
 
-    os_memset(G_ui_state.lower_line_short, 0x00,
-              DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE);
+    // os_memset(G_ui_state.lower_line_short, 0x00,
+    //           DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE);
+    reset_ui();
 
     size_t percentage = (100 * ctx->cipher_number_of_parsed_bytes / ctx->cipher_text_byte_count);
 
@@ -283,22 +284,10 @@ static void stream_decrypt_msg()
     }
 }
 
-void handleDecryptData(
-    uint8_t p1, 
-    uint8_t p2, 
-    uint8_t *dataBuffer,
-    
-    uint16_t dataLength, 
-    unsigned int *flags,
-    unsigned int *tx
- ) {
-    os_memset(ctx, 0x00, sizeof(decryptDataContext_t));
-    PRINTF("\n\nSTART OF 'handleDecryptData'\n");
-    PRINTF("Parsing input from first chunk\n");
-    parse_input_of_first_chunk(dataBuffer, dataLength);
-    PRINTF("Finished parsing input from first chunk\n");
+static void setup_and_start_streaming_decrypted_msg() {
+
     prepare_decryption_data();
-    PRINTF("SETUP COMPLETE -> start decryption...\n");
+    PRINTF("SETUP COMPLETE\n");
 
     if (msg_is_split_across_multiple_chunks()) {
         UX_MENU_DISPLAY(0, ui_hack_as_menu_progress_update, NULL);
@@ -310,7 +299,31 @@ void handleDecryptData(
 
     PRINTF("\n***** DONE *****\n");
 
-    if (msg_is_split_across_multiple_chunks()) {
-        ui_idle();
-    }
+    ui_idle();
+}
+
+static void ask_for_confirmation_about_decryption() {
+    display_lines("Proceed with", "decryption?", setup_and_start_streaming_decrypted_msg);
+}
+
+void handleDecryptData(
+    uint8_t p1, 
+    uint8_t p2, 
+    uint8_t *dataBuffer,
+    
+    uint16_t dataLength, 
+    unsigned int *flags,
+    unsigned int *tx
+ ) {
+    PRINTF("handleDecryptData START\n");
+    os_memset(ctx, 0x00, sizeof(decryptDataContext_t));
+    PRINTF("Parsing input from first chunk\n");
+    parse_input_of_first_chunk(dataBuffer, dataLength);
+    PRINTF("Finished parsing input from first chunk\n");
+    
+    PRINTF("Blocking waiting for confirmation about decryption...\n");
+    *flags |= IO_ASYNCH_REPLY;
+    ask_for_confirmation_about_decryption();
+
+   
 }
