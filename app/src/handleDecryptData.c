@@ -184,8 +184,6 @@ static void updateProgressDisplay() {
         DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE, 
         "%02d%% done.", percentage
     );
-    
-    PRINTF("Finished displaing percentage on device\n");
 
     UX_REDISPLAY_IDX(ux_visible_element_index);
 }
@@ -243,8 +241,14 @@ static bool decrypt_part_of_msg() {
         );
     }
 
-    io_exchange_with_code(SW_OK, tx);
-
+    if (is_last_chunk && os_memcmp(ctx->calc_mac, ctx->mac, MAC_LEN) != 0) {
+            PRINTF("MAC mismatch, expected: %.*h\n", MAC_LEN, ctx->mac);
+            PRINTF("But got MAC: %.*h\n", MAC_LEN, ctx->calc_mac);
+            os_memcpy(G_io_apdu_buffer, ctx->calc_mac, MAC_LEN);
+            io_exchange_with_code(SW_INVALID_MAC_CODE, MAC_LEN);
+    } else {
+        io_exchange_with_code(SW_OK, tx);
+    }
 
     return is_last_chunk;
 }
@@ -270,13 +274,6 @@ static void stream_decrypt_msg()
     assert(ctx->cipher_number_of_parsed_bytes == ctx->cipher_text_byte_count);
 
     PRINTF("\n.-~=*#^^^ FINISHED PARSING ALL CHUNKS ^^^#*=~-.\n");
-
-    if (os_memcmp(ctx->calc_mac, ctx->mac, MAC_LEN) != 0) {
-        PRINTF("Expected MAC:\n"); PRINTF("%.*h", MAC_LEN, ctx->mac);
-        PRINTF("But got MAC:\n"); PRINTF("%.*h", MAC_LEN, ctx->calc_mac);
-
-        FATAL_ERROR("FAILURE! MAC mismatch\n");
-    }
 }
 
 static void setup_and_start_streaming_decrypted_msg() {

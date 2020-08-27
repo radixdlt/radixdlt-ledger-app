@@ -31,6 +31,7 @@ Please refer to [these codes found in `os.h`](https://github.com/LedgerHQ/nanos-
 | Return code   | Description             |
 | ------------- | ----------------------- |
 | 0x6985 		| User rejected command   |
+| 0x6986 		| INVALID MAC CODE 		  |
 | 0x6B00		| Fatal error incorrect implementation |
 | 0x6B01        | Invalid input       |
 | 0x6D00        | Incorrect instruction identifier |

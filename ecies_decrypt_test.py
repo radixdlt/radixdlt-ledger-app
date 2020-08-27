@@ -6,6 +6,7 @@ from ledgerblue.commException import CommException
 from functools import reduce
 from typing import List
 
+from enum import Enum, unique, auto
 import argparse
 import struct
 import math
@@ -15,7 +16,16 @@ import os
 
 aes256_blocksize = 16
 CommExceptionUserRejection = 0x6985
+CommExceptionMACCodeMismatch = 0x6986
 
+@unique
+class Result(Enum):
+	SKIP = auto()
+	FAIL = auto()
+	PASS = auto()
+
+class CustomError(Exception):
+    __module__ = Exception.__module__
 
 class TestVector(object):
 	def __init__(self, dict):
@@ -27,6 +37,13 @@ class TestVector(object):
 		IV(16) + 0x33(1) + PubKey(33) + L_CipherTextLength(4) + CipherText(L) + MAC(32)
 		"""
 		return self.__dict__['encryptedMessage']
+
+	def expected_MAC_code_mismatch(self) -> bool:
+		expectedMacCodeMismatch = self.__dict__.get('expectedMacCodeMismatch')
+		if expectedMacCodeMismatch is not None:
+			return expectedMacCodeMismatch
+		else:
+			return False
 
 	def encryped_message(self) -> bytearray:
 		"""
@@ -83,13 +100,14 @@ class TestVector(object):
 	def mac(self) -> bytearray:
 		return self.encryped_message()[-32:]
 
-def ecies_decrypt(dongle, vector: TestVector) -> bool:
+def ecies_decrypt(dongle, vector: TestVector) -> Result:
 	print(f"""
 
 🚀 vector:
 🔓Expected plain text: '{vector.expected_plainText()}'
 🔐Encrypted msg: '{vector.encryped_message_hex()}'
-🔮""")
+🔮 Expects MAC code mismatch: '{vector.expected_MAC_code_mismatch()}'
+🚀""")
 
 	prefix = vector.apdu_prefix()
 	pubkey_length_encoded = struct.pack(">B", 33)
@@ -102,7 +120,15 @@ def ecies_decrypt(dongle, vector: TestVector) -> bool:
 
 	L_c = bytes([payload_size])
 	apdu = prefix + L_c + payload
-	result = dongle.exchange(apdu)
+	# result = dongle.exchange(apdu)
+	try:
+		result = dongle.exchange(apdu)
+	except CommException as commException:
+		if commException.sw == CommExceptionUserRejection:
+			print("🙅🏿‍♀️ You rejected the msg to decrypt...Aborting vector.")
+			return Result.SKIP
+		else:
+			raise commException # unknown error, interrupt exection and propage the error.
 
 
 	cipher_byte_count = vector.cipher_length()
@@ -129,10 +155,15 @@ def ecies_decrypt(dongle, vector: TestVector) -> bool:
 		try:
 			result = dongle.exchange(apdu)
 		except CommException as commException:
-			if commException.sw == CommExceptionUserRejection:
-				print("🙅🏿‍♀️ You rejected the msg to decrypt...Aborting vector.")
-				dongle.close()
-				return False
+			if commException.sw == CommExceptionMACCodeMismatch:
+				expected_MAC_code_mismatch = vector.expected_MAC_code_mismatch()
+				calculated_mac = commException.data.hex()
+				print(f"MAC code mismatch, got: {calculated_mac}, expected mismatch: {expected_MAC_code_mismatch}")
+				if expected_MAC_code_mismatch:
+					return Result.PASS
+				else:
+					return Result.FAIL
+
 			else:
 				raise commException # unknown error, interrupt exection and propage the error.
 
@@ -156,9 +187,9 @@ def ecies_decrypt(dongle, vector: TestVector) -> bool:
 		print("\n☢️ Plain text mismatch ☢️\n")
 		print(f"Expected plainText: {expectedPlainText}") 
 		print(f"But got plainText from ledger: {plainText_from_ledger}")
-		return False
+		return Result.FAIL
 
-	return True
+	return Result.PASS
 
 
 if __name__ == "__main__":
@@ -174,10 +205,19 @@ if __name__ == "__main__":
 		fail_count = 0
 		for vector_json in json_array_of_vectors:
 			vector = TestVector(vector_json)
-			if ecies_decrypt(dongle, vector):
+			result = ecies_decrypt(dongle, vector)
+
+			if result is Result.PASS:
 				success_count += 1
-			else:
+			elif result is Result.FAIL:
 				fail_count += 1
+			elif result is Result.SKIP:
+				dongle.close()
+				raise CustomError("🤷‍♂️ Skipped testing since you rejected something on the ledger...") 
+			else:
+				raise CustomError(f"Unhandled result: {result}") 
+
+
 		print(f"Success count: {success_count}/{success_count + fail_count}")
 		assert success_count == len(json_array_of_vectors), "Expected all vectors to pass"
 
