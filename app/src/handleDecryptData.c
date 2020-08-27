@@ -175,11 +175,6 @@ static const ux_menu_entry_t ui_hack_as_menu_progress_update[] = {
 #define MAX_CHUNK_SIZE_AES_MULTIPLE 240 // multiple of 16 (AES blocksize)
 
 static void updateProgressDisplay() {
-    // os_memset(G_ui_state.lower_line_long, 0x00,
-    //           MAX_LENGTH_FULL_STR_DISPLAY);
-
-    // os_memset(G_ui_state.lower_line_short, 0x00,
-    //           DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE);
     reset_ui();
 
     size_t percentage = (100 * ctx->cipher_number_of_parsed_bytes / ctx->cipher_text_byte_count);
@@ -303,7 +298,13 @@ static void setup_and_start_streaming_decrypted_msg() {
 }
 
 static void ask_for_confirmation_about_decryption() {
-    display_lines("Proceed with", "decryption?", setup_and_start_streaming_decrypted_msg);
+    reset_ui();
+    G_ui_state.length_lower_line_long = snprintf(
+        G_ui_state.lower_line_long, 
+        DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE, 
+        "%d bytes?", ctx->cipher_text_byte_count
+    );
+    display_value("Decrypt", setup_and_start_streaming_decrypted_msg);
 }
 
 void handleDecryptData(
@@ -317,6 +318,7 @@ void handleDecryptData(
  ) {
     PRINTF("handleDecryptData START\n");
     os_memset(ctx, 0x00, sizeof(decryptDataContext_t));
+    ctx->cipher_text_byte_count = 1337;
     PRINTF("Parsing input from first chunk\n");
     parse_input_of_first_chunk(dataBuffer, dataLength);
     PRINTF("Finished parsing input from first chunk\n");
