@@ -31,6 +31,7 @@
 
 // exception codes
 #define SW_USER_REJECTED                        0x6985
+#define SW_INVALID_MAC_CODE                     0x6986
 #define SW_FATAL_ERROR_INCORRECT_IMPLEMENTATION 0x6B00
 #define SW_INVALID_PARAM                        0x6B01
 #define SW_INVALID_INSTRUCTION                  0x6D00
