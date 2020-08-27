@@ -3,6 +3,23 @@ Using [Python program 'ledgerblue'](https://github.com/LedgerHQ/blue-loader-pyth
 
 ## Examples
 
+### Decrypt arbitrary length data
+ECIES decryption of arbitrary length messages can be tested using the pyton program written while developping this feature:
+
+```sh
+python ecies_decrypt_test.py
+```
+
+If the command fails, you might need to install some missing python packages, do it with:
+
+```sh
+pip install THE_MISSING_PACKAGE
+```
+
+After you have activated your virtualenv of course.
+
+See [`SETUP.md`](SETUP.md) and info around `source ledger/bin/activate`
+
 
 ### Generate Public Key
 Example of generation of Radix Address key (`INS_GEN_RADIX_ADDR`), you can use CLI and send a command to the ledger using
