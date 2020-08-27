@@ -315,7 +315,6 @@ void handleDecryptData(
  ) {
     PRINTF("handleDecryptData START\n");
     os_memset(ctx, 0x00, sizeof(decryptDataContext_t));
-    ctx->cipher_text_byte_count = 1337;
     PRINTF("Parsing input from first chunk\n");
     parse_input_of_first_chunk(dataBuffer, dataLength);
     PRINTF("Finished parsing input from first chunk\n");
