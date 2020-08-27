@@ -174,6 +174,10 @@ static void radix_main(void) {
                         PRINTF("error %d is 'INVALID_PARAMETER'\n", e);
                         break;
                     }
+                    case INVALID_STATE: {
+                        PRINTF("error %d is 'INVALID_STATE'\n", e);
+                        break;
+                    }
                     case EXCEPTION_OVERFLOW: {
                         PRINTF("error %d is 'EXCEPTION_OVERFLOW'\n", e);
                         break;

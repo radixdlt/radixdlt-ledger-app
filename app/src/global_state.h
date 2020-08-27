@@ -6,11 +6,13 @@
 #include "aes.h"
 
 typedef struct {
+	size_t cipher_text_byte_count;
+	size_t cipher_number_of_parsed_bytes;
+	cx_ecfp_private_key_t privateKey;
 	cx_hmac_sha256_t hmac;
 	struct AES_ctx aes_ctx;
 	cx_sha512_t hasher;
 	uint8_t calc_mac[MAC_LEN];
-
 	uint8_t iv[IV_LEN];
 	cx_ecfp_256_public_key_t ephemeral_pubkey;
 	uint8_t mac[MAC_LEN];

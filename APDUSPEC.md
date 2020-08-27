@@ -31,6 +31,7 @@ Please refer to [these codes found in `os.h`](https://github.com/LedgerHQ/nanos-
 | Return code   | Description             |
 | ------------- | ----------------------- |
 | 0x6985 		| User rejected command   |
+| 0x6986 		| INVALID MAC CODE 		  |
 | 0x6B00		| Fatal error incorrect implementation |
 | 0x6B01        | Invalid input       |
 | 0x6D00        | Incorrect instruction identifier |
@@ -198,3 +199,47 @@ Streaming of Atom data in multiple chunks/packets, first chunk will contain meta
 | PK      | byte (33) | Compressed Public Key 	|                		   |
 | SW1-SW2 | byte (2)  | Return code 			| see list of return codes |
 
+
+### INS_DECRYPT_DATA
+
+Streaming of ECIES encrypted data in multiple chunks/packets, first chunk will contain everything BUT the actual cipher text. After this initial chunk we expect the host machine to stream 1-N chunks where each chunk must be 240 bytes (or less). The size of the chunk MUST be a multiple of 16 (AES block size).
+
+When you are streaming the encrypted cipher text in N chunk from the host machine to the Ledger, you must read the response data from each chunk, because that contains the part of the decrypted message. If you encounter error code `0x6986` (INVALID MAC CODE) then the encrypted message MAC does not match the one from Ledger. 
+
+#### Command
+
+| Field | Type      | Content                            | Expected  |
+| ----- | --------- | ---------------------------------- | --------- |
+| CLA   | byte (1)  | Application Identifier             | 0xAA      |
+| INS   | byte (1)  | Instruction ID                     | 0x16      |
+| P1    | byte (1)  | ----							     | not used  |
+| P2    | byte (1)  | ----                               | not used  |
+| L  		| byte (1)  | Length of Payload          | ?   |
+| |
+| DEFINITION OF PAYLOAD |
+| Path[2]    | byte (4)       | Derivation Path index 2 Data   | ?              |
+| Path[3]    | byte (4)       | Derivation Path index 3 Data   | ?              |
+| Path[4]    | byte (4)       | Derivation Path index 4 Data   | ?              |
+| IV | byte (16) | IV | ? |
+| PubKey Length | byte (1) | Lengt of compressed public key | 0x33 |
+| PubKey | byte (33) | Compress ephemeral pub key | ? |
+| Cipher text Length | byte (4) | Length of cipher text | ? |
+| MAC | byte (32) | Expected MAC code | ? |
+
+**First item in the derivation path, data at index 2 (i.e. third component) will be automatically hardened**
+
+*Other Chunks/Packets*
+
+| Field   | Type     | Content                                              | Expected |
+| ------- | -------- | ---------------------------------------------------- | -------- |
+| Cipher text chunk | bytes... | Chunk of max 240 bytes  |      ?    |
+
+
+#### Responses
+
+| Field   | Type      | Content     | Note                     |
+| ------- | --------- | ----------- | ------------------------ |
+| Decrypted message part     | byte (=< 240) | Part of decypted messsage  | Concatenate these chunks together for plaintext msg |
+| SW1-SW2 | byte (2)  | Return code | see list of return codes |
+
+--------------

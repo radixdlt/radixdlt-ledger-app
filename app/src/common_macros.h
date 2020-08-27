@@ -31,6 +31,7 @@
 
 // exception codes
 #define SW_USER_REJECTED                        0x6985
+#define SW_INVALID_MAC_CODE                     0x6986
 #define SW_FATAL_ERROR_INCORRECT_IMPLEMENTATION 0x6B00
 #define SW_INVALID_PARAM                        0x6B01
 #define SW_INVALID_INSTRUCTION                  0x6D00
@@ -64,8 +65,6 @@
 
 #define IV_LEN 16
 #define MAC_LEN 32
-#define ECIES_KEY_DATA_PART_LEN 32
 #define HASH512_LEN 64
 #define UNPUBLIC_KEY_COMPRESSEED_BYTE_COUNT 65
 #define BIP32_PATH_LEN 12
-#define MAX_ENCRYPTED_LEN (MAX_CHUNK_SIZE - BIP32_PATH_LEN)
