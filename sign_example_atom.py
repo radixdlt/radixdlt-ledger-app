@@ -23,6 +23,63 @@ def bip32_path_big_endian_encoded():
 	return bytes.fromhex("800000020000000100000003")
 
 
+def __chunks(lst, n):
+	"""Yield successive n-sized chunks from lst."""
+	for i in range(0, len(lst), n):
+		yield lst[i:i + n]
+
+
+def chunks(lst, n):
+	return list(__chunks(lst, n))
+
+class ByteInterval(object):
+	def __init__(self, bytes: bytearray):
+
+		assert len(bytes) == 4
+		def nextInt16() -> int:
+			nonlocal bytes
+			two_bytes = bytes[0:2]
+			integer = struct.unpack('>h', two_bytes)[0]
+			bytes = bytes[2:]
+			return integer
+
+		self.startsAtByte = nextInt16()
+		self.byteCount = nextInt16()
+		assert len(bytes) == 0
+
+	def __repr__(self):
+		return f"@{self.startsAtByte}#{self.byteCount}"
+
+
+class ParticleMetaData(object):
+	def __init__(self, bytes: bytearray):
+		assert len(bytes) == 20
+		bytes_copy = bytes.copy()
+
+		def nextInterval() -> ByteInterval:
+			nonlocal bytes
+			interval = ByteInterval(bytes[0:4])
+			bytes = bytes[4:]
+			return interval
+
+		self.particleItself = nextInterval()
+		self.addressByteInterval = nextInterval()
+		self.amountByteInterval = nextInterval()
+		self.serializerByteInterval = nextInterval()
+		self.tokenDefinitionReferenceByteInterval = nextInterval()
+		assert len(bytes) == 0
+		self.bytes = bytes_copy[4:]
+		assert len(self.bytes) == 16
+
+	def __repr__(self):
+		return f"⚛{self.particleItself}: ({self.addressByteInterval}, {self.amountByteInterval}, {self.serializerByteInterval}, {self.tokenDefinitionReferenceByteInterval})\nraw: {self.bytes.hex()}\n"
+
+	def start_index_in_atom(self) -> int:
+		return self.particleItself.startsAtByte
+
+	def end_index_in_atom(self) -> int:
+		return self.start_index_in_atom() + self.particleItself.byteCount
+
 class TestVector(object):
 	def __init__(self, j):
 		self.__dict__ = json.loads(j)
@@ -43,13 +100,19 @@ class TestVector(object):
 
 	# ByteInterval of the following fields in the following order:
 	# [
+	#    particleItself,
 	# 	  addressByteInterval,
 	# 	  amountByteInterval,
 	# 	  serializerByteInterval,
 	# 	  tokenDefinitionReferenceByteInterval
 	# ]
-	def particle_meta_data(self) -> bytearray:
+	def __particle_meta_data(self) -> bytearray:
 		return bytearray.fromhex(self.atomDescription['particleSpinUpMetaDataHex'])
+
+	def particle_meta_data_list(self) -> List[ParticleMetaData]:
+		particle_meta_data_list_ = chunks(self.__particle_meta_data(), 20)
+		assert len(particle_meta_data_list_) == self.number_of_up_particles()
+		return list(map(lambda b: ParticleMetaData(b), particle_meta_data_list_))
 
 	def cbor_encoded_hex(self) -> str:
 		return self.atomDescription['cborEncodedHex']
@@ -82,7 +145,7 @@ class TestVector(object):
 	def contains_non_transfer_data(self) -> bool:
 		return (self.number_of_up_particles() - self.number_of_transferrable_tokens_particles_with_spin_up()) > 0
 
-	def apdu_prefix(self, skipConfirmation: bool) -> bytearray:
+	def apdu_prefix_initial_payload(self, skipConfirmation: bool) -> bytearray:
 		# https://en.wikipedia.org/wiki/Smart_card_application_protocol_data_unit
 		CLA = bytes.fromhex("AA")
 		INS = b"\x02" # `02` is command "SIGN_ATOM"
@@ -95,6 +158,32 @@ class TestVector(object):
 
 	def particle_group_count(self) -> int:
 		return self.atomDescription['particleGroupCount']
+
+
+
+def apdu_prefix_particle_metadata(is_particle_meta_data: bool) -> bytearray:
+		CLA = bytes.fromhex("AA")
+		INS = b"\x02" # `02` is command "SIGN_ATOM"
+		flag = 0 if is_particle_meta_data else 1
+		P1 = struct.pack(">B", flag)
+		P2 = b"\x00"
+		return CLA + INS + P1 + P2
+
+
+def sendToLedger(dongle, prefix: bytearray, payload: bytearray) -> bool:
+	payload_size = len(payload)
+	L_c = bytes([payload_size])
+	apdu = prefix + L_c + payload
+	try:
+		dongle.exchange(apdu)
+		return True # success
+	except CommException as commException:
+		if commException.sw == CommExceptionUserRejection:
+			print("🙅🏿‍♀️ You rejected the atom...Aborting vector.")
+			dongle.close()
+			return False # fail
+		else:
+			raise commException # unknown error, interrupt exection and propage the error.
 
 
 def send_large_atom_to_ledger_in_many_chunks(vector: TestVector, skipConfirmation: bool) -> bool:
@@ -130,7 +219,7 @@ Contains non transfer data: {}
 	)
 
 	bip_32_path_bytes = bip32_path_big_endian_encoded()
-	particles_meta_data_bytes = vector.particle_meta_data()
+	# particles_meta_data_bytes = vector.particle_meta_data()
 	atom_bytes = vector.atom_cbor_encoded()
 
 	hasher = hashlib.sha256()
@@ -151,9 +240,9 @@ Contains non transfer data: {}
 
 	atom_byte_count_encoded = struct.pack(">h", atom_byte_count) # `>` means big endian, `h` means `short` -> 2 bytes
 
-	prefix = vector.apdu_prefix(skipConfirmation=skipConfirmation)
+	prefix = vector.apdu_prefix_initial_payload(skipConfirmation=skipConfirmation)
 
-	payload = bip_32_path_bytes + atom_byte_count_encoded + particles_meta_data_bytes
+	payload = bip_32_path_bytes + atom_byte_count_encoded
 
 	print("Sending payload: " + payload.hex())
 
@@ -163,45 +252,91 @@ Contains non transfer data: {}
 
 	result = dongle.exchange(apdu)
 
+	print(f"got result back from Ledger for intial payload={result}")
+
 	count_bytes_sent_to_ledger = 0
 
-	chunk_index = 0
-	number_of_chunks_to_send = int(math.ceil(atom_byte_count / STREAM_LEN))
-	print(f"Atom will be sent in #chunks: {number_of_chunks_to_send}")
+	# chunk_index = 0
+	# number_of_chunks_to_send = int(math.ceil(atom_byte_count / STREAM_LEN))
+	# print(f"Atom will be sent in #chunks: {number_of_chunks_to_send}")
 
 	atom_bytes_chunked = atom_bytes.copy()
 
+	particleMetaDataList = vector.particle_meta_data_list()
+	particleMetaDataSize = len(particleMetaDataList)
+	particleMetaDataSent = 0
+
+	def sendToLedgerParticleMetaData(particleMetaData: ParticleMetaData):
+		print(f"Sending particle metadata to Ledger: {particleMetaData}")
+		success = sendToLedger(
+			dongle,
+			prefix=apdu_prefix_particle_metadata(True),
+			payload=particleMetaData.bytes
+		)
+		if not success:
+			raise RuntimeError("Failed sending meta data to Ledger")
+
+
+	def sendToLedgerAtomBytes(atomBytes: bytearray):
+		print(f"Sending #{len(atomBytes)} atom bytes to Ledger")
+		success = sendToLedger(
+			dongle,
+			prefix=apdu_prefix_particle_metadata(False),
+			payload=atomBytes
+		)
+
+		if not success:
+			raise RuntimeError("Failed sending atom bytes to Ledger")
+	
 	# Keep streaming data into the device till we run out of it.
 	while count_bytes_sent_to_ledger < atom_byte_count:
-		number_of_bytes_left_to_send = atom_byte_count - count_bytes_sent_to_ledger
 
-		chunk = bytearray(0)
-		if number_of_bytes_left_to_send > STREAM_LEN:
-			chunk = atom_bytes_chunked[0:STREAM_LEN]
-			atom_bytes_chunked = atom_bytes_chunked[STREAM_LEN:]
+		nextRelevantEnd = atom_byte_count if len(particleMetaDataList) == 0 else particleMetaDataList[0].start_index_in_atom()
+		nextParticleMetaData = particleMetaDataList[0] if len(particleMetaDataList) else None
+
+
+		if not nextParticleMetaData is None and count_bytes_sent_to_ledger == nextParticleMetaData.start_index_in_atom():
+			sendToLedgerParticleMetaData(nextParticleMetaData)
+			particleMetaDataSent += 1
+			particleMetaDataList.pop(0)
+			print(f"Finished sending ParticleMetaData: {particleMetaDataSent}/{particleMetaDataSize}")
 		else:
-			chunk = atom_bytes_chunked
-			atom_bytes_chunked = bytearray(0)
+			count = min(STREAM_LEN, nextRelevantEnd - count_bytes_sent_to_ledger)
+			chunk = atom_bytes_chunked[0:count]
+			atom_bytes_chunked = atom_bytes_chunked[count:]
+			sendToLedgerAtomBytes(chunk)
+			count_bytes_sent_to_ledger += count
+	
+		# number_of_bytes_left_to_send = atom_byte_count - count_bytes_sent_to_ledger
 
-		chunk_size = len(chunk)
-		print(f"Chunk {chunk_index+1}: [{count_bytes_sent_to_ledger}-{count_bytes_sent_to_ledger+chunk_size}]")
-		L_c = bytes([chunk_size])
-		count_bytes_sent_to_ledger += chunk_size
-		apdu = prefix + L_c + chunk
-		if (chunk_index+1) == number_of_chunks_to_send:
-			print(f"🔮 Finished streaming all chunks to the ledger.\n💡 Expected Hash: {vector.expected_hash_hex()}\nWaiting for your to press the Ledger's buttons...")
+		# chunk = bytearray(0)
+		# if number_of_bytes_left_to_send > STREAM_LEN:
+		# 	chunk = atom_bytes_chunked[0:STREAM_LEN]
+		# 	atom_bytes_chunked = atom_bytes_chunked[STREAM_LEN:]
+		# else:
+		# 	chunk = atom_bytes_chunked
+		# 	atom_bytes_chunked = bytearray(0)
 
-		try:
-			result = dongle.exchange(apdu)
-		except CommException as commException:
-			if commException.sw == CommExceptionUserRejection:
-				print("🙅🏿‍♀️ You rejected the atom...Aborting vector.")
-				dongle.close()
-				return False
-			else:
-				raise commException # unknown error, interrupt exection and propage the error.
-		chunk_index += 1
+		# chunk_size = len(chunk)
+		# print(f"Chunk {chunk_index+1}: [{count_bytes_sent_to_ledger}-{count_bytes_sent_to_ledger+chunk_size}]")
+		# L_c = bytes([chunk_size])
+		# count_bytes_sent_to_ledger += chunk_size
+		# apdu = prefix + L_c + chunk
+		# if (chunk_index+1) == number_of_chunks_to_send:
+		# 	print(f"🔮 Finished streaming all chunks to the ledger.\n💡 Expected Hash: {vector.expected_hash_hex()}\nWaiting for your to press the Ledger's buttons...")
 
+		# try:
+		# 	result = dongle.exchange(apdu)
+		# except CommException as commException:
+		# 	if commException.sw == CommExceptionUserRejection:
+		# 		print("🙅🏿‍♀️ You rejected the atom...Aborting vector.")
+		# 		dongle.close()
+		# 		return False
+		# 	else:
+		# 		raise commException # unknown error, interrupt exection and propage the error.
+		# chunk_index += 1
+
+	print(f"🔮 Finished streaming all chunks to the ledger.\n💡 Expected Hash: {vector.expected_hash_hex()}\nWaiting for your to press the Ledger's buttons...")
 
 	signature_from_ledger_device = result.hex()
 	expected_signature_hex = vector.expected_signature_rs_hex()
@@ -225,7 +360,7 @@ if __name__ == "__main__":
 	parser.add_argument(
 		'--inputAtomVector', 
 		'-i', 
-		default='./vectors/sign_atom/no_data_single_transfer_small_amount_no_change.json',
+		default='./vectors/sign_atom/huge_atom.json',
 		type=str, 
 		help='Path to JSON file containing test vector with CBOR encoded Atom, the particle meta data, description of atom contents and expected hash and signature.\n\nDefaults to %(default)',
 		metavar='FILE'

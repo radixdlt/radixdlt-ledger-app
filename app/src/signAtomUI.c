@@ -15,19 +15,10 @@ typedef enum {
 
 // ===== START ===== HELPERS =========
 
-static Transfer* nextTransfer() {
-    assert(ctx->numberOfTransfersToNotMyAddress > 0);
-
-    uint8_t indexOfNextTransferToNotMyAddress = ctx->indiciesTransfersToNotMyAddress[ctx->numberOfTransfersToNotMyAddressApproved];
-   
-    assert(indexOfNextTransferToNotMyAddress < ctx->numberOfTransferrableTokensParticlesParsed);
-    return &(ctx->transfers[indexOfNextTransferToNotMyAddress]);
-}
-
 static void prepare_display_with_transfer_data_step(ReviewAtomStep step)
 {
     clear_lower_line_long();
-    Transfer *transfer = nextTransfer();
+    Transfer *transfer = &(ctx->transfer);
     switch (step)
     {
     case ReviewAddress:
@@ -102,28 +93,30 @@ static void prepareForDisplayingHash()
 }
 
 
+void askUserForConfirmationOfHash() {
+    prepareForDisplayingHash();
+}
 
-static void proceedWithNextTransfer();
 
-static void proceedWithNextTransferIfAnyElseDisplayHash()
+static void didApproveTransfer()
 {
     // approved RRI -> finished with this transfer => proceed
     ctx->numberOfTransfersToNotMyAddressApproved++;
-    if (ctx->numberOfTransfersToNotMyAddressApproved < ctx->numberOfTransfersToNotMyAddress)
-    {
-        proceedWithNextTransfer();
-    }
-    else
-    {
-        // Finished accepting all transfers
-        prepareForDisplayingHash();
-    }
+    // if (ctx->numberOfTransfersToNotMyAddressApproved < ctx->numberOfTransfersToNotMyAddress)
+    // {
+    //     proceedWithNextTransfer();
+    // }
+    // else
+    // {
+    //     // Finished accepting all transfers
+    //     prepareForDisplayingHash(); 
+    // }
 }
 
 static void prepareForApprovalOfRRI()
 {
     prepare_display_with_transfer_data_step(ReviewRRI);
-    display_value("Token:", proceedWithNextTransferIfAnyElseDisplayHash);
+    display_value("Token:", didApproveTransfer);
 }
 
 static void prepareForApprovalOfAmount() {
@@ -136,12 +129,30 @@ static void prepareForApprovalOfAddress() {
     display_value("To address:", prepareForApprovalOfAmount);
 }
 
-static void proceedWithNextTransfer() {
-    assert(ctx->numberOfTransfersToNotMyAddressApproved <
-           ctx->numberOfTransfersToNotMyAddress);
+static bool is_transfer_change_back_to_me() {
+    cx_ecfp_public_key_t myPublicKeyCompressed;
+    
+    derive_radix_key_pair(
+        ctx->bip32Path, 
+        &myPublicKeyCompressed, 
+        NULL // dont write private key
+    );
 
-    assert(ctx->numberOfTransfersToNotMyAddressApproved <= MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP);
-    assert(MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP == 6);
+    return matchesPublicKey(&(ctx->transfer.address), &myPublicKeyCompressed);
+}
+
+void askUserForConfirmationOfTransferIfNeeded() {
+    // assert(ctx->numberOfTransfersToNotMyAddressApproved <
+        //    ctx->numberOfTransfersToNotMyAddress);
+
+    // assert(ctx->numberOfTransfersToNotMyAddressApproved <= MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP);
+    // assert(MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP == 6);
+
+    if (!is_transfer_change_back_to_me()) 
+    {
+        PRINTF("Skipped reviewing transfer since it was change back to user...\n");
+        return;
+    }
 
     char upper_line_with_value[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE +
                                1];
@@ -171,62 +182,54 @@ static void proceedWithNextTransfer() {
     display_lines(upper_line_with_value, "transfer\0", prepareForApprovalOfAddress);
 }
 
-static void filterOutTransfersBackToMeFromAllTransfers() {
-    cx_ecfp_public_key_t myPublicKeyCompressed;
-    
-    derive_radix_key_pair(
-        ctx->bip32Path, 
-        &myPublicKeyCompressed, 
-        NULL // dont write private key
-    );
+// static void proceedToDisplayingTransfersIfAny() {
+//     if (ctx->numberOfTransferrableTokensParticlesParsed == 0)
+//     {
+//         prepareForDisplayingHash();
+//     }
+//     else
+//     {
+//         filterOutTransfersBackToMeFromAllTransfers();
 
-    for (int transferIndex = 0; transferIndex < ctx->numberOfTransferrableTokensParticlesParsed; ++transferIndex)
-    {
-        Transfer *transfer = &(ctx->transfers[transferIndex]);
-        if (!matchesPublicKey(&(transfer->address), &myPublicKeyCompressed))
-        {
-            ctx->indiciesTransfersToNotMyAddress[ctx->numberOfTransfersToNotMyAddress] = transferIndex;
-            ctx->numberOfTransfersToNotMyAddress++;
-        }
-    }
-}
+//         if (ctx->numberOfTransfersToNotMyAddress == 0) {
+//             // Either Burn Action or Mint Action
+//             // assert Data found
+//             assert(ctx->numberOfNonTransferrableTokensParticlesIdentified > 0); // Expect 
+//             prepareForDisplayingHash();
+//         } else if (ctx->numberOfTransfersToNotMyAddress == 1) {
+//             prepareForApprovalOfAddress();
+//         } else {
+//             char upper_line_with_value[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE + 1];
+//             snprintf(upper_line_with_value, 8, "Found %d", ctx->numberOfTransfersToNotMyAddress);
+//             G_ui_state.length_lower_line_long = 10;
+//             display_lines(upper_line_with_value, "transfers", proceedWithNextTransfer);
+//         }
+//     }
+// }
 
-static void proceedToDisplayingTransfersIfAny() {
-    if (ctx->numberOfTransferrableTokensParticlesParsed == 0)
-    {
-        prepareForDisplayingHash();
-    }
-    else
-    {
-        filterOutTransfersBackToMeFromAllTransfers();
-
-        if (ctx->numberOfTransfersToNotMyAddress == 0) {
-            // Either Burn Action or Mint Action
-            // assert Data found
-            assert(ctx->numberOfNonTransferrableTokensParticlesIdentified > 0); // Expect 
-            prepareForDisplayingHash();
-        } else if (ctx->numberOfTransfersToNotMyAddress == 1) {
-            prepareForApprovalOfAddress();
-        } else {
-            char upper_line_with_value[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE + 1];
-            snprintf(upper_line_with_value, 8, "Found %d", ctx->numberOfTransfersToNotMyAddress);
-            G_ui_state.length_lower_line_long = 10;
-            display_lines(upper_line_with_value, "transfers", proceedWithNextTransfer);
-        }
-    }
+static void didApproveNonTransferData() {
+    ctx->hasApprovedNonTransferData = true;
 }
 
 static void notifyNonTransferDataFound() {
-    display_lines("Non-Transfer", "data found!!", proceedToDisplayingTransfersIfAny);
+    display_lines("Non-Transfer", "data found!!", didApproveNonTransferData);
 }
 
-void presentAtomContentsOnDisplay() {
-    if (ctx->numberOfNonTransferrableTokensParticlesIdentified > 0)
-    {
-        notifyNonTransferDataFound();
+
+void notifyNonTransferDataFoundIfNeeded() {
+    if (ctx->hasApprovedNonTransferData) {
+        return;
     }
-    else
-    {
-        proceedToDisplayingTransfersIfAny();
-    }
+    notifyNonTransferDataFound();
 }
+
+// void presentAtomContentsOnDisplay() {
+//     if (ctx->numberOfNonTransferrableTokensParticlesIdentified > 0)
+//     {
+//         notifyNonTransferDataFound();
+//     }
+//     else
+//     {
+//         proceedToDisplayingTransfersIfAny();
+//     }
+// }
