@@ -1,3 +1,4 @@
+void askUserForConfirmationOfTransferIfNeeded();
+void askUserForConfirmationOfHash();
 void askUserForFinalConfirmation();
-
-void presentAtomContentsOnDisplay();
+void notifyNonTransferDataFoundIfNeeded();

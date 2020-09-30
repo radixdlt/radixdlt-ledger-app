@@ -282,7 +282,6 @@ void derive_radix_key_pair(
 
 size_t derive_sign_move_to_global_buffer(uint32_t *bip32path,
                                          const uint8_t *hash) {
-    PLOC();
     volatile cx_ecfp_public_key_t publicKey;
     volatile cx_ecfp_private_key_t privateKey;
     derive_radix_key_pair(bip32path, &publicKey, &privateKey);
@@ -304,7 +303,7 @@ size_t derive_sign_move_to_global_buffer(uint32_t *bip32path,
     }
 
     format_signature_out(der_sig);
-
+    PRINTF("Copying over signature to 'G_io_apdu_buffer'\n");
     PRINTF("%.*h", 64, G_io_apdu_buffer);
     return ECSDA_SIGNATURE_BYTE_COUNT;
 }

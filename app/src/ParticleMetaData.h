@@ -13,6 +13,8 @@ typedef struct {
 // tokenDefinitionReferenceByteInterval]` and check if all zero or not.
 typedef struct {
 
+	// ByteInterval particleItself;
+
 	// In case of Non-TransferrableTokensParticle this will have value (0, 0)
 	ByteInterval addressOfRecipientByteInterval;
 
