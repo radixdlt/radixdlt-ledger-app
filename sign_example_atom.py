@@ -165,27 +165,9 @@ def apdu_prefix_particle_metadata(is_particle_meta_data: bool) -> bytearray:
 		CLA = bytes.fromhex("AA")
 		INS = b"\x02" # `02` is command "SIGN_ATOM"
 		flag = 3 if is_particle_meta_data else 4
-		print(f"Sending P1={flag} ('is_particle_meta_data'={is_particle_meta_data})")
 		P1 = struct.pack(">B", flag)
 		P2 = b"\x00"
 		return CLA + INS + P1 + P2
-
-
-def sendToLedger(dongle, prefix: bytearray, payload: bytearray) -> bool:
-	payload_size = len(payload)
-	L_c = bytes([payload_size])
-	apdu = prefix + L_c + payload
-	try:
-		dongle.exchange(apdu)
-		return True # success
-	except CommException as commException:
-		if commException.sw == CommExceptionUserRejection:
-			print("🙅🏿‍♀️ You rejected the atom...Aborting vector.")
-			dongle.close()
-			return False # fail
-		else:
-			raise commException # unknown error, interrupt exection and propage the error.
-
 
 def send_large_atom_to_ledger_in_many_chunks(vector: TestVector, skipConfirmation: bool) -> bool:
 	"""
@@ -259,10 +241,26 @@ Contains non transfer data: {}
 	particleMetaDataSize = len(particleMetaDataList)
 	particleMetaDataSent = 0
 
+	def sendToLedger(prefix: bytearray, payload: bytearray) -> bool:
+		nonlocal result
+		payload_size = len(payload)
+		L_c = bytes([payload_size])
+		apdu = prefix + L_c + payload
+		try:
+			result = dongle.exchange(apdu)
+			return True # success
+		except CommException as commException:
+			if commException.sw == CommExceptionUserRejection:
+				print("🙅🏿‍♀️ You rejected the atom...Aborting vector.")
+				dongle.close()
+				return False # fail
+			else:
+				raise commException # unknown error, interrupt exection and propage the error.
+
+
 	def sendToLedgerParticleMetaData(particleMetaData: ParticleMetaData):
 		print(f"Sending particle metadata to Ledger: {particleMetaData}")
 		success = sendToLedger(
-			dongle,
 			prefix=apdu_prefix_particle_metadata(True),
 			payload=particleMetaData.bytes
 		)
@@ -273,7 +271,6 @@ Contains non transfer data: {}
 	def sendToLedgerAtomBytes(atomBytes: bytearray):
 		print(f"Sending #{len(atomBytes)} atom bytes to Ledger")
 		success = sendToLedger(
-			dongle,
 			prefix=apdu_prefix_particle_metadata(False),
 			payload=atomBytes
 		)
@@ -299,6 +296,8 @@ Contains non transfer data: {}
 			atom_bytes_chunked = atom_bytes_chunked[count:]
 			sendToLedgerAtomBytes(chunk)
 			count_bytes_sent_to_ledger += count
+
+		print(f"result: {result.hex()}")
 	
 		# number_of_bytes_left_to_send = atom_byte_count - count_bytes_sent_to_ledger
 
