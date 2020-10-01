@@ -1,10 +1,10 @@
-// #include "ui.h"
-// #include "global_state.h"
-// #include "key_and_signatures.h"
-// #include "base_conversion.h"
-// #include "common_macros.h"
+#include "ui.h"
+#include "global_state.h"
+#include "key_and_signatures.h"
+#include "base_conversion.h"
+#include "common_macros.h"
 
-// static signAtomContext_t *ctx = &global.signAtomContext;
+static signAtomContext_t *ctx = &global.signAtomContext;
 
 // typedef enum {
 //     ReviewAddress = 0,
@@ -70,32 +70,32 @@
 // }
 // // ===== END ===== HELPERS =========
 
-// static void didFinishSignAtomFlow()
-// {
-//     int tx = derive_sign_move_to_global_buffer(ctx->bip32Path, ctx->hash);
-// 	io_exchange_with_code(SW_OK, tx);
-//     ui_idle();
-// }
+static void didFinishSignAtomFlow()
+{
+    int tx = derive_sign_move_to_global_buffer(ctx->bip32_path, ctx->hash);
+	io_exchange_with_code(SW_OK, tx);
+    ui_idle();
+}
 
-// void askUserForFinalConfirmation() {
-//     display_lines("Sign content", "Confirm?", didFinishSignAtomFlow);
-// }
+void askUserForFinalConfirmation() {
+    display_lines("Sign content", "Confirm?", didFinishSignAtomFlow);
+}
 
-// static void prepareForDisplayingHash()
-// {
-//     size_t lengthOfHashString = HASH256_BYTE_COUNT * 2 + 1; // + 1 for NULL
+static void prepareForDisplayingHash()
+{
+    size_t lengthOfHashString = HASH256_BYTE_COUNT * 2 + 1; // + 1 for NULL
 
-//     hexadecimal_string_from(ctx->hash, HASH256_BYTE_COUNT, G_ui_state.lower_line_long);
+    hexadecimal_string_from(ctx->hash, HASH256_BYTE_COUNT, G_ui_state.lower_line_long);
 
-//     G_ui_state.length_lower_line_long = lengthOfHashString;
+    G_ui_state.length_lower_line_long = lengthOfHashString;
 
-//     display_value("Verify Hash", askUserForFinalConfirmation);
-// }
+    display_value("Verify Hash", askUserForFinalConfirmation);
+}
 
 
-// void askUserForConfirmationOfHash() {
-//     prepareForDisplayingHash();
-// }
+void askUserForConfirmationOfHash() {
+    prepareForDisplayingHash();
+}
 
 
 // static void didApproveTransfer()
