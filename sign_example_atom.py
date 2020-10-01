@@ -150,7 +150,7 @@ class TestVector(object):
 		CLA = bytes.fromhex("AA")
 		INS = b"\x02" # `02` is command "SIGN_ATOM"
 		P1 = struct.pack(">B", self.number_of_up_particles())
-		P2 = b"\x00"
+		P2 = b"\xCC"
 		if skipConfirmation:
 			P2 = b"\xFF"
 
@@ -164,7 +164,8 @@ class TestVector(object):
 def apdu_prefix_particle_metadata(is_particle_meta_data: bool) -> bytearray:
 		CLA = bytes.fromhex("AA")
 		INS = b"\x02" # `02` is command "SIGN_ATOM"
-		flag = 0 if is_particle_meta_data else 1
+		flag = 3 if is_particle_meta_data else 4
+		print(f"Sending P1={flag} ('is_particle_meta_data'={is_particle_meta_data})")
 		P1 = struct.pack(">B", flag)
 		P2 = b"\x00"
 		return CLA + INS + P1 + P2
@@ -195,26 +196,18 @@ def send_large_atom_to_ledger_in_many_chunks(vector: TestVector, skipConfirmatio
 	letDongleOutputDebugPrintStatements = False
 	dongle = getDongle(debug=letDongleOutputDebugPrintStatements)
 
-	transfers_string_if_any = ""
-	if vector.transfers_human_readable() != "":
-		transfers_string_if_any = "Transfers: {}".format(vector.transfers_human_readable())
-
 	print(
 		"""
 🚀 Streaming Atom from vector to Ledger:
-'{}'
 Atom byte count: #{}bytes
 Particle groups: #{}
 Particles with spin UP: #{}
 Contains non transfer data: {}
-{}
 		""".format(
-			vector.description(), 
 			vector.atom_byte_count(),
 			vector.particle_group_count(),
 			vector.up_particles_dict(),
-			vector.contains_non_transfer_data(),
-			transfers_string_if_any
+			vector.contains_non_transfer_data()
 		)
 	)
 

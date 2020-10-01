@@ -6,7 +6,7 @@
 
 typedef struct {
     RadixAddress address;
-    RadixResourceIdentifier tokenDefinitionReference;
+    RadixResourceIdentifier token_definition_reference;
     Granularity granularity;
     Planck planck;
     Nonce nonce;

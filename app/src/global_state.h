@@ -37,50 +37,18 @@ typedef struct {
 #define MAX_SERIALIZER_LENGTH 100
 
 typedef struct {
-	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
-	
-    uint16_t atomByteCount;
-    uint16_t atomByteCountParsed;
-
+    uint8_t number_of_up_particles;
+	bool non_transfer_data_found;
 	cx_sha256_t hasher;
-
-	// Only written to when the digest is finalized, after having received the
-	// last byte of the atom
 	uint8_t hash[HASH256_BYTE_COUNT];
+    uint16_t number_of_atom_bytes_parsed;
+	uint32_t bip32_path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
+    uint16_t atom_byte_count;
+	uint8_t number_of_cached_bytes;
 
-	// a 20 byte object containing metadata about the next particle to parse
-	ParticleMetaData metaDataAboutParticle;
-
-    // The de-facto length of the array `offsetsOfParticlesWithSpinUp`, read from APDU instr
-    uint8_t numberOfParticlesWithSpinUp;
-
-	uint8_t numberOfNonTransferrableTokensParticlesIdentified;
-    uint8_t numberOfTransferrableTokensParticlesParsed;
-
-	// char serializerOfLastParticle[MAX_SERIALIZER_LENGTH];
-
-	// The number of cached bytes from last chunk, bound by `MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS`
-	uint8_t numberOfCachedBytes;
-
-	// Sometimes a particle might span across multiple chunks and thus some relevant
-	// info, such as `serializer` (type of Particle), `amount`, `recepientAddress`,
-	// `rri` (RadixResourceIdentifier - which toke type) etc might get split. This will
-	// be "cached"/"carried over" to the next chunk, and should be copied over to
-	// the beginning of this atomSlice buffer in between chunk parsing. We must also set
-	// `numberOfCachedBytes`
-   	uint8_t atomSlice[MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS + MAX_CHUNK_SIZE];
-
-	// A temporary value helping construction of a Transfer
-	bool hasConfirmedSerializerOfTransferrableTokensParticle;
-
-	uint8_t numberOfTransfersToNotMyAddressApproved;
-
-	// If the recently parsed UP particle was of type TransferrableTokensParticle we will have parsed it into this `Transfer` object
-	// this might be a transfer back to the user's own address, so we might wanna skip presenting user with confirmation
-	// flow if it
+	ParticleMetaData particle_meta_data; // can be 'empty'
 	Transfer transfer;
-
-	bool hasApprovedNonTransferData;
+   	uint8_t atom_slice[MAX_ATOM_SLICE_SIZE];
 } signAtomContext_t;
 
 // To save memory, we store all the context types in a single global union,
