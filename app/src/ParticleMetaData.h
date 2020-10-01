@@ -10,9 +10,10 @@ typedef struct {
 // will have value (0, 0), thus we can distinquish between this ParticleMetaData
 // being meta data for a `TransferrableTokensParticle` of other particle type
 // by looking at `[addressOfRecipientByteInterval, amountByteInterval,
-// tokenDefinitionReferenceByteInterval]` and check if all zero or not.
+// token_definition_referenceByteInterval]` and check if all zero or not.
 typedef struct {
 
+	bool has_relevant_data;
 	// ByteInterval particleItself;
 
 	// In case of Non-TransferrableTokensParticle this will have value (0, 0)
@@ -25,5 +26,5 @@ typedef struct {
 	ByteInterval serializerValueByteInterval;
 
 	// In case of Non-TransferrableTokensParticle this will have value (0, 0)
-	ByteInterval tokenDefinitionReferenceByteInterval;
+	ByteInterval token_definition_referenceByteInterval;
 } ParticleMetaData;

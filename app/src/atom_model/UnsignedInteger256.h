@@ -7,8 +7,10 @@
 // which is 78 digits long.
 #define UINT256_DEC_STRING_MAX_LENGTH  78
 
+#define RADIX_AMOUNT_BYTE_COUNT 32
+
 typedef struct {
-    uint8_t bytes[32]; // Unsigned 256 bit integer
+    uint8_t bytes[RADIX_AMOUNT_BYTE_COUNT]; // Unsigned 256 bit integer
 } UnsignedInteger256;
 
 size_t to_string_uint256(
