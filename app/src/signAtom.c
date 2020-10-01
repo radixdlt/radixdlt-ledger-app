@@ -175,25 +175,20 @@ static uint8_t receive_bytes_from_host_machine() {
     }
 }
 
-static void update_hash(uint8_t number_of_atom_bytes_received, uint8_t number_of_cached_bytes) {
-    bool shouldFinalizeHash = ctx->number_of_atom_bytes_parsed + number_of_atom_bytes_received == ctx->atom_byte_count;
+static void update_hash(uint8_t* bytes, uint16_t byte_count, bool should_finalize_hash) {
 
-    PRINTF("Updating hash with #%d bytes\n", number_of_atom_bytes_received);
-
-    if (shouldFinalizeHash) {
-        PRINTF("\nFinalizing hash!\n\n");
-    }
-
+    PRINTF("Updating hash with #%d bytes\n", byte_count);
 
     // UPDATE HASH
     sha256_hash(
         &(ctx->hasher),
-        /* bytes to hash */ ctx->atom_slice + number_of_cached_bytes,
-        (size_t)number_of_atom_bytes_received,
-        shouldFinalizeHash,
+        bytes,
+        byte_count,
+        should_finalize_hash,
         ctx->hash);
 
-    if (shouldFinalizeHash) {
+    if (should_finalize_hash) {
+          PRINTF("\nFinalizing hash!\n\n");
         // re-initiate hasher
         cx_sha256_init(&(ctx->hasher));
 
@@ -572,19 +567,26 @@ static bool parse_particle_field_if_needed(
 static void hash_and_parse_atom_bytes(uint8_t number_of_atom_bytes_received) {
     uint8_t number_of_cached_bytes = ctx->number_of_cached_bytes;
     ctx->number_of_cached_bytes = 0;
-    update_hash(number_of_atom_bytes_received, number_of_cached_bytes);
 
-    bool done_with_atom_bytes = false;
-    int counter = 0;
-    while (!done_with_atom_bytes) {
-        PRINTF("hash_and_parse_atom_bytes - loop counter=%d\n", counter);
-        done_with_atom_bytes = parse_particle_field_if_needed(
-            number_of_cached_bytes,
-            ctx->number_of_atom_bytes_parsed,
-            number_of_atom_bytes_received
-        );
-        counter++;
-    }
+    bool should_finalize_hash = ctx->number_of_atom_bytes_parsed + number_of_atom_bytes_received == ctx->atom_byte_count;
+
+    update_hash(
+        ctx->atom_slice + number_of_cached_bytes,
+        number_of_atom_bytes_received,
+        should_finalize_hash
+    );
+
+    // bool done_with_atom_bytes = false;
+    // int counter = 0;
+    // while (!done_with_atom_bytes) {
+    //     PRINTF("hash_and_parse_atom_bytes - loop counter=%d\n", counter);
+    //     done_with_atom_bytes = parse_particle_field_if_needed(
+    //         number_of_cached_bytes,
+    //         ctx->number_of_atom_bytes_parsed,
+    //         number_of_atom_bytes_received
+    //     );
+    //     counter++;
+    // }
 
     ctx->number_of_atom_bytes_parsed += number_of_atom_bytes_received;
 }
@@ -604,7 +606,8 @@ static void parse_atom() {
     while (ctx->number_of_atom_bytes_parsed < ctx->atom_byte_count) {
         parse_bytes_from_host_machine();
     }
-    PRINTF("Finished parsing all atom bytes.\n");
+    PRINTF("Finished parsing all atom bytes => Asking user to confirm hash on Ledger...\n");
+    askUserForConfirmationOfHash();
 }
 
 static void parse_and_sign_atom(

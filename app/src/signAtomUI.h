@@ -1,4 +1,4 @@
 // void askUserForConfirmationOfTransferIfNeeded();
-// void askUserForConfirmationOfHash();
+void askUserForConfirmationOfHash();
 // void askUserForFinalConfirmation();
 // void notifyNonTransferDataFoundIfNeeded();
