@@ -378,8 +378,8 @@ static void parseParticleField(
 // }
 
 static void cache_bytes_to_next_chunk(
-    const size_t field_position_in_atom_slice,
-    const size_t number_of_bytes_to_cache
+    const uint16_t field_position_in_atom_slice,
+    const uint16_t number_of_bytes_to_cache
 ) {
     assert(number_of_bytes_to_cache <= MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS);
     uint8_t tmp[number_of_bytes_to_cache];
@@ -399,12 +399,36 @@ static void cache_bytes_to_next_chunk(
     ctx->number_of_cached_bytes = number_of_bytes_to_cache;
 }
 
+static void print_particle_field_type(ParticleField field_type) {
+    switch (field_type)
+    {
+    case ParticleFieldNoField:
+        PRINTF("ERROR No Field\n");
+        break;
+    case ParticleFieldAddress:
+        PRINTF("Address Field\n");
+        break;
+    case ParticleFieldAmount:
+        PRINTF("Amount Field\n");
+        break;
+    case ParticleFieldSerializer:
+        PRINTF("Serializer Field\n");
+        break;
+    case ParticleFieldTokenDefinitionReference:
+        PRINTF("TokenDefinitionReference Field\n");
+        break;
+    }
+}
 
 static void parse_particle_field_from_atom_slice(
     ParticleField type_of_field_to_parse,
     uint8_t *bytes,
     const size_t field_byte_count
 ) {
+
+    PRINTF("Trying to parse field\n");
+    print_particle_field_type(type_of_field_to_parse);
+    PRINTF("With #%dbytes\n", field_byte_count);
 
     CborParser cborParser;
     CborValue cborValue;
@@ -530,40 +554,44 @@ static bool atom_slice_contains_particles_bytes() {
 }
 
 // Returns true if there is a next interval to parse (populated in input param)
-static bool next_field_to_parse_and_update_atom_slice(ByteInterval* interval, ByteInterval* output, bool *is_done_with_slice) {
-        if (interval->byteCount == 0) {
-            return false;
-        }
 
-        FATAL_ERROR("impl me");
+static bool next_field_to_parse_and_update_atom_slice(
+    ByteInterval* interval, 
+    ByteInterval* output, 
+    bool *is_done_with_slice
+) {
+    if (interval->byteCount == 0) {
+        return false;
+    }
 
-		// 	guard currentAtomSlice.endsWith >= interval.endsWith else {
-		// 		print("`currentAtomSlice.endsWith < interval.endsWith` => caching bytes!")
-		// 		ctx.noCachedBytes = currentAtomSlice.byteCount
-		// 		doneWithAtomSlice = true
-		// 		return nil
-		// 	}
+    if (end_index(ctx->interval_of_atom_slice) < end_index(*interval)) {
+        PRINTF("`currentAtomSlice.endsWith < interval.endsWith` => cache bytes!?");
+        ctx->number_of_cached_bytes = ctx->interval_of_atom_slice.byteCount;
+        return false;
+    }
 
-		// 	guard 
-		// 		currentAtomSlice.startsAt <= interval.startsAt
-		// 	else {
-		// 		print("interval not in atom slice, maybe another interval for the same particle? SHOULD WE UPDATE currentAtomSlice.startsAt???")
-		// 		return nil
-		// 	}
+    if (ctx->interval_of_atom_slice.startsAt > interval->startsAt) {
+        PRINTF("Interval not in atom slice, maybe another interval for the same particle?\n");
+        return false;
+    }
 
-		// 	if currentAtomSlice.startsAt != interval.startsAt {
-		// 		print("`currentAtomSlice.startsAt != interval.startsAt` => setting `currentAtomSlice.startsAt := interval.startsAt` and decreasing `currentAtomSlice.byteCount`")
-		// 		currentAtomSlice.byteCount -= (interval.startsAt - currentAtomSlice.startsAt)
-		// 		currentAtomSlice.startsAt = interval.startsAt
-		// 	}
-		
-		// 	assert(currentAtomSlice.byteCount >= interval.byteCount)
-		// 	return interval
-		// }
+    if (ctx->interval_of_atom_slice.startsAt != interval->startsAt) {
+        PRINTF("`currentAtomSlice.startsAt != interval.startsAt` => setting `currentAtomSlice.startsAt := interval.startsAt` and decreasing `currentAtomSlice.byteCount`\n");
+
+        ctx->interval_of_atom_slice.byteCount -= (interval->startsAt - ctx->interval_of_atom_slice.startsAt);
+
+		ctx->interval_of_atom_slice.startsAt = interval->startsAt;
+    }
+	
+	assert(ctx->interval_of_atom_slice.startsAt == interval->startsAt);
+    return true;
 }
 
 // Returns true if there is a next interval to parse (populated in input param)
-static bool get_interval_of_next_field_to_parse(ParticleField *field_type, ByteInterval *next_field) {
+static bool get_interval_of_next_field_to_parse(
+    ParticleField *field_type, 
+    ByteInterval *next_field
+) {
 	assert(ctx->particle_meta_data.is_initialized);
 
     bool is_done_with_slice = false;
@@ -634,8 +662,10 @@ static void parse_bytes_from_host_machine() {
         uint8_t number_of_cached_bytes = ctx->number_of_cached_bytes;
         ctx->number_of_cached_bytes = 0;
 
+        uint16_t chunk_start_position_in_atom = ctx->number_of_atom_bytes_received - number_of_cached_bytes;
+
         ctx->interval_of_atom_slice = (ByteInterval) { 
-            .startsAt = ctx->number_of_atom_bytes_received - number_of_cached_bytes,
+            .startsAt = chunk_start_position_in_atom,
             .byteCount = number_of_cached_bytes + number_of_newly_received_bytes
         };
 
@@ -643,21 +673,38 @@ static void parse_bytes_from_host_machine() {
 
         ByteInterval interval_of_next_field_to_parse;
         ParticleField particle_field_type;
+
+        uint16_t start_position_of_field_in_slice = 0;
+
         while (atom_slice_contains_particles_bytes()) { // will "slide" atom slice window
             PRINTF("parse_atom_bytes (ITERATION=%d)\n", counter_DEBUG_ONLY);
 
-            if (
-                !get_interval_of_next_field_to_parse(
-                    &interval_of_next_field_to_parse, 
-                    &particle_field_type
-                )
-            ) {
-                return;
+            bool can_parse_field = get_interval_of_next_field_to_parse(
+                &interval_of_next_field_to_parse, 
+                &particle_field_type
+            );
+
+            if (ctx->number_of_cached_bytes || can_parse_field) {
+                start_position_of_field_in_slice = interval_of_next_field_to_parse.startsAt - ctx->interval_of_atom_slice.startsAt;
+
+                PRINTF("(%s) start_position_of_field_in_slice: %d\n", can_parse_field ? "PARSING FIELD" : "CACHING BYTES", start_position_of_field_in_slice);
+            } else {
+                start_position_of_field_in_slice = 0;
             }
 
-            uint16_t start_position_of_field_in_slice = interval_of_next_field_to_parse.startsAt - ctx->interval_of_atom_slice.startsAt;
+            if (ctx->number_of_cached_bytes) {
+                assert(!can_parse_field);
+                PRINTF("CACHING BYTES\n");
+                cache_bytes_to_next_chunk(
+                    interval_of_next_field_to_parse.startsAt - ctx->interval_of_atom_slice.startsAt,
+                    // field->startsAt - chunk_start_position_in_atom
+                    ctx->number_of_cached_bytes
+                );
+            }
 
-            PRINTF("start_position_of_field_in_slice: %d\n", start_position_of_field_in_slice);
+            if (!can_parse_field) {
+                return;
+            }
 
             parse_particle_field_from_atom_slice(
                 particle_field_type,
