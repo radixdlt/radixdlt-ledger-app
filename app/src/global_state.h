@@ -41,12 +41,15 @@ typedef struct {
 	bool non_transfer_data_found;
 	cx_sha256_t hasher;
 	uint8_t hash[HASH256_BYTE_COUNT];
+    uint16_t number_of_atom_bytes_received;
     uint16_t number_of_atom_bytes_parsed;
+
+	ByteInterval interval_of_atom_slice;
 	uint32_t bip32_path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
     uint16_t atom_byte_count;
 	uint8_t number_of_cached_bytes;
 
-	ParticleMetaData particle_meta_data; // can be 'empty'
+	ParticleMetaData particle_meta_data; 
 	Transfer transfer;
    	uint8_t atom_slice[MAX_ATOM_SLICE_SIZE];
 } signAtomContext_t;

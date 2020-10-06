@@ -1,3 +1,6 @@
+#include <stdint.h>
+#include <stdbool.h>
+
 typedef struct {
 	uint16_t startsAt;
 	uint16_t byteCount;
@@ -13,8 +16,11 @@ typedef struct {
 // token_definition_referenceByteInterval]` and check if all zero or not.
 typedef struct {
 
-	bool has_relevant_data;
-	// ByteInterval particleItself;
+	// since ctx has storage for a 'ParticleMetaData', but not being a pointer, and
+	// we want to avoid using 'is all zero' solution.
+	bool is_initialized;
+
+	ByteInterval particleItself;
 
 	// In case of Non-TransferrableTokensParticle this will have value (0, 0)
 	ByteInterval addressOfRecipientByteInterval;
@@ -28,3 +34,6 @@ typedef struct {
 	// In case of Non-TransferrableTokensParticle this will have value (0, 0)
 	ByteInterval token_definition_referenceByteInterval;
 } ParticleMetaData;
+
+uint16_t end_index(ByteInterval interval);
+uint16_t last_byte_of_particle_from_its_meta_data(ParticleMetaData particle_meta_data);

@@ -68,8 +68,8 @@ class ParticleMetaData(object):
 		self.serializerByteInterval = nextInterval()
 		self.tokenDefinitionReferenceByteInterval = nextInterval()
 		assert len(bytes) == 0
-		self.bytes = bytes_copy[4:]
-		assert len(self.bytes) == 16
+		self.bytes = bytes_copy
+		assert len(self.bytes) == 20
 
 	def __repr__(self):
 		return f"⚛{self.particleItself}: ({self.addressByteInterval}, {self.amountByteInterval}, {self.serializerByteInterval}, {self.tokenDefinitionReferenceByteInterval})\nraw: {self.bytes.hex()}\n"
@@ -98,9 +98,8 @@ class TestVector(object):
 	def alice_private_key(self) -> str:
 		return self.expected['privateKeyAlice']
 
-	# ByteInterval of the following fields in the following order:
-	# [
-	#    particleItself,
+	# [ByteInterval][
+	#     particleItself,
 	# 	  addressByteInterval,
 	# 	  amountByteInterval,
 	# 	  serializerByteInterval,
