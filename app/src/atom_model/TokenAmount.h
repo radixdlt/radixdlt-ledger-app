@@ -2,3 +2,5 @@
 
 // TokenAmount
 typedef UnsignedInteger256 TokenAmount;
+
+void printTokenAmount(TokenAmount *tokenAmount);
