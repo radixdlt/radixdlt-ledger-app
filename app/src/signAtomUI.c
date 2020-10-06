@@ -6,69 +6,70 @@
 
 static signAtomContext_t *ctx = &global.signAtomContext;
 
-// typedef enum {
-//     ReviewAddress = 0,
-//     ReviewAmount,
-//     ReviewRRI
-// } ReviewAtomStep;
+typedef enum {
+    ReviewAddress = 0,
+    ReviewAmount,
+    ReviewRRI
+} ReviewAtomStep;
 
 
 // // ===== START ===== HELPERS =========
 
-// static void prepare_display_with_transfer_data_step(ReviewAtomStep step)
-// {
-//     clear_lower_line_long();
-//     Transfer *transfer = &(ctx->transfer);
-//     switch (step)
-//     {
-//     case ReviewAddress:
-//     {
-//         size_t number_of_chars_to_copy = RADIX_ADDRESS_BASE58_CHAR_COUNT_MAX + 1;
-//         assert(number_of_chars_to_copy <= MAX_LENGTH_FULL_STR_DISPLAY);
-//        G_ui_state.length_lower_line_long = to_string_radix_address(&(transfer->address), G_ui_state.lower_line_long, number_of_chars_to_copy);
-//         break;
-//     }
-//     case ReviewAmount:
-//     {
-//         size_t number_of_chars_to_copy = UINT256_DEC_STRING_MAX_LENGTH + 1;
-//         assert(number_of_chars_to_copy <= MAX_LENGTH_FULL_STR_DISPLAY);
-//        G_ui_state.length_lower_line_long = to_string_uint256(&(transfer->amount), G_ui_state.lower_line_long, number_of_chars_to_copy);
-//         break;
-//     }
-//     case ReviewRRI: {
+static void prepare_display_with_transfer_data_step(ReviewAtomStep step)
+{
+    clear_lower_line_long();
+    Transfer transfer = ctx->transfer;
 
-//         size_t offset = to_string_rri_null_term_or_not(
-//             &(transfer->tokenDefinitionReference), 
-//             G_ui_state.lower_line_long, 
-//             RADIX_RRI_MAX_LENGTH_SYMBOL, 
-//             true,
-//             false
-//         );
+    switch (step)
+    {
+    case ReviewAddress:
+    {
+        size_t number_of_chars_to_copy = RADIX_ADDRESS_BASE58_CHAR_COUNT_MAX + 1;
+        assert(number_of_chars_to_copy <= MAX_LENGTH_FULL_STR_DISPLAY);
+       G_ui_state.length_lower_line_long = to_string_radix_address(&transfer.address, G_ui_state.lower_line_long, number_of_chars_to_copy);
+        break;
+    }
+    case ReviewAmount:
+    {
+        size_t number_of_chars_to_copy = UINT256_DEC_STRING_MAX_LENGTH + 1;
+        assert(number_of_chars_to_copy <= MAX_LENGTH_FULL_STR_DISPLAY);
+       G_ui_state.length_lower_line_long = to_string_uint256(&transfer.amount, G_ui_state.lower_line_long, number_of_chars_to_copy);
+        break;
+    }
+    case ReviewRRI: {
 
-//         size_t length_of_string___comma_space_Full_Identifier_color_space = 19;
-//         os_memcpy(
-//             G_ui_state.lower_line_long + offset,
-//             ", Full Identifier: ",
-//             length_of_string___comma_space_Full_Identifier_color_space
-//         );
-//         offset += length_of_string___comma_space_Full_Identifier_color_space;
+        size_t offset = to_string_rri_null_term_or_not(
+            &transfer.token_definition_reference, 
+            G_ui_state.lower_line_long, 
+            RADIX_RRI_MAX_LENGTH_SYMBOL, 
+            true,
+            false
+        );
 
-//         offset += to_string_rri_null_term_or_not(
-//             &(transfer->tokenDefinitionReference), 
-//             G_ui_state.lower_line_long + offset, 
-//             MAX_LENGTH_FULL_STR_DISPLAY - offset,
-//             false,
-//             true
-//         );
+        size_t length_of_string___comma_space_Full_Identifier_color_space = 19;
+        os_memcpy(
+            G_ui_state.lower_line_long + offset,
+            ", Full Identifier: ",
+            length_of_string___comma_space_Full_Identifier_color_space
+        );
+        offset += length_of_string___comma_space_Full_Identifier_color_space;
 
-//        G_ui_state.length_lower_line_long = offset;
-//         break;
-//     }
-//     default:
-//         FATAL_ERROR("Unknown step: %d", step);
-//     }
-// }
-// // ===== END ===== HELPERS =========
+        offset += to_string_rri_null_term_or_not(
+            &transfer.token_definition_reference, 
+            G_ui_state.lower_line_long + offset, 
+            MAX_LENGTH_FULL_STR_DISPLAY - offset,
+            false,
+            true
+        );
+
+       G_ui_state.length_lower_line_long = offset;
+        break;
+    }
+    default:
+        FATAL_ERROR("Unknown step: %d", step);
+    }
+}
+// ===== END ===== HELPERS =========
 
 static void didFinishSignAtomFlow()
 {
@@ -97,90 +98,59 @@ void askUserForConfirmationOfHash() {
     prepareForDisplayingHash();
 }
 
+static void didApproveTransfer()
+{
 
-// static void didApproveTransfer()
-// {
-//     // approved RRI -> finished with this transfer => proceed
-//     ctx->numberOfTransfersToNotMyAddressApproved++;
-//     // if (ctx->numberOfTransfersToNotMyAddressApproved < ctx->numberOfTransfersToNotMyAddress)
-//     // {
-//     //     proceedWithNextTransfer();
-//     // }
-//     // else
-//     // {
-//     //     // Finished accepting all transfers
-//     //     prepareForDisplayingHash(); 
-//     // }
-// }
+    unsigned int tx = 0;
+    G_io_apdu_buffer[tx++] = 0x90;
+    G_io_apdu_buffer[tx++] = 0x00;
+    // Send back the response, do not restart the event loop
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
+    // Display back the original UX
+    ui_idle();
+}
 
-// static void prepareForApprovalOfRRI()
-// {
-//     prepare_display_with_transfer_data_step(ReviewRRI);
-//     display_value("Token:", didApproveTransfer);
-// }
+void prepareForApprovalOfRRI()
+{
+    prepare_display_with_transfer_data_step(ReviewRRI);
+    display_value("Token:", didApproveTransfer);
+}
 
-// static void prepareForApprovalOfAmount() {
-//     prepare_display_with_transfer_data_step(ReviewAmount);
-//     display_value("Amount:", prepareForApprovalOfRRI);
-// }
+void prepareForApprovalOfAmount() {
+    prepare_display_with_transfer_data_step(ReviewAmount);
+    display_value("Amount:", prepareForApprovalOfRRI);
+}
 
-// static void prepareForApprovalOfAddress() {
-//     prepare_display_with_transfer_data_step(ReviewAddress);
-//     display_value("To address:", prepareForApprovalOfAmount);
-// }
+void prepareForApprovalOfAddress() {
+    prepare_display_with_transfer_data_step(ReviewAddress);
+    display_value("To address:", prepareForApprovalOfAmount);
+}
 
-// static bool is_transfer_change_back_to_me() {
-//     cx_ecfp_public_key_t myPublicKeyCompressed;
+bool is_transfer_change_back_to_me() {
+    cx_ecfp_public_key_t myPublicKeyCompressed;
     
-//     derive_radix_key_pair(
-//         ctx->bip32Path, 
-//         &myPublicKeyCompressed, 
-//         NULL // dont write private key
-//     );
+    derive_radix_key_pair(
+        ctx->bip32_path, 
+        &myPublicKeyCompressed, 
+        NULL // dont write private key
+    );
 
-//     return matchesPublicKey(&(ctx->transfer.address), &myPublicKeyCompressed);
-// }
+    return matchesPublicKey(&ctx->transfer.address, &myPublicKeyCompressed);
+}
 
-// void askUserForConfirmationOfTransferIfNeeded() {
-//     // assert(ctx->numberOfTransfersToNotMyAddressApproved <
-//         //    ctx->numberOfTransfersToNotMyAddress);
+void askUserForConfirmationOfTransferIfNeeded() {
 
-//     // assert(ctx->numberOfTransfersToNotMyAddressApproved <= MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP);
-//     // assert(MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP == 6);
+    if (is_transfer_change_back_to_me()) 
+    {
+        PRINTF("Skipped reviewing transfer since it was change back to user...trying to return by calling `io_exchange(IO_RETURN_AFTER_TX, 0);`\n");
 
-//     if (!is_transfer_change_back_to_me()) 
-//     {
-//         PRINTF("Skipped reviewing transfer since it was change back to user...\n");
-//         return;
-//     }
+        io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 0);
+        return;
+    }
+    
+    display_lines("Review", "transfer", prepareForApprovalOfAddress);
 
-//     char upper_line_with_value[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE +
-//                                1];
-
-//     size_t offset = 0;
-//     size_t upper_line_length = strlen("Review ");
-//     os_memcpy(upper_line_with_value + offset, "Review ", upper_line_length);
-//     offset += upper_line_length;
-
-//     size_t number_length = 3;
-//     if (ctx->numberOfTransfersToNotMyAddressApproved + 1 == 1) {
-//         os_memcpy(upper_line_with_value + offset, "1st", number_length);
-//     } else if (ctx->numberOfTransfersToNotMyAddressApproved + 1 == 2) {
-//         os_memcpy(upper_line_with_value + offset, "2nd", number_length);
-//     } else if (ctx->numberOfTransfersToNotMyAddressApproved + 1 == 3) {
-//         os_memcpy(upper_line_with_value + offset, "3rd", number_length);
-//     } else if (ctx->numberOfTransfersToNotMyAddressApproved + 1 == 4) {
-//         os_memcpy(upper_line_with_value + offset, "4th", number_length);
-//     } else if (ctx->numberOfTransfersToNotMyAddressApproved + 1 == 5) {
-//         os_memcpy(upper_line_with_value + offset, "5th", number_length);
-//     } else if (ctx->numberOfTransfersToNotMyAddressApproved + 1 == 6) {
-//         os_memcpy(upper_line_with_value + offset, "6th", number_length);
-//     }
-//     offset += number_length;
-//     upper_line_with_value[offset] = '\0';
-//     G_ui_state.length_lower_line_long = 9;
-//     display_lines(upper_line_with_value, "transfer\0", prepareForApprovalOfAddress);
-// }
+}
 
 // // static void proceedToDisplayingTransfersIfAny() {
 // //     if (ctx->numberOfTransferrableTokensParticlesParsed == 0)

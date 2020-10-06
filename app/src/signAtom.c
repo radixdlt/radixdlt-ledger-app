@@ -35,13 +35,6 @@ static void printRRI(RadixResourceIdentifier *rri) {
     PRINTF("%s", rri_utf8_string);
 }
 
-static void printTokenAmount(TokenAmount *tokenAmount) {
-    const size_t max_length = (UINT256_DEC_STRING_MAX_LENGTH + 1); // +1 for null
-    char dec_string[max_length];
-    to_string_uint256(tokenAmount, dec_string, max_length);
-    PRINTF("%s", dec_string);
-}
-
 static void empty_particle_meta_data() {
     explicit_bzero(&ctx->particle_meta_data, sizeof(ParticleMetaData));
     ctx->particle_meta_data.is_initialized = false;
@@ -52,7 +45,7 @@ static void empty_transfer() {
     ctx->transfer.has_confirmed_serializer = false;
     ctx->transfer.is_address_set = false;
     ctx->transfer.is_amount_set = false;
-    ctx->transfer.is_token_definition_reference_set = false;
+    // ctx->transfer.is_token_definition_reference_set = false;
 }
 
 static void empty_atom_slice() {
@@ -61,6 +54,7 @@ static void empty_atom_slice() {
 
 static void reset_state() {
     ctx->atom_byte_count = 0;
+    ctx->number_of_cached_bytes = 0;
     ctx->number_of_atom_bytes_received = 0;
     ctx->number_of_atom_bytes_parsed = 0;
     ctx->non_transfer_data_found = false;
@@ -140,7 +134,7 @@ static void parse_particle_meta_data(
     ctx->particle_meta_data.token_definition_referenceByteInterval.startsAt = U2BE(dataBuffer, dataOffset); dataOffset += 2;
     ctx->particle_meta_data.token_definition_referenceByteInterval.byteCount = U2BE(dataBuffer, dataOffset); dataOffset += 2;
 
-    PRINTF("\nFinished parsing particle meta data...\n\n");
+    PRINTF("Finished parsing particle meta data...\n");
 
     ctx->particle_meta_data.is_initialized = true;
 }
@@ -323,11 +317,6 @@ static bool parseSerializer_is_ttp(
 }
 
 
-static void ask_user_for_confirmation_of_transfer_if_needed() {
-    FATAL_ERROR("TODO ask user for confirmation of transfer");
-}
-
-
 static void parseParticleField(
     const size_t valueByteCount,
     CborValue *cborValue,
@@ -381,6 +370,12 @@ static void cache_bytes_to_next_chunk(
     const uint16_t field_position_in_atom_slice,
     const uint16_t number_of_bytes_to_cache
 ) {
+    PRINTF("number_of_bytes_to_cache: %d\n", number_of_bytes_to_cache);
+
+    if (number_of_bytes_to_cache > MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS) {
+        FATAL_ERROR("ERROR cannot cache that many bytes, max is %d\n", MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS);
+    }
+
     assert(number_of_bytes_to_cache <= MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS);
     uint8_t tmp[number_of_bytes_to_cache];
 
@@ -420,20 +415,32 @@ static void print_particle_field_type(ParticleField field_type) {
     }
 }
 
+// static void resume_parsing_atom() {
+//     unsigned int tx = 0;
+//     G_io_apdu_buffer[tx++] = 0x90;
+//     G_io_apdu_buffer[tx++] = 0x00;
+//     // Send back the response, do not restart the event loop
+//     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
+//     // Display back the original UX
+//     ui_idle();
+// }
+
 static void parse_particle_field_from_atom_slice(
     ParticleField type_of_field_to_parse,
-    uint8_t *bytes,
+    uint16_t offset_to_bytes_in_slice,
     const size_t field_byte_count
 ) {
 
     PRINTF("Trying to parse field\n");
     print_particle_field_type(type_of_field_to_parse);
     PRINTF("With #%dbytes\n", field_byte_count);
+    PRINTF("offset_to_bytes_in_slice: %d\n", offset_to_bytes_in_slice);
+
 
     CborParser cborParser;
     CborValue cborValue;
     CborError cborError = cbor_parser_init(
-        bytes,
+        ctx->atom_slice + offset_to_bytes_in_slice,
         field_byte_count,
         0, // flags
         &cborParser,
@@ -450,7 +457,7 @@ static void parse_particle_field_from_atom_slice(
 
     if (cborError)
     {
-        FATAL_ERROR("Failed to calculate length of coming cbor value, CBOR eror: '%s'\n", cbor_error_string(cborError));
+        FATAL_ERROR("Failed to calculate length of coming cbor value, CBOR error: '%s'\n", cbor_error_string(cborError));
     }
 
     switch (type_of_field_to_parse)
@@ -471,7 +478,10 @@ static void parse_particle_field_from_atom_slice(
         );
         
         ctx->transfer.is_address_set = true;
-        PRINTF("Parsed address: "); printRadixAddress(&ctx->transfer.address);
+
+        PRINTF("Parsed address\n");
+        // PRINTF("Parsed address: "); printRadixAddress(&ctx->transfer.address);PRINTF("\n");
+
         break;
 
     case ParticleFieldAmount:
@@ -486,7 +496,10 @@ static void parse_particle_field_from_atom_slice(
             ctx->transfer.amount.bytes
         );
         ctx->transfer.is_amount_set = true;
-        PRINTF("Parsed amount: "); printTokenAmount(&ctx->transfer.amount);
+
+        PRINTF("Parsed amount\n");
+        // PRINTF("Parsed amount: "); printTokenAmount(&ctx->transfer.amount);PRINTF("\n");
+
         break;
 
     case ParticleFieldSerializer:
@@ -511,7 +524,7 @@ static void parse_particle_field_from_atom_slice(
         assert(ctx->transfer.has_confirmed_serializer);
         assert(ctx->transfer.is_address_set);
         assert(ctx->transfer.is_amount_set);
-        assert(!ctx->transfer.is_token_definition_reference_set);
+        // assert(!ctx->transfer.is_token_definition_reference_set);
         
         parseParticleField(
             readLength, 
@@ -520,13 +533,24 @@ static void parse_particle_field_from_atom_slice(
             ctx->transfer.token_definition_reference.bytes
         );
 
-        ctx->transfer.is_token_definition_reference_set = true;
+        // ctx->transfer.is_token_definition_reference_set = true;
         
-        PRINTF("Parsed RRI: "); printRRI(&ctx->transfer.token_definition_reference);
+        PRINTF("Parsed RRI\n");
+        // PRINTF("Parsed RRI: "); printRRI(&ctx->transfer.token_definition_reference);PRINTF("\n");
 
+        if (!is_transfer_change_back_to_me()) {
+            PRINTF("Asking for input from user to approve transfer\n");
+    
+            // display_lines("Review", "Transfer", resume_parsing_atom);
+            display_lines("Review", "Transfer", prepareForApprovalOfAddress);
+    
+            io_exchange(CHANNEL_APDU | IO_ASYNCH_REPLY, 0);
+        } else {
+            PRINTF("Found transfer, but is change back to me, so skipping it..\n");
+        }
 
-        ask_user_for_confirmation_of_transfer_if_needed();
-        FATAL_ERROR("MUST BLOCK here so we empty transfer after user has");
+  
+        PRINTF("Awesome, resumed program...now emptying transfer\n");
         empty_transfer();
 
         break;
@@ -547,26 +571,144 @@ static int number_of_overlapping_bytes_in_intervals(
 
 static bool atom_slice_contains_particles_bytes() {
     assert(ctx->particle_meta_data.is_initialized);
-   return number_of_overlapping_bytes_in_intervals(
+    int overlapping_byte_count = number_of_overlapping_bytes_in_intervals(
        ctx->interval_of_atom_slice,
        ctx->particle_meta_data.particleItself
-   ) > 0;
+    );
+
+    PRINTF("overlapping_byte_count: %d\n", overlapping_byte_count);
+
+    return overlapping_byte_count > 0;
 }
 
-// Returns true if there is a next interval to parse (populated in input param)
+static void print_particle_metadata() {
+    PRINTF("META DATA ABOUT PARTICLE [%d-%d] (#%d bytes)\n", 
+        ctx->particle_meta_data.particleItself.startsAt, 
+        end_index(ctx->particle_meta_data.particleItself), 
+        ctx->particle_meta_data.particleItself.byteCount
+    );
 
+    PRINTF("field 'Address' [%d-%d] (#%d bytes)\n", 
+        ctx->particle_meta_data.addressOfRecipientByteInterval.startsAt, 
+        end_index(ctx->particle_meta_data.addressOfRecipientByteInterval), 
+        ctx->particle_meta_data.addressOfRecipientByteInterval.byteCount
+    );
+    
+    PRINTF("field 'Amount' [%d-%d] (#%d bytes)\n", 
+        ctx->particle_meta_data.amountByteInterval.startsAt, 
+        end_index(ctx->particle_meta_data.amountByteInterval), 
+        ctx->particle_meta_data.amountByteInterval.byteCount
+    );
+
+    PRINTF("field 'Serializer' [%d-%d] (#%d bytes)\n", 
+        ctx->particle_meta_data.serializerValueByteInterval.startsAt, 
+        end_index(ctx->particle_meta_data.serializerValueByteInterval), 
+        ctx->particle_meta_data.serializerValueByteInterval.byteCount
+    );
+
+    PRINTF("field 'TokenDefRef' [%d-%d] (#%d bytes)\n", 
+        ctx->particle_meta_data.token_definition_referenceByteInterval.startsAt, 
+        end_index(ctx->particle_meta_data.token_definition_referenceByteInterval), 
+        ctx->particle_meta_data.token_definition_referenceByteInterval.byteCount
+    );
+}
+
+static void print_current_atom_slice() {
+     PRINTF("current atom slice [%d-%d] (#%d bytes)\n", 
+                ctx->interval_of_atom_slice.startsAt, 
+                end_index(ctx->interval_of_atom_slice), 
+                ctx->interval_of_atom_slice.byteCount
+    );
+}
+
+// static bool can_parse_any_particle_field_with_current_atom_slice() {
+    
+//     PRINTF("START of can_parse_any_particle_field_with_current_atom_slice\n");
+//     print_current_atom_slice();
+//     print_particle_metadata();
+
+//     uint16_t first_relevant_particle_byte_index = 0;
+//     uint16_t index = 0;
+//     uint16_t byteCount = 0;
+
+//     if (ctx->particle_meta_data.token_definition_referenceByteInterval.byteCount > 0) {
+
+//     index = ctx->particle_meta_data.token_definition_referenceByteInterval.startsAt;
+//     if (index > 0) {
+//         first_relevant_particle_byte_index = index;
+//         byteCount = ctx->particle_meta_data.token_definition_referenceByteInterval.byteCount;
+//         PRINTF("first_relevant_particle_byte_index := tokenDefRef.startsAt\n");
+//     }
+//     }
+    
+//     if (ctx->particle_meta_data.serializerValueByteInterval.byteCount > 0) {
+//     index = ctx->particle_meta_data.serializerValueByteInterval.startsAt;
+//     if (index < first_relevant_particle_byte_index) {
+//         first_relevant_particle_byte_index = index;
+//         byteCount = ctx->particle_meta_data.serializerValueByteInterval.byteCount;
+//         PRINTF("first_relevant_particle_byte_index := serializerField.startsAt\n");
+//     }
+//     }
+
+//  if (ctx->particle_meta_data.amountByteInterval.byteCount > 0) {
+
+//     index = ctx->particle_meta_data.amountByteInterval.startsAt;
+//     if (index < first_relevant_particle_byte_index) {
+//         first_relevant_particle_byte_index = index;
+//         byteCount = ctx->particle_meta_data.amountByteInterval.byteCount;
+//         PRINTF("first_relevant_particle_byte_index := amountField.startsAt\n");
+//     }
+//  }
+
+//  if (ctx->particle_meta_data.addressOfRecipientByteInterval.byteCount > 0) {
+//     index = ctx->particle_meta_data.addressOfRecipientByteInterval.startsAt;
+//     if (index < first_relevant_particle_byte_index) {
+//         first_relevant_particle_byte_index = index;
+//         byteCount = ctx->particle_meta_data.addressOfRecipientByteInterval.byteCount;
+//         PRINTF("first_relevant_particle_byte_index := addressField.startsAt\n");
+//     }
+//  }
+    
+//     PRINTF("first_relevant_particle_byte_index: %d\ncurrentAtomSlice.endsWith: %d\n", first_relevant_particle_byte_index, end_index(ctx->interval_of_atom_slice));
+
+//     bool has_reached_first_relevant_bytes_in_particle_yet = first_relevant_particle_byte_index > ctx->interval_of_atom_slice.startsAt;
+
+//     if (!has_reached_first_relevant_bytes_in_particle_yet) {
+//         PRINTF("Has not yet reached any relevant bytes...\n");
+//         return false;
+//     }
+
+//     if (first_relevant_particle_byte_index + byteCount > end_index(ctx->interval_of_atom_slice)) {
+//         PRINTF("PROBABLY SHOULD CACHE BYTES HERE ALREADY? Skipping this atom slice...\n");
+//         return false;
+//     }
+
+//     return true;
+// }
+
+// Returns true if there is a next interval to parse (populated in input param)
 static bool next_field_to_parse_and_update_atom_slice(
     ByteInterval* interval, 
     ByteInterval* output, 
-    bool *is_done_with_slice
+    bool *is_done_with_slice,
+    ParticleField *output_field_type,
+    ParticleField field_to_test
 ) {
+
+    PRINTF("Checking if next field is");print_particle_field_type(field_to_test);
+    *output_field_type = field_to_test;
+
     if (interval->byteCount == 0) {
+        PRINTF("Skipping field since it has zero bytes: ");print_particle_field_type(field_to_test);
         return false;
     }
-
+ 
     if (end_index(ctx->interval_of_atom_slice) < end_index(*interval)) {
-        PRINTF("`currentAtomSlice.endsWith < interval.endsWith` => cache bytes!?");
+        PRINTF("`currentAtomSlice.endsWith < interval.endsWith` => cache bytes!?\n");
+        print_particle_metadata();
+        print_current_atom_slice();
         ctx->number_of_cached_bytes = ctx->interval_of_atom_slice.byteCount;
+        *is_done_with_slice = true;
         return false;
     }
 
@@ -577,14 +719,31 @@ static bool next_field_to_parse_and_update_atom_slice(
 
     if (ctx->interval_of_atom_slice.startsAt != interval->startsAt) {
         PRINTF("`currentAtomSlice.startsAt != interval.startsAt` => setting `currentAtomSlice.startsAt := interval.startsAt` and decreasing `currentAtomSlice.byteCount`\n");
+    
+        PRINTF("BEFORE\n");
+        print_current_atom_slice();
 
-        ctx->interval_of_atom_slice.byteCount -= (interval->startsAt - ctx->interval_of_atom_slice.startsAt);
+        ctx->interval_of_atom_slice.byteCount -= (interval->startsAt -  ctx->interval_of_atom_slice.startsAt);
 
-		ctx->interval_of_atom_slice.startsAt = interval->startsAt;
+        assert(ctx->interval_of_atom_slice.byteCount >= 0);
+
+	    ctx->interval_of_atom_slice.startsAt = interval->startsAt;
+
+        PRINTF("AFTER\n");
+        print_current_atom_slice();
     }
 	
 	assert(ctx->interval_of_atom_slice.startsAt == interval->startsAt);
+    *output = *interval;
     return true;
+}
+
+static bool does_atom_slice_overlap_with_field(ByteInterval interval) {
+    if (interval.byteCount == 0) {
+        return false;
+    }
+
+    return number_of_overlapping_bytes_in_intervals(interval, ctx->interval_of_atom_slice)> 0;
 }
 
 // Returns true if there is a next interval to parse (populated in input param)
@@ -594,61 +753,96 @@ static bool get_interval_of_next_field_to_parse(
 ) {
 	assert(ctx->particle_meta_data.is_initialized);
 
+    ParticleMetaData md = ctx->particle_meta_data;
+    if (
+        !(
+            does_atom_slice_overlap_with_field(md.addressOfRecipientByteInterval) ||
+            does_atom_slice_overlap_with_field(md.amountByteInterval) ||
+            does_atom_slice_overlap_with_field(md.serializerValueByteInterval) ||
+            does_atom_slice_overlap_with_field(md.token_definition_referenceByteInterval)
+        )
+    ) {
+        PRINTF("Not yet reached relevant atom bytes\nSHOULD CACHE (skipped now...)??!\n");
+        return false;
+    }
+
     bool is_done_with_slice = false;
-	
-    *field_type = ParticleFieldNoField;
 
     if (
+        !is_done_with_slice,
         next_field_to_parse_and_update_atom_slice(
             &ctx->particle_meta_data.addressOfRecipientByteInterval, 
             next_field,
-            &is_done_with_slice
+            &is_done_with_slice,
+            field_type,
+            ParticleFieldAddress
         )
     ) {
-        *field_type = ParticleFieldAddress;
         return true;
     }
 
     if (
+        !is_done_with_slice,
         next_field_to_parse_and_update_atom_slice(
             &ctx->particle_meta_data.amountByteInterval,
             next_field,
-            &is_done_with_slice
+            &is_done_with_slice,
+            field_type,
+            ParticleFieldAmount
         )
     ) {
-        *field_type = ParticleFieldAmount;
         return true;
     }
 
     if (
+        !is_done_with_slice,
         next_field_to_parse_and_update_atom_slice(
             &ctx->particle_meta_data.serializerValueByteInterval,
             next_field,
-            &is_done_with_slice
+            &is_done_with_slice,
+            field_type,
+            ParticleFieldSerializer
         )
     ) {
-        *field_type = ParticleFieldSerializer;
         return true;
     }
 
     if (
+        !is_done_with_slice,
         next_field_to_parse_and_update_atom_slice(
             &ctx->particle_meta_data.token_definition_referenceByteInterval,
             next_field,
-            &is_done_with_slice
+            &is_done_with_slice,
+            field_type,
+            ParticleFieldTokenDefinitionReference
         )
     ) {
-        *field_type = ParticleFieldTokenDefinitionReference;
         return true;
     }
 	
-    PRINTF("No next particle field in current atom slice to parse...");
+    PRINTF("No next particle field in current atom slice to parse. is_done_with_slice: %s\n", is_done_with_slice ? "TRUE" : "FALSE");
+
+
+    if (end_index(ctx->particle_meta_data.particleItself) < end_index(ctx->interval_of_atom_slice)) {
+        PRINTF("Particle meta data not relevant anymore since current atom slice starts at a byte later than end of the particle => `setting ctx->particle_meta_data.is_initialized := false` to mark that it is not relevant any more\n");
+
+        ctx->particle_meta_data.is_initialized = false;
+    }
+
     return false;
 }
 	
 
 static void parse_bytes_from_host_machine() {
     
+    PRINTF("\n\n\n#######################################\nparse_bytes_from_host_machine START\n");
+
+    uint8_t number_of_cached_bytes = ctx->number_of_cached_bytes;
+        ctx->number_of_cached_bytes = 0;
+
+
+    uint16_t chunk_start_position_in_atom = ctx->number_of_atom_bytes_received - number_of_cached_bytes;
+
     uint8_t number_of_newly_received_bytes = receive_bytes_from_host_machine_and_update_hash();
 
     if (number_of_newly_received_bytes) {
@@ -659,45 +853,68 @@ static void parse_bytes_from_host_machine() {
         	return;
         }
 
-        uint8_t number_of_cached_bytes = ctx->number_of_cached_bytes;
-        ctx->number_of_cached_bytes = 0;
+        assert(ctx->particle_meta_data.is_initialized);
+        print_particle_metadata();
 
-        uint16_t chunk_start_position_in_atom = ctx->number_of_atom_bytes_received - number_of_cached_bytes;
+        PRINTF("Number of newly received atom bytes: %d\n", number_of_newly_received_bytes);
+        PRINTF("Number of cached bytes since last payload: %d\n", number_of_cached_bytes);
+
+        PRINTF("Chunk/payload start position in atom: %d\n", chunk_start_position_in_atom);
+
+        if (number_of_cached_bytes > 0) {
+            PRINTF("bytes received (incl cached):\n");
+            PRINTF("%.*h\n", number_of_newly_received_bytes + number_of_cached_bytes, ctx->atom_slice);
+        } else {
+            PRINTF("bytes received (none cached):\n");
+            PRINTF("%.*h\n", number_of_newly_received_bytes, ctx->atom_slice);
+        }
 
         ctx->interval_of_atom_slice = (ByteInterval) { 
             .startsAt = chunk_start_position_in_atom,
             .byteCount = number_of_cached_bytes + number_of_newly_received_bytes
         };
 
+        // if (!can_parse_any_particle_field_with_current_atom_slice()) {
+        //     PRINTF("Skipping atom bytes since first relevant bytes according to particle meta data has not been reached yet (no need to cache...)\n");
+        //     return;
+        // }
+
+
         int counter_DEBUG_ONLY = 0;
 
         ByteInterval interval_of_next_field_to_parse;
         ParticleField particle_field_type;
 
-        uint16_t start_position_of_field_in_slice = 0;
-
-        while (atom_slice_contains_particles_bytes()) { // will "slide" atom slice window
+        while (atom_slice_contains_particles_bytes() && ctx->particle_meta_data.is_initialized) { // will "slide" atom slice window
             PRINTF("parse_atom_bytes (ITERATION=%d)\n", counter_DEBUG_ONLY);
 
+            print_current_atom_slice();
+
             bool can_parse_field = get_interval_of_next_field_to_parse(
-                &interval_of_next_field_to_parse, 
-                &particle_field_type
+                &particle_field_type,
+                &interval_of_next_field_to_parse
             );
 
-            if (ctx->number_of_cached_bytes || can_parse_field) {
-                start_position_of_field_in_slice = interval_of_next_field_to_parse.startsAt - ctx->interval_of_atom_slice.startsAt;
-
-                PRINTF("(%s) start_position_of_field_in_slice: %d\n", can_parse_field ? "PARSING FIELD" : "CACHING BYTES", start_position_of_field_in_slice);
-            } else {
-                start_position_of_field_in_slice = 0;
+            if (can_parse_field) {
+                PRINTF("Cool! Will try to parse field\n");
+                print_particle_field_type(particle_field_type);
+                PRINTF("With interval: [%d-%d] (#%d bytes)\n", interval_of_next_field_to_parse.startsAt, end_index(interval_of_next_field_to_parse), interval_of_next_field_to_parse.byteCount);
             }
 
-            if (ctx->number_of_cached_bytes) {
+            if (ctx->number_of_cached_bytes > 0) {
                 assert(!can_parse_field);
-                PRINTF("CACHING BYTES\n");
+                PRINTF("CACHING BYTES?\n");
+
+                if (!does_atom_slice_overlap_with_field(interval_of_next_field_to_parse)) {
+                    PRINTF("No no need to cache bytes since they are not relevant.Right?\n");
+                    print_current_atom_slice();
+                    print_particle_metadata();
+                    PRINTF("Right!?\n");
+                    break;
+                }
+
                 cache_bytes_to_next_chunk(
-                    interval_of_next_field_to_parse.startsAt - ctx->interval_of_atom_slice.startsAt,
-                    // field->startsAt - chunk_start_position_in_atom
+                    interval_of_next_field_to_parse.startsAt - chunk_start_position_in_atom,
                     ctx->number_of_cached_bytes
                 );
             }
@@ -706,14 +923,33 @@ static void parse_bytes_from_host_machine() {
                 return;
             }
 
+
             parse_particle_field_from_atom_slice(
                 particle_field_type,
-                ctx->atom_slice + start_position_of_field_in_slice,
+                interval_of_next_field_to_parse.startsAt - chunk_start_position_in_atom,
                 interval_of_next_field_to_parse.byteCount
             );
 
+            PRINTF("Finished parsing field, updating currentAtomSlice\n~before:\n");
+            print_current_atom_slice();
+
+	        ctx->interval_of_atom_slice.startsAt = end_index(interval_of_next_field_to_parse);
+            ctx->interval_of_atom_slice.byteCount -= interval_of_next_field_to_parse.byteCount;
+
+            PRINTF("~after\n");
+            print_current_atom_slice();
+
             counter_DEBUG_ONLY += 1;
         }
+
+        if (
+            !ctx->particle_meta_data.is_initialized 
+            && 
+            ctx->number_of_cached_bytes == 0 
+            && end_index(ctx->interval_of_atom_slice) != end_index(ctx->particle_meta_data.particleItself)
+        ) {
+            PRINTF("\n\n!!!! WARNING! Might have missed caching bytes..? !!!!\n\n");
+        } 
 
     } else {
         assert(ctx->particle_meta_data.is_initialized);
