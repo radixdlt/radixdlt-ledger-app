@@ -1,3 +1,6 @@
+#ifndef RADIXADDRESS_H
+#define RADIXADDRESS_H
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -25,3 +28,5 @@ bool matchesPublicKeyBytes(RadixAddress *address, uint8_t *compressedPublicKeyBy
 int generate_public_address_from_pub_key_and_universe_magic(
     uint8_t magicByte, uint8_t *compressedPublicKeyBytes,
     char *output_radix_addr_str, const size_t length_of_output_radix_addr_str);
+
+#endif

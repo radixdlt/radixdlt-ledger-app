@@ -2,7 +2,7 @@
 
 uint16_t end_index(ByteInterval *interval) {
     return interval->startsAt + interval->byteCount;
-};
+}
 
 bool is_interval_empty(ByteInterval *interval) {
     return interval->byteCount == 0;

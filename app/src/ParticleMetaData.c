@@ -1,4 +1,6 @@
 #include "ParticleMetaData.h"
+#include <os_io_seproxyhal.h>
+#include "common_macros.h"
 
 uint16_t last_byte_of_particle_from_its_meta_data(ParticleMetaData *particle_meta_data) {
     assert(particle_meta_data->is_initialized);
@@ -19,10 +21,10 @@ bool is_meta_data_about_transferrable_tokens_particle(ParticleMetaData *particle
 bool are_all_fields_empty(
     ParticleMetaData *particle_meta_data
 ) {
-    return is_field_empty(particle_meta_data->address_field) &&
-        is_field_empty(particle_meta_data->amount_field) &&
-        is_field_empty(particle_meta_data->serializer_field) &&
-        is_field_empty(particle_meta_data->token_definition_reference_field);
+    return is_field_empty(&particle_meta_data->address_field) &&
+        is_field_empty(&particle_meta_data->amount_field) &&
+        is_field_empty(&particle_meta_data->serializer_field) &&
+        is_field_empty(&particle_meta_data->token_definition_reference_field);
 }
 
 // Returns `true` iff all intervals of particle_meta_data are zero
@@ -119,7 +121,7 @@ bool iterate_intervals_of_metadata(
 ) {
 	if (
 		conditional_set_result_based_on_particle_field(
-			particle_meta_data->address_field,
+			&particle_meta_data->address_field,
 			result
 		)
 	) {
@@ -128,7 +130,7 @@ bool iterate_intervals_of_metadata(
 
 	if (
 		conditional_set_result_based_on_particle_field(
-			particle_meta_data->amount_field,
+			&particle_meta_data->amount_field,
 			result
 		)
 	) {
@@ -137,7 +139,7 @@ bool iterate_intervals_of_metadata(
 
 	if (
 		conditional_set_result_based_on_particle_field(
-			particle_meta_data->serializer_field,
+			&particle_meta_data->serializer_field,
 			result
 		)
 	) {
@@ -146,7 +148,7 @@ bool iterate_intervals_of_metadata(
 
 	if (
 		conditional_set_result_based_on_particle_field(
-			particle_meta_data->token_definition_reference_field,
+			&particle_meta_data->token_definition_reference_field,
 			result
 		)
 	) {
@@ -158,23 +160,33 @@ bool iterate_intervals_of_metadata(
 
 static void populate_interval(
 	ByteInterval *interval,
-	uint8_t bytes,
+	uint8_t *bytes,
 	uint16_t *offset
 ) {
+	
 	interval->startsAt = U2BE(bytes, *offset); *offset += 2;
     interval->byteCount = U2BE(bytes, *offset); *offset += 2;
 }
 
 static void populate_field(
 	ParticleField *field,
-	uint8_t bytes,
+	uint8_t *bytes,
 	uint16_t *offset
 ) {
 	populate_interval(
-		field->byte_interval,
+		&field->byte_interval,
 		bytes,
 		offset
 	);
+}
+
+void zero_out_particle_metadata(ParticleMetaData *particle_meta_data) {
+	zero_out_interval(&particle_meta_data->byte_interval_of_particle_itself);
+	zero_out_interval_in_field(&particle_meta_data->address_field);
+	zero_out_interval_in_field(&particle_meta_data->amount_field);
+	zero_out_interval_in_field(&particle_meta_data->serializer_field);
+	zero_out_interval_in_field(&particle_meta_data->token_definition_reference_field);
+	particle_meta_data->is_initialized = false;
 }
 
 void do_populate_particle_meta_data(
@@ -191,13 +203,13 @@ void do_populate_particle_meta_data(
     uint16_t offset = 0;
 
     PRINTF("Zeroing out old particle meta data now...\n");
-    empty_particle_meta_data();
+    zero_out_particle_metadata(particle_meta_data);
 
-	populate_interval(particle_meta_data->byte_interval_of_particle_itself), bytes, &offset);
+	populate_interval(&particle_meta_data->byte_interval_of_particle_itself, bytes, &offset);
 
-	populate_field(particle_meta_data->amount_field, bytes, &offset);
-	populate_field(particle_meta_data->serializer_field, bytes, &offset);
-	populate_field(particle_meta_data->token_definition_reference_field, bytes, &offset);
+	populate_field(&particle_meta_data->amount_field, bytes, &offset);
+	populate_field(&particle_meta_data->serializer_field, bytes, &offset);
+	populate_field(&particle_meta_data->token_definition_reference_field, bytes, &offset);
 
     PRINTF("Finished parsing particle meta data...\n");
 
@@ -215,13 +227,4 @@ void do_print_particle_metadata(ParticleMetaData *particle_meta_data) {
 	print_particle_field(&particle_meta_data->serializer_field);
 	print_particle_field(&particle_meta_data->token_definition_reference_field);
 	PRINTF("\n");
-}
-
-void zero_out_particle_metadata(ParticleMetaData *particle_meta_data) {
-	zero_out_interval(&particle_meta_data->byte_interval_of_particle_itself);
-	zero_out_interval_in_field(&particle_meta_data->address_field);
-	zero_out_interval_in_field(&particle_meta_data->amount_field);
-	zero_out_interval_in_field(&particle_meta_data->serializer_field);
-	zero_out_interval_in_field(&particle_meta_data->token_definition_reference_field);
-	particle_meta_data->is_initialized = false;
 }

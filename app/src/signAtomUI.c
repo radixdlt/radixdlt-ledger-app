@@ -18,7 +18,7 @@ typedef enum {
 static void prepare_display_with_transfer_data_step(ReviewAtomStep step)
 {
     clear_lower_line_long();
-    Transfer transfer = ctx->transfer;
+    Transfer transfer = ctx->ux_state.transfer;
 
     switch (step)
     {
@@ -135,7 +135,7 @@ bool is_transfer_change_back_to_me() {
         NULL // dont write private key
     );
 
-    return matchesPublicKey(&ctx->transfer.address, &myPublicKeyCompressed);
+    return matchesPublicKey(&ctx->ux_state.transfer.address, &myPublicKeyCompressed);
 }
 
 void askUserForConfirmationOfTransferIfNeeded() {

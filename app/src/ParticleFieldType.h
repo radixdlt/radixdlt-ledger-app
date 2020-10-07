@@ -1,3 +1,6 @@
+#ifndef PARTICLEFIELDTYPE_H
+#define PARTICLEFIELDTYPE_H
+
 
 typedef enum {
     ParticleFieldTypeNoField = 0,
@@ -8,3 +11,5 @@ typedef enum {
 } ParticleFieldType;
 
 void print_particle_field_type(ParticleFieldType field_type);
+
+#endif

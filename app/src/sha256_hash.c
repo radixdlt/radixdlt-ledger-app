@@ -5,6 +5,7 @@
 #include <os_io_seproxyhal.h>
 #include "key_and_signatures.h"
 #include "ui.h"
+#include "common_macros.h"
 
 bool sha256_hash(
     cx_sha256_t *hash_context,
@@ -58,7 +59,7 @@ void update_hash_and_maybe_finalize(
     assert(success);
 
     if (should_finalize_hash) {
-        cx_sha256_init(hasher
+        cx_sha256_init(hasher);
 
         // tmp copy of firstHash
         uint8_t hashedOnce[HASH256_BYTE_COUNT];

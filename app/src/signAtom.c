@@ -118,7 +118,7 @@ static void receive_bytes_and_update_hash_and_update_ux() {
 }
 
 static void parse_atom() {
-    while (ctx->number_of_atom_bytes_parsed < ctx->atom_byte_count) {
+    while (ctx->number_of_atom_bytes_received < ctx->atom_byte_count) {
         receive_bytes_and_update_hash_and_update_ux();
     }
     PRINTF("Finished parsing all atom bytes => Asking user to confirm hash on Ledger...\n");
@@ -131,9 +131,8 @@ static void parse_and_sign_atom(
     const uint16_t dataLength
 ) {
 	initiate_state();
-    ctx.ux_state.number_of_up_particles = number_of_up_particles;
+    ctx->ux_state.number_of_up_particles = number_of_up_particles;
 	parse_bip_and_atom_size(dataBuffer, dataLength);
-    
     parse_atom();
 }
 

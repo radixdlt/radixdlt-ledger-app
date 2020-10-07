@@ -1,6 +1,5 @@
 #include "ParticleFieldType.h"
 
-
 void print_particle_field_type(ParticleFieldType field_type) {
     switch (field_type)
     {
