@@ -5,7 +5,7 @@ void empty_bytes(AtomBytesWindow *atom_bytes_window) {
     explicit_bzero(atom_bytes_window->bytes, MAX_ATOM_SLICE_SIZE);
 }
 
-static void cache_bytes(
+void do_cache_bytes(
     AtomBytesWindow *atom_bytes_window,
     uint8_t *bytes_to_cache,
     const uint16_t number_of_bytes_to_cache
@@ -39,6 +39,7 @@ void do_update_atom_bytes_window(
 ) {
 
     uint8_t number_of_cached_bytes_from_last_payload = atom_bytes_window->number_of_cached_bytes_from_last_payload;
+    atom_bytes_window->number_of_cached_bytes_from_last_payload = 0;
 
     uint16_t number_of_processed_bytes_before_this_payload = ctx->number_of_atom_bytes_received - number_of_cached_bytes_from_last_payload - number_of_newly_received_atom_bytes;
 
@@ -56,4 +57,12 @@ void do_update_atom_bytes_window(
     );
 
     // 'atom_slice' should now contain 'number_of_bytes_to_process' bytes
+}
+
+uint16_t get_end_of_atom_bytes_window(AtomBytesWindow *atom_bytes_window) {
+    return end_index(&atom_bytes_window->interval);
+}
+
+uint16_t get_start_of_atom_bytes_window(AtomBytesWindow *atom_bytes_window) {
+    return atom_bytes_window->interval.startsAt;
 }

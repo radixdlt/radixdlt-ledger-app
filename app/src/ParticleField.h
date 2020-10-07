@@ -11,3 +11,5 @@ bool is_field_empty(ParticleField *field);
 void print_particle_field(ParticleField *field);
 
 void zero_out_interval_in_field(ParticleField *field);
+
+bool is_field_interval_empty(ParticleField *field);

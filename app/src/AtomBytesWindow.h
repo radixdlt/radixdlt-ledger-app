@@ -10,7 +10,16 @@ typedef struct {
 
 void empty_bytes(AtomBytesWindow *atom_bytes_window);
 
-void cache_bytes_to_next_chunk(
+void do_update_atom_bytes_window(
+    AtomBytesWindow *atom_bytes_window,
+    uint8_t *bytes,
+    uint16_t number_of_newly_received_atom_bytes
+);
+
+void do_cache_bytes(
+    AtomBytesWindow *atom_bytes_window,
     uint8_t *bytes_to_cache,
     const uint16_t number_of_bytes_to_cache
 );
+
+uint16_t get_end_of_atom_bytes_window(AtomBytesWindow *atom_bytes_window);
