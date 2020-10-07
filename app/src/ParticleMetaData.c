@@ -114,7 +114,7 @@ bool mark_metadata_uninitialized_if_all_intervals_are_zero(
 typedef bool (*CheckParticleField)(ParticleField *check_field, void* result);
 
 // returns true if any field in particle_meta_data fulfilled `conditional_set_result_based_on_particle_field`
-bool iterate_intervals_of_metadata(
+bool iterate_fields_of_metadata(
 	ParticleMetaData *particle_meta_data,
 	CheckParticleField conditional_set_result_based_on_particle_field,
 	void *result
