@@ -89,29 +89,43 @@ static void receive_bytes_and_update_hash_and_update_ux() {
 
     uint8_t p1 = G_io_apdu_buffer[OFFSET_P1];
     uint8_t* dataBuffer = G_io_apdu_buffer + OFFSET_CDATA;
-    uint16_t number_of_atom_bytes_newly_received = G_io_apdu_buffer[OFFSET_LC];
+    uint16_t number_of_bytes_received = G_io_apdu_buffer[OFFSET_LC];
 
     PayloadType payloadType = p1;
+
+    PRINTF("Received payload from host machine - #%d bytes\n", number_of_bytes_received);
 
     // Check what kind of payload the bytes represent
     switch (payloadType)
     {
     case PayloadTypeIsAtomBytes:
-        ctx->number_of_atom_bytes_received += number_of_atom_bytes_newly_received;
+        PRINTF("Received payload is Atom bytes\n");
+        ctx->number_of_atom_bytes_received += number_of_bytes_received;
 
         // Update hash
         bool should_finalize_hash = ctx->number_of_atom_bytes_received == ctx->atom_byte_count;
 
         update_hash(
             dataBuffer,
-            number_of_atom_bytes_newly_received,
+            number_of_bytes_received,
             should_finalize_hash
         );
 
-        received_atom_bytes_from_host_machine(dataBuffer, number_of_atom_bytes_newly_received);
+        received_atom_bytes_from_host_machine(
+            dataBuffer, 
+            number_of_bytes_received
+        );
     
+        break;
     case PayloadTypeIsParticleMetaData:
-        received_particle_meta_data_bytes_from_host_machine(dataBuffer, number_of_atom_bytes_newly_received);
+        PRINTF("Received payload is Particle Meta Data\n");
+
+        received_particle_meta_data_bytes_from_host_machine(
+            dataBuffer, 
+            number_of_bytes_received
+        );
+
+        break;
     default:
         FATAL_ERROR("Unrecognized P1 value: %d\n", p1)
     }
