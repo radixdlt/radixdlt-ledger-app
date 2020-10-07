@@ -13,3 +13,7 @@ void print_particle_field(ParticleField *field) {
 void zero_out_interval_in_field(ParticleField *field) {
 	zero_out_interval(&field->byte_interval);
 }
+
+bool is_field_interval_empty(ParticleField *field) {
+    return is_interval_empty(&field->byte_interval);
+}

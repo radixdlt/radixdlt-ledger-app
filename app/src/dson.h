@@ -1,4 +1,5 @@
 #include "ParticleFieldType.h"
+#include "AtomBytesWindow.h"
 
 // Please see column "Additional info" in table "CBOR Major types": https://radixdlt.atlassian.net/wiki/spaces/AM/pages/56557727/DSON+Encoding
 typedef enum
@@ -12,6 +13,12 @@ typedef enum
     ByteStringCBORPrefixByte_rri = 6
 } CBORBytePrefixForByteArray;
 
+typedef enum {
+  ParseFieldResultNonTransferDataFound = 1,
+  ParseFieldResultParsedPartOfTransfer,  
+  ParseFieldResultFinishedParsingTransfer  
+} ParseFieldResult;
+
 CBORBytePrefixForByteArray cborBytePrefixForParticleFieldType(ParticleFieldType field);
 
 // Returns `true` iff `utf8_string` indicates a TransferrableTokensParticle
@@ -20,18 +27,13 @@ bool is_transferrable_tokens_particle_serializer(
     const size_t string_length
 );
 
-
 // Returns `true` iff `cborValue` indicates a TransferrableTokensParticle
 bool parseSerializer_is_ttp(
     const size_t valueByteCount,
     CborValue *cborValue);
 
-void parseParticleFieldType(
-    const size_t valueByteCount,
-    CborValue *cborValue,
-    ParticleFieldType field,
-
-    uint8_t *output_buffer
+ParseFieldResult parse_field_from_bytes_and_populate_transfer(
+    ParticleField *particle_field,
+    uint8_t *bytes,
+    Transfer *transfer
 );
-
-void print_particle_field_type(ParticleFieldType field_type);
