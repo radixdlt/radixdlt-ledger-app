@@ -1,3 +1,7 @@
+#ifndef UNSIGNEDINTEGER256_H
+#define UNSIGNEDINTEGER256_H
+
+
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -17,3 +21,5 @@ size_t to_string_uint256(
     UnsignedInteger256 *uint256,
     char *outstr,
     const size_t outstr_length);
+
+#endif

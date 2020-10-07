@@ -1,3 +1,7 @@
+#ifndef TRANSFER_H
+#define TRANSFER_H
+
+
 #include "RadixResourceIdentifier.h"
 #include "TokenAmount.h"
 
@@ -13,3 +17,5 @@ typedef struct {
     bool is_token_definition_reference_set;
     RadixResourceIdentifier token_definition_reference;
 } Transfer;
+
+#endif

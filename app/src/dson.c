@@ -1,9 +1,6 @@
 #include "dson.h"
-#include "AtomBytesWindow.h"
-#include "cbor.h"
-#include "Transfer.h"
 
-static CBORBytePrefixForByteArray cborBytePrefixForParticleFieldType(ParticleFieldType field)
+CBORBytePrefixForByteArray cborBytePrefixForParticleFieldType(ParticleFieldType field)
 {
     switch (field)
     {
@@ -177,16 +174,16 @@ ParseFieldResult parse_field_from_bytes_and_populate_transfer(
 
     case ParticleFieldTypeTokenDefinitionReference:
         assert(type == CborByteStringType);
-        assert(ux_state->transfer.has_confirmed_serializer);
-        assert(ux_state->transfer.is_address_set);
-        assert(ux_state->transfer.is_amount_set);
-        assert(transfer.is_token_definition_reference_set);
+        assert(transfer->has_confirmed_serializer);
+        assert(transfer->is_address_set);
+        assert(transfer->is_amount_set);
+        assert(transfer->is_token_definition_reference_set);
         
         parse_particle_field(
             readLength, 
             &cborValue, 
             ParticleFieldTypeTokenDefinitionReference, 
-            ux_state->transfer.token_definition_reference.bytes
+            transfer->token_definition_reference.bytes
         );
 
         transfer->is_token_definition_reference_set = true;

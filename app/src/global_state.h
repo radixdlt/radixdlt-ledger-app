@@ -1,9 +1,8 @@
 #include "key_and_signatures.h"
 #include "Transfer.h"
-#include "common_macros.h"
-#include "ParticleMetaData.h"
 #include "aes.h"
 #include "AtomBytesWindow.h"
+#include "ParticleMetaData.h"
 
 typedef struct {
 	size_t cipher_text_byte_count;

@@ -17,11 +17,10 @@
 
 
 static signAtomContext_t *ctx = &global.signAtomContext;
-static signAtomUX_t *ux_state = &ctx.ux_state
+static signAtomUX_t *ux_state = &global.signAtomContext.ux_state;
 
 static void empty_particle_meta_data() {
-    explicit_bzero(&ux_state->particle_meta_data, sizeof(ParticleMetaData));
-    ux_state->particle_meta_data.is_initialized = false;
+    zero_out_particle_metadata(&ux_state->particle_meta_data);
 }
 
 static void empty_transfer() {
@@ -33,11 +32,11 @@ static void empty_transfer() {
 }
 
 static void empty_atom_bytes_window() {
-    empty_bytes(ux_state->atom_bytes_window);
+    empty_bytes(&ux_state->atom_bytes_window);
 }
 
 void reset_ux_state() {
-    ux_state->number_of_cached_bytes = 0;
+    ux_state->atom_bytes_window.number_of_cached_bytes_from_last_payload = 0;
     ux_state->user_has_accepted_non_transfer_data = false;
     ux_state->number_of_identified_up_particles = 0;
     empty_particle_meta_data();
@@ -46,11 +45,11 @@ void reset_ux_state() {
 }
 
 static void print_atom_bytes_window() {
-    do_print_atom_bytes_window(ux_state->atom_bytes_window);
+    do_print_atom_bytes_window(&ux_state->atom_bytes_window);
 }
 
 static void print_particle_metadata() {
-    do_print_particle_metadata(ux_state->particle_meta_data);
+    do_print_particle_metadata(&ux_state->particle_meta_data);
 }
 
 
@@ -66,14 +65,14 @@ static uint16_t start_of_atom_bytes_window() {
 static uint16_t offset_of_field_in_atom_bytes_window(
     ParticleField *particle_field
 ) {
-    uint16_t offset = particle_field->startsAt - start_of_atom_bytes_window();
+    uint16_t offset = particle_field->byte_interval.startsAt - start_of_atom_bytes_window();
 
     return offset;
 }
 
 static bool can_parse_field_given_atom_bytes_window(ParticleField *particle_field) {
 
-    if (end_of_atom_bytes_window() > end_index(particle_field->byte_interval)) {
+    if (end_of_atom_bytes_window() > end_index(&particle_field->byte_interval)) {
         return false;
     } else {
         return true;
@@ -93,32 +92,12 @@ static void cache_bytes(
     );
 }
 
-
-void received_particle_meta_data_bytes_from_host_machine(
-    uint8_t *bytes,
-    uint16_t number_of_bytes_received
-) {
-
-    do_populate_particle_meta_data(
-        ux_state->particle_meta_data,
-        bytes,
-        number_of_bytes_received
-    );
-
-    if (!is_transfer_particle() && ux_state->user_has_accepted_non_transfer_data) {
-        PRINTF("Just received meta data about non Transfer particle, but user has already accepted 'non transfer data', so we will ignore parsing the bytes for this particle, thus will will mark the meta data irrelevant and also cheat by increasing 'number_of_identified_up_particles' by one. Cheating... I know.\n");
-        ux_state->number_of_identified_up_particles++; // cheating....
-        zero_out_particle_metadata(&ux_state->particle_meta_data);
-        assert(ux_state->atom_bytes_window.number_of_cached_bytes_from_last_payload == 0);
-    }
-}
-
 static bool has_particle_meta_data() {
     return ux_state->particle_meta_data.is_initialized;
 }
 
 static bool finished_parsing_all_particles() {
-    bool parsed_all_particles = ux_state->number_of_identified_up_particles == number_of_up_particles;
+    bool parsed_all_particles = ux_state->number_of_identified_up_particles == ux_state->number_of_up_particles;
     if (parsed_all_particles) {
         assert(!has_particle_meta_data());
         assert(ux_state->atom_bytes_window.number_of_cached_bytes_from_last_payload == 0);
@@ -128,7 +107,7 @@ static bool finished_parsing_all_particles() {
 
 static bool is_transfer_particle() {
     assert(has_particle_meta_data());
-    return is_meta_data_about_transferrable_tokens_particle(ux_state->particle_meta_data);
+    return is_meta_data_about_transferrable_tokens_particle(&ux_state->particle_meta_data);
 }
 
 static bool should_parse_atom_bytes() {
@@ -157,23 +136,16 @@ static void update_atom_bytes_window(
     uint16_t number_of_newly_received_atom_bytes
 ) {
 
+    uint16_t number_of_processed_bytes_before_this_payload = ctx->number_of_atom_bytes_received - ux_state->atom_bytes_window.number_of_cached_bytes_from_last_payload - number_of_newly_received_atom_bytes;
+
     do_update_atom_bytes_window(
         &ux_state->atom_bytes_window,
         bytes,
+        number_of_processed_bytes_before_this_payload,
         number_of_newly_received_atom_bytes
     );
 }
 
-static bool update_relevant_fields_and_get_first_relevant_one_if_any(
-    ParticleField *candidate_field,
-    void *output_relevat_field
-) {
-    return do_update_relevant_fields_and_get_first_relevant_one_if_any(
-        candidate_field, 
-        output_relevat_field,
-        ux_state->atom_window->interval.startsAt
-    );
-}
 
 // Returns sets `output_first_interval := candidate_interval` and returns `true` iff `candidate_interval.startsAt >= pointer_in_atom`,
 // else does not set `output_first_interval`, marks `candidate_interval` as zero length and returns false
@@ -197,11 +169,23 @@ static bool do_update_relevant_fields_and_get_first_relevant_one_if_any(
     return true;
 }
 
+
+static bool update_relevant_fields_and_get_first_relevant_one_if_any(
+    ParticleField *candidate_field,
+    void *output_relevat_field
+) {
+    return do_update_relevant_fields_and_get_first_relevant_one_if_any(
+        candidate_field, 
+        output_relevat_field,
+        ux_state->atom_bytes_window.interval.startsAt
+    );
+}
+
 // Returns `true` iff `output_particle_field` is set
 static bool next_interval_to_parse_from_particle_meta_data(
     ParticleField *output_particle_field
 ) {
-    assert(ux_state->particle_meta_data->is_initialized);
+    assert(ux_state->particle_meta_data.is_initialized);
 
     bool is_output_set = iterate_fields_of_metadata(
         &ux_state->particle_meta_data,
@@ -209,7 +193,7 @@ static bool next_interval_to_parse_from_particle_meta_data(
         output_particle_field
     );
 
-    if (mark_metadata_uninitialized_if_all_intervals_are_zero()) {
+    if (mark_metadata_uninitialized_if_all_intervals_are_zero(&ux_state->particle_meta_data)) {
         assert(!is_output_set);
     }
 
@@ -258,7 +242,7 @@ static void do_parse_field_from_atom_bytes(
         
         case ParseFieldResultParsedPartOfTransfer:
             PRINTF("Parsed part of transfer...\n");
-            break
+            break;
     }
 
 }
@@ -281,11 +265,11 @@ static void parse_atom_bytes() {
             return;
         }
 
-        uint8_t *read_bytes_needle_head = ux_state->atom_bytes_window.bytes + offset_of_field_in_atom_bytes_window(&particle_field);
+        uint8_t *read_bytes_needle_head = ux_state->atom_bytes_window.bytes + offset_of_field_in_atom_bytes_window(&next_particle_field);
 
-        if (end_index(next_particle_field.byte_interval) > end_of_atom_bytes_window()) {
+        if (end_index(&next_particle_field.byte_interval) > end_of_atom_bytes_window()) {
             PRINTF("Skipped parsing atom bytes, since we only have some of the relevant bytes of next particle field, we will cache the bytes we have and try parsing once we get the remaining particle fields bytes in the next payload.\n");
-            uint16_t number_of_bytes_to_cache = end_index(next_particle_field.byte_interval) - end_of_atom_bytes_window();
+            uint16_t number_of_bytes_to_cache = end_index(&next_particle_field.byte_interval) - end_of_atom_bytes_window();
             cache_bytes(
                 read_bytes_needle_head,
                 number_of_bytes_to_cache
@@ -294,7 +278,7 @@ static void parse_atom_bytes() {
         }
 
         do_parse_field_from_atom_bytes(
-            &particle_field,
+            &next_particle_field,
             read_bytes_needle_head
         );
 
@@ -310,10 +294,29 @@ void received_atom_bytes_from_host_machine(
 
     if (!should_parse_atom_bytes()) {
         PRINTF("Skipped parsing atom bytes, since not needed\n");
-        assert(ux_state->atom_bytes_window->number_of_cached_bytes_from_last_payload == 0); // validation of state consistency
+        assert(ux_state->atom_bytes_window.number_of_cached_bytes_from_last_payload == 0); // validation of state consistency
         return;
     }
 
     update_atom_bytes_window(bytes, number_of_newly_received_atom_bytes);
     parse_atom_bytes();
+}
+
+void received_particle_meta_data_bytes_from_host_machine(
+    uint8_t *bytes,
+    uint16_t number_of_bytes_received
+) {
+
+    do_populate_particle_meta_data(
+        &ux_state->particle_meta_data,
+        bytes,
+        number_of_bytes_received
+    );
+
+    if (!is_transfer_particle() && ux_state->user_has_accepted_non_transfer_data) {
+        PRINTF("Just received meta data about non Transfer particle, but user has already accepted 'non transfer data', so we will ignore parsing the bytes for this particle, thus will will mark the meta data irrelevant and also cheat by increasing 'number_of_identified_up_particles' by one. Cheating... I know.\n");
+        ux_state->number_of_identified_up_particles++; // cheating....
+        zero_out_particle_metadata(&ux_state->particle_meta_data);
+        assert(ux_state->atom_bytes_window.number_of_cached_bytes_from_last_payload == 0);
+    }
 }

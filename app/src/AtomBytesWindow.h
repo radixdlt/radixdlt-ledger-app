@@ -1,4 +1,8 @@
-#include "ParticleMetaData.h"
+#ifndef ATOMBYTESWINDOW_H
+#define ATOMBYTESWINDOW_H
+
+
+#include "ByteInterval.h"
 #include "common_macros.h"
 
 typedef struct {
@@ -13,6 +17,7 @@ void empty_bytes(AtomBytesWindow *atom_bytes_window);
 void do_update_atom_bytes_window(
     AtomBytesWindow *atom_bytes_window,
     uint8_t *bytes,
+    uint16_t number_of_processed_bytes_before_this_payload,
     uint16_t number_of_newly_received_atom_bytes
 );
 
@@ -23,3 +28,5 @@ void do_cache_bytes(
 );
 
 uint16_t get_end_of_atom_bytes_window(AtomBytesWindow *atom_bytes_window);
+
+#endif

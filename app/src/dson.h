@@ -1,5 +1,7 @@
-#include "ParticleFieldType.h"
 #include "AtomBytesWindow.h"
+#include "cbor.h"
+#include "Transfer.h"
+#include "ParticleField.h"
 
 // Please see column "Additional info" in table "CBOR Major types": https://radixdlt.atlassian.net/wiki/spaces/AM/pages/56557727/DSON+Encoding
 typedef enum
