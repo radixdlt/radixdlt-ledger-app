@@ -92,8 +92,6 @@ ParseFieldResult parse_field_from_bytes_and_populate_transfer(
     Transfer *transfer
 ) {
 
-    assert(can_parse_field_given_atom_bytes_window(particle_field));
-
     PRINTF("About to CBOR/DSON decode field\n");
     print_particle_field(particle_field);
 
