@@ -207,6 +207,7 @@ void do_populate_particle_meta_data(
 
 	populate_interval(&particle_meta_data->byte_interval_of_particle_itself, bytes, &offset);
 
+	populate_field(&particle_meta_data->address_field, bytes, &offset);
 	populate_field(&particle_meta_data->amount_field, bytes, &offset);
 	populate_field(&particle_meta_data->serializer_field, bytes, &offset);
 	populate_field(&particle_meta_data->token_definition_reference_field, bytes, &offset);
@@ -214,7 +215,6 @@ void do_populate_particle_meta_data(
     PRINTF("Finished parsing particle meta data...\n");
 
     particle_meta_data->is_initialized = true;
-
 	assert(offset == number_of_particle_meta_data_bytes);
 }
 

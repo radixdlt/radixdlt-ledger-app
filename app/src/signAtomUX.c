@@ -129,6 +129,8 @@ static bool should_parse_atom_bytes() {
         PRINTF("Skipped parsing atom bytes since it is non transfer which user has already accepted\n");
         return false;
     }
+
+    return true;
 }
 
 static void update_atom_bytes_window(
