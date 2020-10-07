@@ -63,3 +63,10 @@ size_t to_string_rri_null_term_or_not(
         return length;
     }
 }
+
+void printRRI(RadixResourceIdentifier *rri) {
+    const size_t max_length = RADIX_RRI_STRING_LENGTH_MAX;
+    char rri_utf8_string[max_length];
+    to_string_rri(rri, rri_utf8_string, max_length, true);
+    PRINTF("%s", rri_utf8_string);
+}

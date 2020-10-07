@@ -10,6 +10,6 @@ typedef struct {
     bool is_amount_set;
     TokenAmount amount;
 
-    // bool is_token_definition_reference_set;
+    bool is_token_definition_reference_set;
     RadixResourceIdentifier token_definition_reference;
 } Transfer;

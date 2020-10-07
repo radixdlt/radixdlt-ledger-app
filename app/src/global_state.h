@@ -3,6 +3,7 @@
 #include "common_macros.h"
 #include "ParticleMetaData.h"
 #include "aes.h"
+#include "AtomBytesWindow.h"
 
 typedef struct {
 	size_t cipher_text_byte_count;
@@ -37,21 +38,25 @@ typedef struct {
 #define MAX_SERIALIZER_LENGTH 100
 
 typedef struct {
+
+    uint8_t number_of_identified_up_particles;
     uint8_t number_of_up_particles;
-	bool non_transfer_data_found;
-	cx_sha256_t hasher;
-	uint8_t hash[HASH256_BYTE_COUNT];
-    uint16_t number_of_atom_bytes_received;
+	bool user_has_accepted_non_transfer_data;
     uint16_t number_of_atom_bytes_parsed;
 
-	ByteInterval interval_of_atom_slice;
-	uint32_t bip32_path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
-    uint16_t atom_byte_count;
-	uint8_t number_of_cached_bytes;
-
+	AtomBytesWindow atom_bytes_window;
 	ParticleMetaData particle_meta_data; 
 	Transfer transfer;
-   	uint8_t atom_slice[MAX_ATOM_SLICE_SIZE];
+} signAtomUX_t;
+
+typedef struct {
+    uint16_t atom_byte_count;
+    uint16_t number_of_atom_bytes_received;
+	cx_sha256_t hasher;
+	uint8_t hash[HASH256_BYTE_COUNT];
+	uint32_t bip32_path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
+
+	signAtomUX_t ux_state;
 } signAtomContext_t;
 
 // To save memory, we store all the context types in a single global union,
