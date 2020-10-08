@@ -379,6 +379,9 @@ void received_particle_meta_data_bytes_from_host_machine(
         number_of_bytes_received
     );
 
+        
+    assert(ux_state->particle_meta_data.byte_interval_of_particle_itself.startsAt == ctx->number_of_atom_bytes_received);
+
     if (!is_transfer_particle() && ux_state->user_has_accepted_non_transfer_data) {
         PRINTF("Just received meta data about non Transfer particle, but user has already accepted 'non transfer data', so we will ignore parsing the bytes for this particle, thus will will mark the meta data irrelevant and also cheat by increasing 'number_of_identified_up_particles' by one. Cheating... I know.\n");
         ux_state->number_of_identified_up_particles++; // cheating....
