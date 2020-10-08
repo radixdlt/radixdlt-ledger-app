@@ -205,10 +205,26 @@ static bool next_particle_field_to_parse_from_particle_meta_data(
     return is_output_set;
 }
 
-static void ask_user_for_confirmation_of_non_transfer_data() {
-    FATAL_ERROR("IMPL ME");
+static void continue_sign_atom_flow() {
+    unsigned int tx = 0;
+    G_io_apdu_buffer[tx++] = 0x90;
+    G_io_apdu_buffer[tx++] = 0x00;
+    // Send back the response, do not restart the event loop
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
+    // Display back the original UX
+    ui_idle();
+    PRINTF("(3) continue_sign_atom_flow\n");
 }
 
+static void user_accepted_non_transfer_data() {
+    PRINTF("(2) user_accepted_non_transfer_data\n");
+    continue_sign_atom_flow();
+}
+
+static void ask_user_for_confirmation_of_non_transfer_data() {
+    PRINTF("(1) ask_user_for_confirmation_of_non_transfer_data\n");
+    display_lines("WARNING", "DATA Found", user_accepted_non_transfer_data);
+}
 
 static void ask_user_for_confirmation_of_transfer() {
     FATAL_ERROR("IMPL ME");
@@ -238,9 +254,11 @@ static void do_parse_field_from_atom_bytes(
             break;
         
         case ParseFieldResultNonTransferDataFound:
+            PRINTF("(0) do_parse_field_from_atom_bytes - blocking flow\n");
             ask_user_for_confirmation_of_non_transfer_data();
             io_exchange(CHANNEL_APDU | IO_ASYNCH_REPLY, 0);
             // Blocked UX, waiting for user input
+            PRINTF("(4) do_parse_field_from_atom_bytes - resumed flow\n");
             ux_state->user_has_accepted_non_transfer_data = true;
             empty_particle_meta_data();
             break;
