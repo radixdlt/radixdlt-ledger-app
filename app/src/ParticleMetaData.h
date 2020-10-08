@@ -1,3 +1,6 @@
+#ifndef PARTICLEMETADATA_H
+#define PARTICLEMETADATA_H
+
 #include <stdint.h>
 #include <stdbool.h>
 #include "ParticleField.h"
@@ -76,3 +79,7 @@ void do_populate_particle_meta_data(
     uint8_t *bytes,
     const uint16_t number_of_particle_meta_data_bytes
 );
+
+void zero_out_particle_metadata(ParticleMetaData *particle_meta_data);
+
+#endif

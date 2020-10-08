@@ -88,7 +88,7 @@ void uncompress_public_key(
     cx_math_powm(y, y, (unsigned char *)secp256k1_p_plus_1_div_4, FIELD_SCALAR_SIZE, MOD); // y == pow(y, (p+1) // 4) % p
 
     bool y_LSB = ReadBitAt(y[FIELD_SCALAR_SIZE-1], 0);
-    if (compressed_pubkey[0] == 0x02 && y_LSB || compressed_pubkey[0] == 0x03 && !y_LSB) {
+    if ((compressed_pubkey[0] == 0x02 && y_LSB) || (compressed_pubkey[0] == 0x03 && !y_LSB)) {
         cx_math_sub(y, secp256k1_P, y, FIELD_SCALAR_SIZE);
     }
 

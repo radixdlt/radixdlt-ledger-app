@@ -268,7 +268,11 @@ Contains non transfer data: {}
 
 
 	def sendToLedgerAtomBytes(atomBytes: bytearray):
-		print(f"Sending #{len(atomBytes)} atom bytes to Ledger")
+		byteCount = len(atomBytes)
+		w_sta = count_bytes_sent_to_ledger
+		w_end = w_sta + byteCount
+		print(f"Sending atom bytes to ledger - window [{w_sta}-{w_end}] (#{byteCount}), bytes:\n")
+		print(atomBytes.hex())
 		success = sendToLedger(
 			prefix=apdu_prefix_particle_metadata(False),
 			payload=atomBytes
@@ -298,34 +302,6 @@ Contains non transfer data: {}
 
 		print(f"result: {result.hex()}")
 	
-		# number_of_bytes_left_to_send = atom_byte_count - count_bytes_sent_to_ledger
-
-		# chunk = bytearray(0)
-		# if number_of_bytes_left_to_send > STREAM_LEN:
-		# 	chunk = atom_bytes_chunked[0:STREAM_LEN]
-		# 	atom_bytes_chunked = atom_bytes_chunked[STREAM_LEN:]
-		# else:
-		# 	chunk = atom_bytes_chunked
-		# 	atom_bytes_chunked = bytearray(0)
-
-		# chunk_size = len(chunk)
-		# print(f"Chunk {chunk_index+1}: [{count_bytes_sent_to_ledger}-{count_bytes_sent_to_ledger+chunk_size}]")
-		# L_c = bytes([chunk_size])
-		# count_bytes_sent_to_ledger += chunk_size
-		# apdu = prefix + L_c + chunk
-		# if (chunk_index+1) == number_of_chunks_to_send:
-		# 	print(f"🔮 Finished streaming all chunks to the ledger.\n💡 Expected Hash: {vector.expected_hash_hex()}\nWaiting for your to press the Ledger's buttons...")
-
-		# try:
-		# 	result = dongle.exchange(apdu)
-		# except CommException as commException:
-		# 	if commException.sw == CommExceptionUserRejection:
-		# 		print("🙅🏿‍♀️ You rejected the atom...Aborting vector.")
-		# 		dongle.close()
-		# 		return False
-		# 	else:
-		# 		raise commException # unknown error, interrupt exection and propage the error.
-		# chunk_index += 1
 
 	print(f"🔮 Finished streaming all chunks to the ledger.\n💡 Expected Hash: {vector.expected_hash_hex()}\nWaiting for your to press the Ledger's buttons...")
 

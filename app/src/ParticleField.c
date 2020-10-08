@@ -1,4 +1,5 @@
 #include "ParticleField.h"
+#include <os.h>
 
 bool is_field_empty(ParticleField *field) {
     return is_interval_empty(&field->byte_interval);

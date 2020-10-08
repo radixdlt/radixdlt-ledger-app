@@ -1,4 +1,5 @@
 #include "TokenAmount.h"
+#include <os.h>
 
 void printTokenAmount(TokenAmount *tokenAmount) {
     const size_t max_length = (UINT256_DEC_STRING_MAX_LENGTH + 1); // +1 for null

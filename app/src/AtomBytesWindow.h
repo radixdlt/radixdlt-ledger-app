@@ -27,6 +27,10 @@ void do_cache_bytes(
     const uint16_t number_of_bytes_to_cache
 );
 
+void do_print_atom_bytes_window(AtomBytesWindow *atom_bytes_window);
+
 uint16_t get_end_of_atom_bytes_window(AtomBytesWindow *atom_bytes_window);
+
+uint16_t get_start_of_atom_bytes_window(AtomBytesWindow *atom_bytes_window);
 
 #endif

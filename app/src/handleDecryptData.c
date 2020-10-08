@@ -31,7 +31,7 @@ static void uncompress_and_init_pubkey(
 }
 
 
-static bool sha512Twice(
+static void sha512Twice(
      const uint8_t *data_in, const size_t data_in_len,
      uint8_t *data_out, const size_t data_out_len
 ) {
@@ -54,7 +54,6 @@ static bool sha512Twice(
         data_out,
         data_out_len
     );
-
 }
 
 static void update_hmac(

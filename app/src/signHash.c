@@ -7,6 +7,7 @@
 #include "global_state.h"
 #include "key_and_signatures.h"
 #include "ui.h"
+#include "base_conversion.h"
 
 static signHashContext_t *ctx = &global.signHashContext;
 
