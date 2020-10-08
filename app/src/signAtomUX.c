@@ -290,7 +290,7 @@ static void parse_atom_bytes() {
         PRINTF("! Next field >");
         print_particle_field(&next_particle_field);
         PRINTF("< is inside atom bytes window >");
-        print_interval(ux_state->atom_bytes_window.interval);
+        print_interval(&ux_state->atom_bytes_window.interval);
         PRINTF("> so will parse it now !\n");
 
         do_parse_field_from_atom_bytes(
