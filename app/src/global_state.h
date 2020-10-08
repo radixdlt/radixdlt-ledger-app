@@ -51,6 +51,7 @@ typedef struct {
 } signAtomUX_t;
 
 typedef struct {
+    uint8_t DELETE_ME___debug_only___NUMBER_OF_RECEIVE_PAYLOADS;
     uint16_t atom_byte_count;
     uint16_t number_of_atom_bytes_received;
 	cx_sha256_t hasher;

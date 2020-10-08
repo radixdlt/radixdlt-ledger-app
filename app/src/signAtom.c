@@ -110,6 +110,51 @@ static void receive_bytes_and_update_hash_and_update_ux() {
 
         PRINTF("in total received %d/%d atom bytes\n", bytes_received_incl_this_payload, ctx->atom_byte_count);
 
+        switch (ctx->DELETE_ME___debug_only___NUMBER_OF_RECEIVE_PAYLOADS)
+        {
+        case 0:
+            if (number_of_bytes_received != 74) {
+                FATAL_ERROR("Expected 74 bytes\n");
+            }
+            break;
+        case 1:
+            if (number_of_bytes_received != 255) {
+                FATAL_ERROR("Expected 255 bytes\n");
+            }
+            break;
+        case 2:
+            if (number_of_bytes_received != 107) {
+                FATAL_ERROR("Expected 107 bytes\n");
+            }
+            break;
+        case 3:
+            if (number_of_bytes_received != 255) {
+                FATAL_ERROR("Expected 255 bytes\n");
+            }
+            break;
+        case 4:
+            if (number_of_bytes_received != 255) {
+                FATAL_ERROR("Expected 255 bytes\n");
+            }
+            break;
+        case 5:
+            if (number_of_bytes_received != 216) {
+                FATAL_ERROR("Expected 216 bytes\n");
+            }
+            break;
+        case 6:
+            if (number_of_bytes_received != 255) {
+                FATAL_ERROR("Expected 255 bytes\n");
+            }
+            break;
+        default:
+            FATAL_ERROR("Unhandled no of received payloads value\n");
+            break;
+        }
+
+        ctx->DELETE_ME___debug_only___NUMBER_OF_RECEIVE_PAYLOADS++;
+ 
+
         // Update hash
         bool should_finalize_hash = bytes_received_incl_this_payload == ctx->atom_byte_count;
 
@@ -166,6 +211,7 @@ void handleSignAtom(
     volatile unsigned int *flags,
     volatile unsigned int *tx)
 {
+    ctx->DELETE_ME___debug_only___NUMBER_OF_RECEIVE_PAYLOADS = 0;
     parse_and_sign_atom(
         p1,
         dataBuffer,
