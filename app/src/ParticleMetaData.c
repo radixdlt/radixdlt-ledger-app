@@ -10,11 +10,11 @@ uint16_t last_byte_of_particle_from_its_meta_data(ParticleMetaData *particle_met
 bool is_meta_data_about_transferrable_tokens_particle(ParticleMetaData *particle_meta_data) {
     assert(particle_meta_data->is_initialized);
 
-    return !(
-		is_field_interval_empty(&particle_meta_data->address_field) ||
-		is_field_interval_empty(&particle_meta_data->amount_field) ||
-		is_field_interval_empty(&particle_meta_data->token_definition_reference_field)
-	);
+    return 
+		!is_field_interval_empty(&particle_meta_data->address_field) ||
+		!is_field_interval_empty(&particle_meta_data->amount_field) ||
+		!is_field_interval_empty(&particle_meta_data->token_definition_reference_field)
+	;
 }
 
 // Returns `true` iff all intervals of particle_meta_data are zero

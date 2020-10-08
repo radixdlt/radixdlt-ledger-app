@@ -83,14 +83,23 @@ static void update_hash(
 
 static void receive_bytes_and_update_hash_and_update_ux() {
     // Get bytes from host machine
-    empty_buffer();
-    G_io_apdu_buffer[0] = 0x90; // 0x9000 == 'SW_OK'
-    G_io_apdu_buffer[1] = 0x00; // 0x9000 == 'SW_OK'
-    io_exchange(CHANNEL_APDU, 2);
+    uint8_t p1;
+    if (G_io_apdu_buffer[OFFSET_LC] == 0) {
+        PRINTF("Requesting more bytes from host machine\n");
+        empty_buffer();
+        G_io_apdu_buffer[0] = 0x90; // 0x9000 == 'SW_OK'
+        G_io_apdu_buffer[1] = 0x00; // 0x9000 == 'SW_OK'
+        io_exchange(CHANNEL_APDU, 2);
+        
+        p1 = G_io_apdu_buffer[OFFSET_P1];
+    } else {
+        PRINTF("Got bytes during UX flow\n");
+        p1 = PayloadTypeIsAtomBytes;
+    }
 
-    uint8_t p1 = G_io_apdu_buffer[OFFSET_P1];
     uint8_t* dataBuffer = G_io_apdu_buffer + OFFSET_CDATA;
     uint16_t number_of_bytes_received = G_io_apdu_buffer[OFFSET_LC];
+    G_io_apdu_buffer[OFFSET_LC] = 0;
 
     PayloadType payloadType = p1;
     PRINTF("\n\n\n===================================================\n");
@@ -102,58 +111,11 @@ static void receive_bytes_and_update_hash_and_update_ux() {
     switch (payloadType)
     {
     case PayloadTypeIsAtomBytes:
-
-
         ctx->number_of_atom_bytes_received = bytes_received_incl_this_payload;
         
         PRINTF("Received payload from host machine - atom bytes window: [%d-%d] (#%d bytes)\n", bytes_received_before_this_payload, bytes_received_incl_this_payload, number_of_bytes_received); 
 
         PRINTF("in total received %d/%d atom bytes\n", bytes_received_incl_this_payload, ctx->atom_byte_count);
-
-        switch (ctx->DELETE_ME___debug_only___NUMBER_OF_RECEIVE_PAYLOADS)
-        {
-        case 0:
-            if (number_of_bytes_received != 74) {
-                FATAL_ERROR("Expected 74 bytes\n");
-            }
-            break;
-        case 1:
-            if (number_of_bytes_received != 255) {
-                FATAL_ERROR("Expected 255 bytes\n");
-            }
-            break;
-        case 2:
-            if (number_of_bytes_received != 107) {
-                FATAL_ERROR("Expected 107 bytes\n");
-            }
-            break;
-        case 3:
-            if (number_of_bytes_received != 255) {
-                FATAL_ERROR("Expected 255 bytes\n");
-            }
-            break;
-        case 4:
-            if (number_of_bytes_received != 255) {
-                FATAL_ERROR("Expected 255 bytes\n");
-            }
-            break;
-        case 5:
-            if (number_of_bytes_received != 216) {
-                FATAL_ERROR("Expected 216 bytes\n");
-            }
-            break;
-        case 6:
-            if (number_of_bytes_received != 255) {
-                FATAL_ERROR("Expected 255 bytes\n");
-            }
-            break;
-        default:
-            FATAL_ERROR("Unhandled no of received payloads value\n");
-            break;
-        }
-
-        ctx->DELETE_ME___debug_only___NUMBER_OF_RECEIVE_PAYLOADS++;
- 
 
         // Update hash
         bool should_finalize_hash = bytes_received_incl_this_payload == ctx->atom_byte_count;
@@ -185,6 +147,7 @@ static void receive_bytes_and_update_hash_and_update_ux() {
 }
 
 static void parse_atom() {
+    empty_buffer();
     while (ctx->number_of_atom_bytes_received < ctx->atom_byte_count) {
         receive_bytes_and_update_hash_and_update_ux();
     }
@@ -211,7 +174,6 @@ void handleSignAtom(
     volatile unsigned int *flags,
     volatile unsigned int *tx)
 {
-    ctx->DELETE_ME___debug_only___NUMBER_OF_RECEIVE_PAYLOADS = 0;
     parse_and_sign_atom(
         p1,
         dataBuffer,
