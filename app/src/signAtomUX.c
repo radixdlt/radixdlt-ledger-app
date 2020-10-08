@@ -256,7 +256,7 @@ static void do_parse_field_from_atom_bytes(
             PRINTF("\n===####!!!$$$ FINISHED PARSING TRANSFER $$$!!!###===\n");
             PRINTF("------------------------------------------------------\n");    
 
-            if (!is_transfer_change_back_to_me) {
+            if (!is_transfer_change_back_to_me()) {
                 ask_user_for_confirmation_of_transfer();
                 io_exchange(CHANNEL_APDU | IO_ASYNCH_REPLY, 0);
                 // Blocked UX, waiting for user input
