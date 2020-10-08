@@ -99,8 +99,8 @@ static void receive_bytes_and_update_hash_and_update_ux() {
     switch (payloadType)
     {
     case PayloadTypeIsAtomBytes:
-        PRINTF("Received payload is Atom bytes\n");
         ctx->number_of_atom_bytes_received += number_of_bytes_received;
+        PRINTF("Received payload is Atom bytes, in total received %d/%d atom bytes\n", ctx->number_of_atom_bytes_received, ctx->atom_byte_count);
 
         // Update hash
         bool should_finalize_hash = ctx->number_of_atom_bytes_received == ctx->atom_byte_count;
