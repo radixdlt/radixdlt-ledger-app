@@ -223,12 +223,16 @@ static void user_accepted_non_transfer_data() {
     continue_sign_atom_flow();
 }
 
+static void user_accepted_transfer() {
+    continue_sign_atom_flow();
+}
+
 static void ask_user_for_confirmation_of_non_transfer_data() {
     display_lines("WARNING", "DATA Found", user_accepted_non_transfer_data);
 }
 
 static void ask_user_for_confirmation_of_transfer() {
-    display_lines("Transfer", "found", user_accepted_non_transfer_data);
+    display_lines("Transfer", "found", user_accepted_transfer);
 }
 
 
