@@ -83,7 +83,6 @@ static void update_hash(
 
 static void receive_bytes_and_update_hash_and_update_ux() {
     // Get bytes from host machine
-    uint8_t p1;
     if (G_io_apdu_buffer[OFFSET_LC] == 0) {
         PRINTF("Requesting more bytes from host machine\n");
         empty_buffer();
@@ -91,12 +90,11 @@ static void receive_bytes_and_update_hash_and_update_ux() {
         G_io_apdu_buffer[1] = 0x00; // 0x9000 == 'SW_OK'
         io_exchange(CHANNEL_APDU, 2);
         
-        p1 = G_io_apdu_buffer[OFFSET_P1];
     } else {
         PRINTF("Got bytes during UX flow\n");
-        p1 = PayloadTypeIsAtomBytes;
     }
 
+    uint8_t p1 = G_io_apdu_buffer[OFFSET_P1];
     uint8_t* dataBuffer = G_io_apdu_buffer + OFFSET_CDATA;
     uint16_t number_of_bytes_received = G_io_apdu_buffer[OFFSET_LC];
     G_io_apdu_buffer[OFFSET_LC] = 0;
