@@ -92,7 +92,7 @@ static void receive_bytes_and_update_hash_and_update_ux() {
     uint16_t number_of_bytes_received = G_io_apdu_buffer[OFFSET_LC];
 
     PayloadType payloadType = p1;
-
+    PRINTF("\n\n\n===================================================\n");
     PRINTF("Received payload from host machine - #%d bytes\n", number_of_bytes_received);
 
     // Check what kind of payload the bytes represent
