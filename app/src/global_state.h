@@ -37,6 +37,8 @@ typedef struct {
 #define MAX_SERIALIZER_LENGTH 100
 
 typedef struct {
+	bool is_users_public_key_calculated;
+	cx_ecfp_public_key_t my_public_key_compressed;
 
     uint8_t number_of_identified_up_particles;
     uint8_t number_of_up_particles;

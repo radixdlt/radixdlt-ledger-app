@@ -20,10 +20,12 @@ static signAtomContext_t *ctx = &global.signAtomContext;
 static signAtomUX_t *ux_state = &global.signAtomContext.ux_state;
 
 static void empty_particle_meta_data() {
+    PRINTF("Emptying particle meta data\n");
     zero_out_particle_metadata(&ux_state->particle_meta_data);
 }
 
 static void empty_transfer() {
+    PRINTF("Emptying transfer\n");
     explicit_bzero(&ux_state->transfer, sizeof(Transfer));
     ux_state->transfer.has_confirmed_serializer = false;
     ux_state->transfer.is_address_set = false;
@@ -38,6 +40,7 @@ static void empty_atom_bytes_window() {
 void reset_ux_state() {
     ux_state->atom_bytes_window.number_of_cached_bytes_from_last_payload = 0;
     ux_state->user_has_accepted_non_transfer_data = false;
+    ux_state->is_users_public_key_calculated = false;
     ux_state->number_of_identified_up_particles = 0;
     empty_particle_meta_data();
     empty_transfer();
@@ -213,21 +216,18 @@ static void continue_sign_atom_flow() {
     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
     // Display back the original UX
     ui_idle();
-    PRINTF("(3) continue_sign_atom_flow\n");
 }
 
 static void user_accepted_non_transfer_data() {
-    PRINTF("(2) user_accepted_non_transfer_data\n");
     continue_sign_atom_flow();
 }
 
 static void ask_user_for_confirmation_of_non_transfer_data() {
-    PRINTF("(1) ask_user_for_confirmation_of_non_transfer_data\n");
     display_lines("WARNING", "DATA Found", user_accepted_non_transfer_data);
 }
 
 static void ask_user_for_confirmation_of_transfer() {
-    FATAL_ERROR("IMPL ME");
+    display_lines("Transfer", "found", user_accepted_non_transfer_data);
 }
 
 
@@ -246,19 +246,27 @@ static void do_parse_field_from_atom_bytes(
     
     switch (parse_result) {
         case ParseFieldResultFinishedParsingTransfer:
-            ask_user_for_confirmation_of_transfer();
-            io_exchange(CHANNEL_APDU | IO_ASYNCH_REPLY, 0);
-            // Blocked UX, waiting for user input
+
+            PRINTF("\n------------------------------------------------------\n");       
+            PRINTF("\n===####!!!$$$ FINISHED PARSING TRANSFER $$$!!!###===\n");
+            PRINTF("------------------------------------------------------\n");    
+
+            if (!is_transfer_change_back_to_me) {
+                ask_user_for_confirmation_of_transfer();
+                io_exchange(CHANNEL_APDU | IO_ASYNCH_REPLY, 0);
+                // Blocked UX, waiting for user input
+            } else {
+                PRINTF("SKIPPED ASKING FOR USER INPUT ON LEDGER DEVICE FOR TRANSFER since it was 'change' back to user herself...\n");     
+            }
+     
             empty_transfer();
             empty_particle_meta_data();
             break;
         
         case ParseFieldResultNonTransferDataFound:
-            PRINTF("(0) do_parse_field_from_atom_bytes - blocking flow\n");
             ask_user_for_confirmation_of_non_transfer_data();
             io_exchange(CHANNEL_APDU | IO_ASYNCH_REPLY, 0);
             // Blocked UX, waiting for user input
-            PRINTF("(4) do_parse_field_from_atom_bytes - resumed flow\n");
             ux_state->user_has_accepted_non_transfer_data = true;
             empty_particle_meta_data();
             break;
@@ -275,7 +283,7 @@ static void parse_atom_bytes() {
 
     ParticleField next_particle_field;
     uint8_t parse_payload_loop_counter = 0;
-    while (true) {
+    while (ux_state->particle_meta_data.is_initialized) {
         PRINTF("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
         PRINTF("@@@@@   PARSE ATOM LOOP: %d   @@@@@\n", parse_payload_loop_counter);
         PRINTF("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
@@ -305,11 +313,11 @@ static void parse_atom_bytes() {
             return;
         }
 
-        PRINTF("! Next field >");
+        PRINTF("! Next field   ---> ");
         print_particle_field(&next_particle_field);
-        PRINTF("< is inside atom bytes window >");
+        PRINTF(" <---   is inside atom bytes window   ---> ");
         print_interval(&ux_state->atom_bytes_window.interval);
-        PRINTF("> so will parse it now !\n");
+        PRINTF(" <---   so will parse it now !\n");
 
         do_parse_field_from_atom_bytes(
             &next_particle_field,

@@ -127,15 +127,16 @@ void prepareForApprovalOfAddress() {
 }
 
 bool is_transfer_change_back_to_me() {
-    cx_ecfp_public_key_t myPublicKeyCompressed;
-    
-    derive_radix_key_pair(
-        ctx->bip32_path, 
-        &myPublicKeyCompressed, 
-        NULL // dont write private key
-    );
+    if (!ctx->ux_state.is_users_public_key_calculated) {
+        derive_radix_key_pair(
+            ctx->bip32_path, 
+            &ctx->ux_state.my_public_key_compressed, 
+            NULL // dont write private key
+        );
+        ctx->ux_state.is_users_public_key_calculated = true;
+    }
 
-    return matchesPublicKey(&ctx->ux_state.transfer.address, &myPublicKeyCompressed);
+    return matchesPublicKey(&ctx->ux_state.transfer.address, &ctx->ux_state.my_public_key_compressed);
 }
 
 void askUserForConfirmationOfTransferIfNeeded() {
