@@ -29,6 +29,9 @@ void do_print_atom_bytes_window(AtomBytesWindow *atom_bytes_window) {
     PRINTF("Atom bytes window\n    ");
     print_interval(&atom_bytes_window->interval);
     PRINTF(" #%d cached bytes\n", atom_bytes_window->number_of_cached_bytes_from_last_payload);
+    PRINTF("    raw bytes:\n");
+    PRINTF("%.*h\n", atom_bytes_window->interval.byteCount, atom_bytes_window->bytes);
+    PRINTF("^^^^^^^^ end of atom bytes ^^^^^^^^^\n");
 }
 
 void do_update_atom_bytes_window(

@@ -1,4 +1,5 @@
 #include "ByteInterval.h"
+#include <os.h>
 
 uint16_t end_index(ByteInterval *interval) {
     return interval->startsAt + interval->byteCount;

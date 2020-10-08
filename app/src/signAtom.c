@@ -11,6 +11,7 @@
 #include "sha256_hash.h"
 #include "base_conversion.h"
 #include "signAtomUX.h"
+#include "signAtomUI.h"
 #include "common_macros.h"
 
 static signAtomContext_t *ctx = &global.signAtomContext;
@@ -93,17 +94,24 @@ static void receive_bytes_and_update_hash_and_update_ux() {
 
     PayloadType payloadType = p1;
     PRINTF("\n\n\n===================================================\n");
-    PRINTF("Received payload from host machine - #%d bytes\n", number_of_bytes_received);
+
+    uint16_t bytes_received_before_this_payload = ctx->number_of_atom_bytes_received;
+    uint16_t bytes_received_incl_this_payload = bytes_received_before_this_payload + number_of_bytes_received;
 
     // Check what kind of payload the bytes represent
     switch (payloadType)
     {
     case PayloadTypeIsAtomBytes:
-        ctx->number_of_atom_bytes_received += number_of_bytes_received;
-        PRINTF("Received payload is Atom bytes, in total received %d/%d atom bytes\n", ctx->number_of_atom_bytes_received, ctx->atom_byte_count);
+
+
+        ctx->number_of_atom_bytes_received = bytes_received_incl_this_payload;
+        
+        PRINTF("Received payload from host machine - atom bytes window: [%d-%d] (#%d bytes)\n", bytes_received_before_this_payload, bytes_received_incl_this_payload, number_of_bytes_received); 
+
+        PRINTF("in total received %d/%d atom bytes\n", bytes_received_incl_this_payload, ctx->atom_byte_count);
 
         // Update hash
-        bool should_finalize_hash = ctx->number_of_atom_bytes_received == ctx->atom_byte_count;
+        bool should_finalize_hash = bytes_received_incl_this_payload == ctx->atom_byte_count;
 
         update_hash(
             dataBuffer,
@@ -118,7 +126,7 @@ static void receive_bytes_and_update_hash_and_update_ux() {
     
         break;
     case PayloadTypeIsParticleMetaData:
-        PRINTF("Received payload is Particle Meta Data\n");
+        PRINTF("Received payload from host machine - Particle Meta Data\n");
 
         received_particle_meta_data_bytes_from_host_machine(
             dataBuffer, 

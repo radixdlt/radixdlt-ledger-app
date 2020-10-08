@@ -14,6 +14,7 @@
 #include "base_conversion.h"
 #include "signAtomUI.h"
 #include "common_macros.h"
+#include "AtomBytesWindow.h"
 
 
 static signAtomContext_t *ctx = &global.signAtomContext;
@@ -69,7 +70,7 @@ static uint16_t offset_of_field_in_atom_bytes_window(
     ParticleField *particle_field
 ) {
     uint16_t offset = particle_field->byte_interval.startsAt - start_of_atom_bytes_window();
-
+    PRINTF("Offset to start of field within atom bytes window: %d\n", offset);
     return offset;
 }
 
