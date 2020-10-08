@@ -210,11 +210,7 @@ static bool next_particle_field_to_parse_from_particle_meta_data(
 }
 
 static void continue_sign_atom_flow() {
-    unsigned int tx = 0;
-    G_io_apdu_buffer[tx++] = 0x90;
-    G_io_apdu_buffer[tx++] = 0x00;
-    // Send back the response, do not restart the event loop
-    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
+    io_exchange_with_code(SW_OK, 0);
     // Display back the original UX
     ui_idle();
 }
@@ -270,7 +266,15 @@ static void do_parse_field_from_atom_bytes(
         
         case ParseFieldResultNonTransferDataFound:
             ask_user_for_confirmation_of_non_transfer_data();
-            io_exchange(CHANNEL_APDU | IO_ASYNCH_REPLY, 0);
+            // io_exchange(CHANNEL_APDU | IO_ASYNCH_REPLY, 0);
+
+    unsigned int tx = 0;
+    G_io_apdu_buffer[tx++] = 0x90;
+    G_io_apdu_buffer[tx++] = 0x00;
+    // Send back the response, do not restart the event loop
+    io_exchange(CHANNEL_APDU | IO_ASYNCH_REPLY, tx);
+
+
             // Blocked UX, waiting for user input
             ux_state->user_has_accepted_non_transfer_data = true;
             empty_particle_meta_data();
@@ -280,7 +284,6 @@ static void do_parse_field_from_atom_bytes(
             PRINTF("Parsed part of transfer...\n");
             break;
     }
-
 }
 
 static void parse_atom_bytes() {
@@ -318,16 +321,34 @@ static void parse_atom_bytes() {
             return;
         }
 
-        PRINTF("! Next field   ---> ");
-        print_particle_field(&next_particle_field);
-        PRINTF(" <---   is inside atom bytes window   ---> ");
-        print_interval(&ux_state->atom_bytes_window.interval);
-        PRINTF(" <---   so will parse it now !\n");
+        // PRINTF("! Next field   ---> ");
+        // print_particle_field(&next_particle_field);
+        // PRINTF(" <---   is inside atom bytes window   ---> ");
+        // print_interval(&ux_state->atom_bytes_window.interval);
+        // PRINTF(" <---   so will parse it now !\n");
 
         do_parse_field_from_atom_bytes(
             &next_particle_field,
             read_bytes_needle_head
         );
+
+        uint16_t last_end = end_of_atom_bytes_window();
+        uint16_t last_start =  ux_state->atom_bytes_window.interval.startsAt;
+        uint16_t last_byte_count_window =  ux_state->atom_bytes_window.interval.byteCount;
+        uint16_t new_start = end_index(&next_particle_field.byte_interval);
+        uint16_t number_of_skipped_bytes = new_start - last_start;
+        uint16_t new_byte_count_window = last_end - new_start;
+        ux_state->atom_bytes_window.interval.startsAt = new_start;
+        ux_state->atom_bytes_window.interval.byteCount = new_byte_count_window;
+
+        assert(number_of_skipped_bytes + new_byte_count_window == last_byte_count_window);
+        
+        os_memcpy(
+            ux_state->atom_bytes_window.bytes, // destination
+            ux_state->atom_bytes_window.bytes + number_of_skipped_bytes, // source
+            new_byte_count_window                                // length
+        );
+        assert(last_end == end_of_atom_bytes_window());
 
         parse_payload_loop_counter++;
     }

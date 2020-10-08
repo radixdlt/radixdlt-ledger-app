@@ -132,7 +132,7 @@ ParseFieldResult parse_field_from_bytes_and_populate_transfer(
         parse_particle_field(
             readLength, 
             &cborValue, 
-            ParticleFieldTypeAddress, 
+            particle_field->field_type, 
             &transfer->address.bytes
         );
         
@@ -148,7 +148,7 @@ ParseFieldResult parse_field_from_bytes_and_populate_transfer(
         parse_particle_field(
             readLength, 
             &cborValue, 
-            ParticleFieldTypeAmount, 
+            particle_field->field_type, 
             &transfer->amount.bytes
         );
         transfer->is_amount_set = true;
@@ -181,7 +181,7 @@ ParseFieldResult parse_field_from_bytes_and_populate_transfer(
         parse_particle_field(
             readLength, 
             &cborValue, 
-            ParticleFieldTypeTokenDefinitionReference, 
+            particle_field->field_type, 
             transfer->token_definition_reference.bytes
         );
 

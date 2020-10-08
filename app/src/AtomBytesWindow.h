@@ -7,6 +7,7 @@
 
 typedef struct {
 	uint8_t number_of_cached_bytes_from_last_payload;
+    // uint8_t offset_within_window_due_to_fields_parsed; 
 	ByteInterval interval;
    	uint8_t bytes[MAX_ATOM_SLICE_SIZE];
 } AtomBytesWindow;
