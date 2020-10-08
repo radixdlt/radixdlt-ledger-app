@@ -49,7 +49,7 @@ bool parseSerializer_is_ttp(
     }
 
     assert(numberOfBytesReadByCBORParser == valueByteCount);
-    PRINTF("Parsed particle serializer: '%s'\n", textString);
+    PRINTF("\n===####!!!$$$ PARSED PARTICLE SERIALIZER $$$!!!###===\n    '%s'\n", textString);
     return is_transferrable_tokens_particle_serializer(textString, valueByteCount);
 }
 
@@ -92,8 +92,9 @@ ParseFieldResult parse_field_from_bytes_and_populate_transfer(
     Transfer *transfer
 ) {
 
-    PRINTF("About to CBOR/DSON decode field\n");
-    print_particle_field(particle_field);
+    // PRINTF("About to CBOR/DSON decode field\n");
+    // print_particle_field(particle_field);
+    // PRINTF("\n");
 
     size_t field_byte_count = particle_field->byte_interval.byteCount;
 
@@ -136,7 +137,7 @@ ParseFieldResult parse_field_from_bytes_and_populate_transfer(
         );
         
         transfer->is_address_set = true;
-        PRINTF("Parsed address\n");
+        PRINTF("\n===####!!!$$$ PARSED PARTICLE ADDRESS $$$!!!###===\n");
         return ParseFieldResultParsedPartOfTransfer;
 
     case ParticleFieldTypeAmount:
@@ -151,7 +152,7 @@ ParseFieldResult parse_field_from_bytes_and_populate_transfer(
             &transfer->amount.bytes
         );
         transfer->is_amount_set = true;
-        PRINTF("Parsed amount\n");
+        PRINTF("\n===####!!!$$$ PARSED PARTICLE AMOUNT $$$!!!###===\n");
         return ParseFieldResultParsedPartOfTransfer;
 
     case ParticleFieldTypeSerializer:
@@ -185,8 +186,7 @@ ParseFieldResult parse_field_from_bytes_and_populate_transfer(
         );
 
         transfer->is_token_definition_reference_set = true;
-        
-        PRINTF("Parsed RRI\n");
+        PRINTF("\n===####!!!$$$ PARSED PARTICLE TokenDefRef $$$!!!###===\n");
         return ParseFieldResultFinishedParsingTransfer;
     }
 }

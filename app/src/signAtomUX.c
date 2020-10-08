@@ -71,13 +71,7 @@ static uint16_t offset_of_field_in_atom_bytes_window(
 }
 
 static bool can_parse_field_given_atom_bytes_window(ParticleField *particle_field) {
-
-    if (end_of_atom_bytes_window() > end_index(&particle_field->byte_interval)) {
-        return false;
-    } else {
-        return true;
-    }
-
+    return end_of_atom_bytes_window() > end_index(&particle_field->byte_interval);
 }
 
 static void cache_bytes(
@@ -153,41 +147,50 @@ static void update_atom_bytes_window(
 // else does not set `output_first_interval`, marks `candidate_interval` as zero length and returns false
 static bool do_update_relevant_fields_and_get_first_relevant_one_if_any(
     ParticleField *candidate_field,
-    ParticleField *output_relevat_field,
+    ParticleField *output_relevant_field,
     uint16_t pointer_in_atom
 ) {
 
-    if (
-        is_field_empty(candidate_field) ||
-        candidate_field->byte_interval.startsAt < pointer_in_atom
-    ) {
-        PRINTF("WARNING Setting `byteCount` and `startsAt` to 0 in `candiate_field` to mark it as irrelevant/used!\n");
-        candidate_field->byte_interval.byteCount = 0;
-        candidate_field->byte_interval.startsAt = 0;
+    if (is_field_empty(candidate_field)) {
         return false;
     }
 
-    *output_relevat_field = *candidate_field;
+    if (candidate_field->byte_interval.startsAt < pointer_in_atom) {
+        
+        PRINTF("WARNING Setting `byteCount := 0` for field:");
+        print_particle_field(candidate_field);
+        PRINTF(" to mark it as irrelevant/used!\n");
+
+        candidate_field->byte_interval.byteCount = 0;
+        return false;
+    }
+
+    PRINTF("Next particle field to parse (potentially not with current atom bytes window):\n    ");
+    print_particle_field(candidate_field);
+    PRINTF("\n");
+    *output_relevant_field = *candidate_field;
     return true;
 }
 
 
 static bool update_relevant_fields_and_get_first_relevant_one_if_any(
     ParticleField *candidate_field,
-    void *output_relevat_field
+    void *output_relevant_field
 ) {
     return do_update_relevant_fields_and_get_first_relevant_one_if_any(
         candidate_field, 
-        output_relevat_field,
+        output_relevant_field,
         ux_state->atom_bytes_window.interval.startsAt
     );
 }
 
 // Returns `true` iff `output_particle_field` is set
-static bool next_interval_to_parse_from_particle_meta_data(
+static bool next_particle_field_to_parse_from_particle_meta_data(
     ParticleField *output_particle_field
 ) {
     assert(ux_state->particle_meta_data.is_initialized);
+
+    PRINTF("Calculating next relevant Particle Field to parse from metadata...\n");
 
     bool is_output_set = iterate_fields_of_metadata(
         &ux_state->particle_meta_data,
@@ -254,13 +257,18 @@ static void parse_atom_bytes() {
 
     ParticleField next_particle_field;
     uint8_t parse_payload_loop_counter = 0;
-    while (
-        next_interval_to_parse_from_particle_meta_data(&next_particle_field)
-    ) {
-        PRINTF("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-        PRINTF("Parse atom bytes loop: %d\n", parse_payload_loop_counter);
+    while (true) {
+        PRINTF("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+        PRINTF("@@@@@   PARSE ATOM LOOP: %d   @@@@@\n", parse_payload_loop_counter);
+        PRINTF("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+
         print_atom_bytes_window();
         print_particle_metadata();
+
+        if (!next_particle_field_to_parse_from_particle_meta_data(&next_particle_field)) {
+            PRINTF("Skipped parsing atom bytes since we don't have ");
+            break;
+        }
 
         if (end_of_atom_bytes_window() < next_particle_field.byte_interval.startsAt) {
             PRINTF("Skipped parsing atom bytes, since `atom_window` doesn't contain bytes of next relevant particle field (yet).\n");
@@ -269,7 +277,7 @@ static void parse_atom_bytes() {
 
         uint8_t *read_bytes_needle_head = ux_state->atom_bytes_window.bytes + offset_of_field_in_atom_bytes_window(&next_particle_field);
 
-        if (end_index(&next_particle_field.byte_interval) > end_of_atom_bytes_window()) {
+        if (!can_parse_field_given_atom_bytes_window(&next_particle_field)) {
             PRINTF("Skipped parsing atom bytes, since we only have some of the relevant bytes of next particle field, we will cache the bytes we have and try parsing once we get the remaining particle fields bytes in the next payload.\n");
             uint16_t number_of_bytes_to_cache = end_index(&next_particle_field.byte_interval) - end_of_atom_bytes_window();
             cache_bytes(
@@ -278,6 +286,12 @@ static void parse_atom_bytes() {
             );
             return;
         }
+
+        PRINTF("! Next field >");
+        print_particle_field(&next_particle_field);
+        PRINTF("< is inside atom bytes window >");
+        print_interval(ux_state->atom_bytes_window.interval);
+        PRINTF("> so will parse it now !\n");
 
         do_parse_field_from_atom_bytes(
             &next_particle_field,
@@ -292,10 +306,8 @@ void received_atom_bytes_from_host_machine(
     uint8_t *bytes,
     uint16_t number_of_newly_received_atom_bytes
 ) {
-    PRINTF("\n===================================================\n");
 
     if (!should_parse_atom_bytes()) {
-        PRINTF("Skipped parsing atom bytes, since not needed\n");
         assert(ux_state->atom_bytes_window.number_of_cached_bytes_from_last_payload == 0); // validation of state consistency
         return;
     }

@@ -6,6 +6,7 @@ bool is_field_empty(ParticleField *field) {
 
 void print_particle_field(ParticleField *field) {
     print_particle_field_type(field->field_type);
+    PRINTF(" ");
     print_interval(&field->byte_interval);
 }
 
