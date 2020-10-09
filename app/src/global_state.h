@@ -40,10 +40,12 @@ typedef struct {
 	bool is_users_public_key_calculated;
 	cx_ecfp_public_key_t my_public_key_compressed;
 
+	// Should be able to safely remove this, should mirror 'number_of_identified_up_particles'
+    uint8_t number_of_particle_meta_data_received;
+
     uint8_t number_of_identified_up_particles;
     uint8_t number_of_up_particles;
 	bool user_has_accepted_non_transfer_data;
-    uint16_t number_of_atom_bytes_parsed;
 
 	AtomBytesWindow atom_bytes_window;
 	ParticleMetaData particle_meta_data; 
