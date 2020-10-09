@@ -43,6 +43,8 @@ void reset_ux_state() {
     ux_state->user_has_accepted_non_transfer_data = false;
     ux_state->is_users_public_key_calculated = false;
     ux_state->number_of_identified_up_particles = 0;
+    ux_state->number_of_particle_meta_data_received = 0;
+    
     empty_particle_meta_data();
     empty_transfer();
     empty_atom_bytes_window();
@@ -334,7 +336,7 @@ static void parse_atom_bytes() {
             &next_particle_field
         );
 
-        PRINTF("Identified %d/%d UP particles\n", ux_state->number_of_identified_up_particles, ux_state->number_of_up_particles);
+        PRINTF("Identified %d/%d UP particles, #%d metadata received\n", ux_state->number_of_identified_up_particles, ux_state->number_of_up_particles, ux_state->number_of_particle_meta_data_received);
 
         if (finished_parsing_all_particles()) {
             PRINTF("End of parse atom bytes loop - identified all particles.");
@@ -368,6 +370,8 @@ void received_particle_meta_data_bytes_from_host_machine(
         bytes,
         number_of_bytes_received
     );
+
+    ux_state->number_of_particle_meta_data_received++;
 
         
     assert(ux_state->particle_meta_data.byte_interval_of_particle_itself.startsAt == ctx->number_of_atom_bytes_received);
