@@ -131,14 +131,23 @@ static bool should_parse_atom_bytes() {
     return true;
 }
 
-static void update_atom_bytes_window(
+static void update_atom_bytes_window_by_sliding_bytes_since_parsed_field(
+    ParticleField *parsed_particle_field
+) {
+    do_update_atom_bytes_window_by_sliding_bytes_since_parsed_field(
+        &ux_state->atom_bytes_window,
+        parsed_particle_field
+    );
+}
+
+static void update_atom_bytes_window_with_new_bytes(
     uint8_t *bytes,
     uint16_t number_of_newly_received_atom_bytes
 ) {
 
     uint16_t number_of_processed_bytes_before_this_payload = ctx->number_of_atom_bytes_received - ux_state->atom_bytes_window.number_of_cached_bytes_from_last_payload - number_of_newly_received_atom_bytes;
 
-    do_update_atom_bytes_window(
+    do_update_atom_bytes_window_with_new_bytes(
         &ux_state->atom_bytes_window,
         bytes,
         number_of_processed_bytes_before_this_payload,
@@ -161,17 +170,17 @@ static bool do_update_relevant_fields_and_get_first_relevant_one_if_any(
 
     if (candidate_field->byte_interval.startsAt < pointer_in_atom) {
         
-        PRINTF("WARNING Setting `byteCount := 0` for field:");
-        print_particle_field(candidate_field);
-        PRINTF(" to mark it as irrelevant/used!\n");
+        // PRINTF("WARNING Setting `byteCount := 0` for field:");
+        // print_particle_field(candidate_field);
+        // PRINTF(" to mark it as irrelevant/used!\n");
 
         candidate_field->byte_interval.byteCount = 0;
         return false;
     }
 
-    PRINTF("Next particle field to parse (potentially not with current atom bytes window):\n    ");
-    print_particle_field(candidate_field);
-    PRINTF("\n");
+    // PRINTF("Next particle field to parse (potentially not with current atom bytes window):\n    ");
+    // print_particle_field(candidate_field);
+    // PRINTF("\n");
     *output_relevant_field = *candidate_field;
     return true;
 }
@@ -193,8 +202,6 @@ static bool next_particle_field_to_parse_from_particle_meta_data(
     ParticleField *output_particle_field
 ) {
     assert(ux_state->particle_meta_data.is_initialized);
-
-    PRINTF("Calculating next relevant Particle Field to parse from metadata...\n");
 
     bool is_output_set = iterate_fields_of_metadata(
         &ux_state->particle_meta_data,
@@ -247,15 +254,14 @@ static void do_parse_field_from_atom_bytes(
     
     switch (parse_result) {
         case ParseFieldResultFinishedParsingTransfer:
-
+            ux_state->number_of_identified_up_particles++;
             PRINTF("\n------------------------------------------------------\n");       
             PRINTF("\n===####!!!$$$ FINISHED PARSING TRANSFER $$$!!!###===\n");
             PRINTF("------------------------------------------------------\n");    
 
             if (!is_transfer_change_back_to_me()) {
                 ask_user_for_confirmation_of_transfer();
-                io_exchange(CHANNEL_APDU | IO_ASYNCH_REPLY, 0);
-                // Blocked UX, waiting for user input
+                io_exchange(IO_ASYNCH_REPLY, 0);
             } else {
                 PRINTF("SKIPPED ASKING FOR USER INPUT ON LEDGER DEVICE FOR TRANSFER since it was 'change' back to user herself...\n");     
             }
@@ -265,17 +271,9 @@ static void do_parse_field_from_atom_bytes(
             break;
         
         case ParseFieldResultNonTransferDataFound:
+            ux_state->number_of_identified_up_particles++;
             ask_user_for_confirmation_of_non_transfer_data();
-            // io_exchange(CHANNEL_APDU | IO_ASYNCH_REPLY, 0);
-
-    unsigned int tx = 0;
-    G_io_apdu_buffer[tx++] = 0x90;
-    G_io_apdu_buffer[tx++] = 0x00;
-    // Send back the response, do not restart the event loop
-    io_exchange(CHANNEL_APDU | IO_ASYNCH_REPLY, tx);
-
-
-            // Blocked UX, waiting for user input
+            io_exchange(IO_ASYNCH_REPLY, 0);
             ux_state->user_has_accepted_non_transfer_data = true;
             empty_particle_meta_data();
             break;
@@ -332,23 +330,15 @@ static void parse_atom_bytes() {
             read_bytes_needle_head
         );
 
-        uint16_t last_end = end_of_atom_bytes_window();
-        uint16_t last_start =  ux_state->atom_bytes_window.interval.startsAt;
-        uint16_t last_byte_count_window =  ux_state->atom_bytes_window.interval.byteCount;
-        uint16_t new_start = end_index(&next_particle_field.byte_interval);
-        uint16_t number_of_skipped_bytes = new_start - last_start;
-        uint16_t new_byte_count_window = last_end - new_start;
-        ux_state->atom_bytes_window.interval.startsAt = new_start;
-        ux_state->atom_bytes_window.interval.byteCount = new_byte_count_window;
-
-        assert(number_of_skipped_bytes + new_byte_count_window == last_byte_count_window);
-        
-        os_memcpy(
-            ux_state->atom_bytes_window.bytes, // destination
-            ux_state->atom_bytes_window.bytes + number_of_skipped_bytes, // source
-            new_byte_count_window                                // length
+        update_atom_bytes_window_by_sliding_bytes_since_parsed_field(
+            &next_particle_field
         );
-        assert(last_end == end_of_atom_bytes_window());
+
+        PRINTF("Identified %d/%d UP particles\n", ux_state->number_of_identified_up_particles, ux_state->number_of_up_particles);
+
+        if (finished_parsing_all_particles()) {
+            PRINTF("End of parse atom bytes loop - identified all particles.");
+        }
 
         parse_payload_loop_counter++;
     }
@@ -364,7 +354,7 @@ void received_atom_bytes_from_host_machine(
         return;
     }
 
-    update_atom_bytes_window(bytes, number_of_newly_received_atom_bytes);
+    update_atom_bytes_window_with_new_bytes(bytes, number_of_newly_received_atom_bytes);
     parse_atom_bytes();
 }
 
