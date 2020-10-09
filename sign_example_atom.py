@@ -259,6 +259,13 @@ Contains non transfer data: {}
 
 	def sendToLedgerParticleMetaData(particleMetaData: ParticleMetaData):
 		print(f"Sending particle metadata to Ledger: {particleMetaData}")
+
+		particle_start = particleMetaData.start_index_in_atom()
+		if count_bytes_sent_to_ledger > particle_start:
+			raise RuntimeError("FATAL ERROR! Flawed logic in this Python script. Sending ParticleMetaData which 'startsAt={particle_start}', however we have already sent #{count_bytes_sent_to_ledger} bytes to the Ledger. Thus the Ledger has missed some relevant bytes for parsing.")
+
+		print(f"#{count_bytes_sent_to_ledger} sent to Ledger, sending MetaData about particle starting at: {particle_start}")
+
 		success = sendToLedger(
 			prefix=apdu_prefix_particle_metadata(True),
 			payload=particleMetaData.bytes
@@ -283,7 +290,7 @@ Contains non transfer data: {}
 	
 	# Keep streaming data into the device till we run out of it.
 	while count_bytes_sent_to_ledger < atom_byte_count:
-
+		print(f"len(particleMetaDataList)={len(particleMetaDataList)}")
 		nextRelevantEnd = atom_byte_count if len(particleMetaDataList) == 0 else particleMetaDataList[0].start_index_in_atom()
 		nextParticleMetaData = particleMetaDataList[0] if len(particleMetaDataList) else None
 
