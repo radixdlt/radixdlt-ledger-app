@@ -218,10 +218,19 @@ static bool next_particle_field_to_parse_from_particle_meta_data(
     return is_output_set;
 }
 
+static bool done_with_ux_for_atom_parsing() {
+    return ux_state->number_of_identified_up_particles == ux_state->number_of_up_particles;
+}
+
 static void continue_sign_atom_flow() {
-    io_exchange_with_code(SW_OK, 0);
-    // Display back the original UX
-    ui_idle();
+    if (done_with_ux_for_atom_parsing()) {
+        PRINTF("Done with parsing atom => confirm hash\n");
+        askUserForConfirmationOfHash();
+    } else {
+        io_exchange_with_code(SW_OK, 0);
+        // Display back the original UX
+        ui_idle();
+    }
 }
 
 static void user_accepted_non_transfer_data() {
@@ -370,6 +379,11 @@ void received_particle_meta_data_bytes_from_host_machine(
         bytes,
         number_of_bytes_received
     );
+
+    if (ux_state->number_of_particle_meta_data_received != ux_state->number_of_identified_up_particles) {
+        PRINTF("Expected 'number_of_particle_meta_data_received' (=%d) == 'number_of_identified_up_particles' (=%d) but it isn't (as you can see...)\n", ux_state->number_of_particle_meta_data_received, ux_state->number_of_identified_up_particles);
+        FATAL_ERROR("Killed...");
+    }
 
     ux_state->number_of_particle_meta_data_received++;
 
