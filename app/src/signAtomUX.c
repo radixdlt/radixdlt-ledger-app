@@ -96,6 +96,10 @@ static bool has_particle_meta_data() {
     return ux_state->particle_meta_data.is_initialized;
 }
 
+static bool user_has_accepted_non_transfer_data() {
+    return ux_state->user_has_accepted_non_transfer_data;
+}
+
 static bool finished_parsing_all_particles() {
     bool parsed_all_particles = ux_state->number_of_identified_up_particles == ux_state->number_of_up_particles;
     if (parsed_all_particles) {
@@ -125,7 +129,7 @@ static bool should_parse_atom_bytes() {
 
     // We have particle meta data
 
-    if (!is_transfer_particle() && ux_state->user_has_accepted_non_transfer_data) {
+    if (!is_transfer_particle() && user_has_accepted_non_transfer_data()) {
         PRINTF("Skipped parsing atom bytes since it is non transfer which user has already accepted\n");
         return false;
     }
@@ -171,18 +175,10 @@ static bool do_update_relevant_fields_and_get_first_relevant_one_if_any(
     }
 
     if (candidate_field->byte_interval.startsAt < pointer_in_atom) {
-        
-        // PRINTF("WARNING Setting `byteCount := 0` for field:");
-        // print_particle_field(candidate_field);
-        // PRINTF(" to mark it as irrelevant/used!\n");
-
         candidate_field->byte_interval.byteCount = 0;
         return false;
     }
 
-    // PRINTF("Next particle field to parse (potentially not with current atom bytes window):\n    ");
-    // print_particle_field(candidate_field);
-    // PRINTF("\n");
     *output_relevant_field = *candidate_field;
     return true;
 }
@@ -203,7 +199,7 @@ static bool update_relevant_fields_and_get_first_relevant_one_if_any(
 static bool next_particle_field_to_parse_from_particle_meta_data(
     ParticleField *output_particle_field
 ) {
-    assert(ux_state->particle_meta_data.is_initialized);
+    assert(has_particle_meta_data());
 
     bool is_output_set = iterate_fields_of_metadata(
         &ux_state->particle_meta_data,
@@ -218,45 +214,11 @@ static bool next_particle_field_to_parse_from_particle_meta_data(
     return is_output_set;
 }
 
-static bool done_with_ux_for_atom_parsing() {
-    return ux_state->number_of_identified_up_particles == ux_state->number_of_up_particles;
-}
-
-static void continue_sign_atom_flow() {
-    if (done_with_ux_for_atom_parsing()) {
-        PRINTF("Done with parsing atom => confirm hash\n");
-        askUserForConfirmationOfHash();
-    } else {
-        io_exchange_with_code(SW_OK, 0);
-        // Display back the original UX
-        ui_idle();
-    }
-}
-
-static void user_accepted_non_transfer_data() {
-    continue_sign_atom_flow();
-}
-
-static void user_accepted_transfer() {
-    continue_sign_atom_flow();
-}
-
-static void ask_user_for_confirmation_of_non_transfer_data() {
-    display_lines("WARNING", "DATA Found", user_accepted_non_transfer_data);
-}
-
-static void ask_user_for_confirmation_of_transfer() {
-    display_lines("Transfer", "found", user_accepted_transfer);
-}
-
 
 static void do_parse_field_from_atom_bytes(
     ParticleField *particle_field,
     uint8_t *bytes
 ) {
-
-    assert(can_parse_field_given_atom_bytes_window(particle_field));
-
     ParseFieldResult parse_result = parse_field_from_bytes_and_populate_transfer(
         particle_field,
         bytes,
@@ -269,14 +231,7 @@ static void do_parse_field_from_atom_bytes(
             PRINTF("\n------------------------------------------------------\n");       
             PRINTF("\n===####!!!$$$ FINISHED PARSING TRANSFER $$$!!!###===\n");
             PRINTF("------------------------------------------------------\n");    
-
-            if (!is_transfer_change_back_to_me()) {
-                ask_user_for_confirmation_of_transfer();
-                io_exchange(IO_ASYNCH_REPLY, 0);
-            } else {
-                PRINTF("SKIPPED ASKING FOR USER INPUT ON LEDGER DEVICE FOR TRANSFER since it was 'change' back to user herself...\n");     
-            }
-     
+            ask_user_for_confirmation_of_transfer_if_to_other_address();
             empty_transfer();
             empty_particle_meta_data();
             break;
@@ -284,7 +239,6 @@ static void do_parse_field_from_atom_bytes(
         case ParseFieldResultNonTransferDataFound:
             ux_state->number_of_identified_up_particles++;
             ask_user_for_confirmation_of_non_transfer_data();
-            io_exchange(IO_ASYNCH_REPLY, 0);
             ux_state->user_has_accepted_non_transfer_data = true;
             empty_particle_meta_data();
             break;
@@ -296,14 +250,11 @@ static void do_parse_field_from_atom_bytes(
 }
 
 static void parse_atom_bytes() {
-    assert(is_transfer_particle() || !ux_state->user_has_accepted_non_transfer_data);
+    assert(is_transfer_particle() || !user_has_accepted_non_transfer_data());
 
     ParticleField next_particle_field;
-    uint8_t parse_payload_loop_counter = 0;
-    while (ux_state->particle_meta_data.is_initialized) {
-        PRINTF("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-        PRINTF("@@@@@   PARSE ATOM LOOP: %d   @@@@@\n", parse_payload_loop_counter);
-        PRINTF("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+
+    while (has_particle_meta_data()) {
 
         print_atom_bytes_window();
         print_particle_metadata();
@@ -330,12 +281,6 @@ static void parse_atom_bytes() {
             return;
         }
 
-        // PRINTF("! Next field   ---> ");
-        // print_particle_field(&next_particle_field);
-        // PRINTF(" <---   is inside atom bytes window   ---> ");
-        // print_interval(&ux_state->atom_bytes_window.interval);
-        // PRINTF(" <---   so will parse it now !\n");
-
         do_parse_field_from_atom_bytes(
             &next_particle_field,
             read_bytes_needle_head
@@ -344,14 +289,6 @@ static void parse_atom_bytes() {
         update_atom_bytes_window_by_sliding_bytes_since_parsed_field(
             &next_particle_field
         );
-
-        PRINTF("Identified %d/%d UP particles, #%d metadata received\n", ux_state->number_of_identified_up_particles, ux_state->number_of_up_particles, ux_state->number_of_particle_meta_data_received);
-
-        if (finished_parsing_all_particles()) {
-            PRINTF("End of parse atom bytes loop - identified all particles.");
-        }
-
-        parse_payload_loop_counter++;
     }
 }
 
@@ -380,17 +317,13 @@ void received_particle_meta_data_bytes_from_host_machine(
         number_of_bytes_received
     );
 
-    if (ux_state->number_of_particle_meta_data_received != ux_state->number_of_identified_up_particles) {
-        PRINTF("Expected 'number_of_particle_meta_data_received' (=%d) == 'number_of_identified_up_particles' (=%d) but it isn't (as you can see...)\n", ux_state->number_of_particle_meta_data_received, ux_state->number_of_identified_up_particles);
-        FATAL_ERROR("Killed...");
-    }
+    assert(ux_state->number_of_particle_meta_data_received == ux_state->number_of_identified_up_particles);
 
     ux_state->number_of_particle_meta_data_received++;
 
-        
     assert(ux_state->particle_meta_data.byte_interval_of_particle_itself.startsAt == ctx->number_of_atom_bytes_received);
 
-    if (!is_transfer_particle() && ux_state->user_has_accepted_non_transfer_data) {
+    if (!is_transfer_particle() && user_has_accepted_non_transfer_data()) {
         PRINTF("Just received meta data about non Transfer particle, but user has already accepted 'non transfer data', so we will ignore parsing the bytes for this particle, thus will will mark the meta data irrelevant and also cheat by increasing 'number_of_identified_up_particles' by one. Cheating... I know.\n");
         ux_state->number_of_identified_up_particles++; // cheating....
         zero_out_particle_metadata(&ux_state->particle_meta_data);

@@ -47,15 +47,9 @@ static void parse_bip_and_atom_size(
     uint16_t expected_bip32_byte_count = expected_number_of_bip32_compents * byte_count_bip_component;
     size_t byte_count_of_atom_size = 2;
     uint16_t expected_data_length = expected_bip32_byte_count + byte_count_of_atom_size;
-    
-    if (dataLength != expected_data_length) {
-        FATAL_ERROR("Incorrect 'dataLength', expected: %d, but got: %d", expected_data_length, dataLength);
-    }
 
-    // READ BIP32 path (12 bytes)
+    assert(dataLength == expected_data_length);
     parse_bip32_path_from_apdu_command(dataBuffer, ctx->bip32_path, NULL, 0);
-
-    // READ Atom Byte Count (CBOR encoded data, max 2 bytes)
     ctx->atom_byte_count = U2BE(dataBuffer, expected_bip32_byte_count);
 }
 
@@ -100,7 +94,7 @@ static void receive_bytes_and_update_hash_and_update_ux() {
     G_io_apdu_buffer[OFFSET_LC] = 0;
 
     PayloadType payloadType = p1;
-    PRINTF("\n\n\n===================================================\n");
+    PRINTF("\n===================================================\n");
 
     uint16_t bytes_received_before_this_payload = ctx->number_of_atom_bytes_received;
     uint16_t bytes_received_incl_this_payload = bytes_received_before_this_payload + number_of_bytes_received;
@@ -149,19 +143,7 @@ static void parse_atom() {
     while (ctx->number_of_atom_bytes_received < ctx->atom_byte_count) {
         receive_bytes_and_update_hash_and_update_ux();
     }
-    PRINTF("Finished parsing all atom bytes => Asking user to confirm hash on Ledger...\n");
-    askUserForConfirmationOfHash();
-}
-
-static void parse_and_sign_atom(
-    const uint8_t number_of_up_particles,
-    uint8_t *dataBuffer,
-    const uint16_t dataLength
-) {
-	initiate_state();
-    ctx->ux_state.number_of_up_particles = number_of_up_particles;
-	parse_bip_and_atom_size(dataBuffer, dataLength);
-    parse_atom();
+    FATAL_ERROR("GREAT! should have gotten this...");
 }
 
 void handleSignAtom(
@@ -172,11 +154,8 @@ void handleSignAtom(
     volatile unsigned int *flags,
     volatile unsigned int *tx)
 {
-    parse_and_sign_atom(
-        p1,
-        dataBuffer,
-        dataLength
-    );
-
-    // *flags |= IO_ASYNCH_REPLY;
+	initiate_state();
+    ctx->ux_state.number_of_up_particles = p1;
+	parse_bip_and_atom_size(dataBuffer, dataLength);
+    parse_atom();
 }
