@@ -178,5 +178,5 @@ void handleSignAtom(
         dataLength
     );
 
-    *flags |= IO_ASYNCH_REPLY;
+    // *flags |= IO_ASYNCH_REPLY;
 }
