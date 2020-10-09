@@ -1,9 +1,3 @@
-bool is_transfer_change_back_to_me();
-void prepareForApprovalOfRRI();
-void prepareForApprovalOfAmount();
-void prepareForApprovalOfAddress();
-
-void askUserForConfirmationOfTransferIfNeeded();
-void askUserForConfirmationOfHash();
-// void askUserForFinalConfirmation();
-// void notifyNonTransferDataFoundIfNeeded();
+void ask_user_for_confirmation_of_transfer_if_to_other_address();
+void ask_user_for_confirmation_of_signing_hash();
+void ask_user_for_confirmation_of_non_transfer_data();

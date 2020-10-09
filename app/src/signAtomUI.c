@@ -78,9 +78,7 @@ static void didFinishSignAtomFlow()
     ui_idle();
 }
 
-void askUserForFinalConfirmation() {
-    display_lines("Sign content", "Confirm?", didFinishSignAtomFlow);
-}
+void ask_user_for_confirmation_of_signing_hash();
 
 static void prepareForDisplayingHash()
 {
@@ -90,38 +88,50 @@ static void prepareForDisplayingHash()
 
     G_ui_state.length_lower_line_long = lengthOfHashString;
 
-    display_value("Verify Hash", askUserForFinalConfirmation);
+    display_value("Verify Hash", ask_user_for_confirmation_of_signing_hash);
 }
 
 
-void askUserForConfirmationOfHash() {
+static bool done_with_ux_for_atom_parsing() {
+    return ctx->ux_state.number_of_identified_up_particles == ctx->ux_state.number_of_up_particles;
+}
+
+static void ask_user_to_verify_hash() {
     prepareForDisplayingHash();
 }
 
-static void didApproveTransfer()
-{
-
-    unsigned int tx = 0;
-    G_io_apdu_buffer[tx++] = 0x90;
-    G_io_apdu_buffer[tx++] = 0x00;
-    // Send back the response, do not restart the event loop
-    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
-    // Display back the original UX
-    ui_idle();
+static void continue_sign_atom_flow() {
+    if (done_with_ux_for_atom_parsing()) {
+        PRINTF("Done with parsing atom => confirm hash\n");
+        ask_user_to_verify_hash();
+    } else {
+        io_exchange_with_code(SW_OK, 0);
+        // Display back the original UX
+        ui_idle();
+    }
 }
 
-void prepareForApprovalOfRRI()
+
+static void didApproveTransfer() {
+    continue_sign_atom_flow();
+}
+
+static void didApproveNonTransferData() {
+    continue_sign_atom_flow();
+}
+
+static void prepareForApprovalOfRRI()
 {
     prepare_display_with_transfer_data_step(ReviewRRI);
     display_value("Token:", didApproveTransfer);
 }
 
-void prepareForApprovalOfAmount() {
+static void prepareForApprovalOfAmount() {
     prepare_display_with_transfer_data_step(ReviewAmount);
     display_value("Amount:", prepareForApprovalOfRRI);
 }
 
-void prepareForApprovalOfAddress() {
+static void prepareForApprovalOfAddress() {
     prepare_display_with_transfer_data_step(ReviewAddress);
     display_value("To address:", prepareForApprovalOfAmount);
 }
@@ -139,68 +149,21 @@ bool is_transfer_change_back_to_me() {
     return matchesPublicKey(&ctx->ux_state.transfer.address, &ctx->ux_state.my_public_key_compressed);
 }
 
-void askUserForConfirmationOfTransferIfNeeded() {
-
-    if (is_transfer_change_back_to_me()) 
-    {
-        PRINTF("Skipped reviewing transfer since it was change back to user...trying to return by calling `io_exchange(IO_RETURN_AFTER_TX, 0);`\n");
-
-        io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 0);
-        return;
-    }
-    
-    display_lines("Review", "transfer", prepareForApprovalOfAddress);
-
+void ask_user_for_confirmation_of_signing_hash() {
+    display_lines("Sign content", "Confirm?", didFinishSignAtomFlow);
+    io_exchange(IO_ASYNCH_REPLY, 0);
 }
 
-// // static void proceedToDisplayingTransfersIfAny() {
-// //     if (ctx->numberOfTransferrableTokensParticlesParsed == 0)
-// //     {
-// //         prepareForDisplayingHash();
-// //     }
-// //     else
-// //     {
-// //         filterOutTransfersBackToMeFromAllTransfers();
+void ask_user_for_confirmation_of_non_transfer_data() {
+    display_lines("WARNING", "DATA Found", didApproveNonTransferData);
+    io_exchange(IO_ASYNCH_REPLY, 0);
+}
 
-// //         if (ctx->numberOfTransfersToNotMyAddress == 0) {
-// //             // Either Burn Action or Mint Action
-// //             // assert Data found
-// //             assert(ctx->numberOfNonTransferrableTokensParticlesIdentified > 0); // Expect 
-// //             prepareForDisplayingHash();
-// //         } else if (ctx->numberOfTransfersToNotMyAddress == 1) {
-// //             prepareForApprovalOfAddress();
-// //         } else {
-// //             char upper_line_with_value[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE + 1];
-// //             snprintf(upper_line_with_value, 8, "Found %d", ctx->numberOfTransfersToNotMyAddress);
-// //             G_ui_state.length_lower_line_long = 10;
-// //             display_lines(upper_line_with_value, "transfers", proceedWithNextTransfer);
-// //         }
-// //     }
-// // }
-
-// static void didApproveNonTransferData() {
-//     ctx->hasApprovedNonTransferData = true;
-// }
-
-// static void notifyNonTransferDataFound() {
-//     display_lines("Non-Transfer", "data found!!", didApproveNonTransferData);
-// }
-
-
-// void notifyNonTransferDataFoundIfNeeded() {
-//     if (ctx->hasApprovedNonTransferData) {
-//         return;
-//     }
-//     notifyNonTransferDataFound();
-// }
-
-// // void presentAtomContentsOnDisplay() {
-// //     if (ctx->numberOfNonTransferrableTokensParticlesIdentified > 0)
-// //     {
-// //         notifyNonTransferDataFound();
-// //     }
-// //     else
-// //     {
-// //         proceedToDisplayingTransfersIfAny();
-// //     }
-// // }
+void ask_user_for_confirmation_of_transfer_if_to_other_address() {
+    if (is_transfer_change_back_to_me()) {
+        PRINTF("SKIPPED ASKING FOR USER INPUT ON LEDGER DEVICE FOR TRANSFER since it was 'change' back to user herself...\n");     
+    } else {
+        display_lines("Review", "transfer", prepareForApprovalOfAddress);
+        io_exchange(IO_ASYNCH_REPLY, 0);
+    }
+}
