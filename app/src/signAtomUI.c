@@ -1,4 +1,4 @@
-#include "ui.h"
+#include "signAtomUI.h"
 #include "global_state.h"
 #include "key_and_signatures.h"
 #include "base_conversion.h"
@@ -26,7 +26,7 @@ static void prepare_display_with_transfer_data_step(ReviewAtomStep step)
     {
         size_t number_of_chars_to_copy = RADIX_ADDRESS_BASE58_CHAR_COUNT_MAX + 1;
         assert(number_of_chars_to_copy <= MAX_LENGTH_FULL_STR_DISPLAY);
-       G_ui_state.length_lower_line_long = to_string_radix_address(&transfer.address, G_ui_state.lower_line_long, number_of_chars_to_copy);
+        G_ui_state.length_lower_line_long = to_string_radix_address(&transfer.address, G_ui_state.lower_line_long, number_of_chars_to_copy);
         break;
     }
     case ReviewAmount:

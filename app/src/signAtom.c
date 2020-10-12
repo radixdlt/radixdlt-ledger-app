@@ -140,10 +140,13 @@ static void receive_bytes_and_update_hash_and_update_ux() {
 
 static void parse_atom() {
     empty_buffer();
+    int counter = 0;
     while (ctx->number_of_atom_bytes_received < ctx->atom_byte_count) {
+        PRINTF("~~~ parse_atom loop: %d ~~~\n", counter);
         receive_bytes_and_update_hash_and_update_ux();
+        counter++;
     }
-    FATAL_ERROR("GREAT! should have gotten this...");
+    FATAL_ERROR("APABANAN reached end of 'parse_atom'");
 }
 
 void handleSignAtom(
@@ -154,8 +157,21 @@ void handleSignAtom(
     volatile unsigned int *flags,
     volatile unsigned int *tx)
 {
+
+    PRINTF("\n\n\n\n._-=~$#@   START OF SIGN ATOM   @#$=~-_.\n\n\n\n");
+
 	initiate_state();
-    ctx->ux_state.number_of_up_particles = p1;
+    init_particles_counter(
+        &ctx->ux_state.up_particles_counter,
+        p1, // total_number_of_up_particles
+        p2 // number_of_up_transferrable_tokens_particles
+    );
+    ctx->ux_state.__DEBUG_MODE_skip_short_transfer_reviews = true;
 	parse_bip_and_atom_size(dataBuffer, dataLength);
     parse_atom();
+
+    ask_user_to_verify_hash();
+    *flags |= IO_ASYNCH_REPLY;
+
+    PRINTF("\n\n\n\n._-=~$#@   END OF SIGN ATOM   @#$=~-_.\n\n\n\n");
 }
