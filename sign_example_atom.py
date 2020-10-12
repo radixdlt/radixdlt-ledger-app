@@ -11,6 +11,7 @@ import json
 import hashlib
 import glob
 import os
+import time
 from pathlib import Path
 
 CommExceptionUserRejection = 0x6985
@@ -110,7 +111,7 @@ class TestVector(object):
 
 	def particle_meta_data_list(self) -> List[ParticleMetaData]:
 		particle_meta_data_list_ = chunks(self.__particle_meta_data(), 20)
-		assert len(particle_meta_data_list_) == self.number_of_up_particles()
+		assert len(particle_meta_data_list_) == self.total_number_of_up_particles()
 		return list(map(lambda b: ParticleMetaData(b), particle_meta_data_list_))
 
 	def cbor_encoded_hex(self) -> str:
@@ -135,23 +136,23 @@ class TestVector(object):
 		non_filtered_up_particle_count_dict = self.atomDescription['upParticles']
 		return { key:value for (key,value) in non_filtered_up_particle_count_dict.items() if value > 0 }
 
-	def number_of_up_particles(self) -> int:
+	def total_number_of_up_particles(self) -> int:
 		return self.up_particles_dict()['totalCount']
 
 	def number_of_transferrable_tokens_particles_with_spin_up(self) -> int:
 		return self.up_particles_dict().get('transferrableTokensParticles', 0)
 
 	def contains_non_transfer_data(self) -> bool:
-		return (self.number_of_up_particles() - self.number_of_transferrable_tokens_particles_with_spin_up()) > 0
+		return (self.total_number_of_up_particles() - self.number_of_transferrable_tokens_particles_with_spin_up()) > 0
 
 	def apdu_prefix_initial_payload(self, skipConfirmation: bool) -> bytearray:
 		# https://en.wikipedia.org/wiki/Smart_card_application_protocol_data_unit
 		CLA = bytes.fromhex("AA")
 		INS = b"\x02" # `02` is command "SIGN_ATOM"
-		P1 = struct.pack(">B", self.number_of_up_particles())
-		P2 = b"\xCC"
+		P1 = struct.pack(">B", self.total_number_of_up_particles())
+		P2 = struct.pack(">B", self.number_of_transferrable_tokens_particles_with_spin_up())
 		if skipConfirmation:
-			P2 = b"\xFF"
+			raise "Not supported."
 
 		return CLA + INS + P1 + P2
 
@@ -325,6 +326,9 @@ Contains non transfer data: {}
 
 	print("⭐️ DONE! ⭐️")
 	dongle.close()
+	seconds_to_sleep = 5
+	print(f"(sleeping {seconds_to_sleep} seconds)\n")
+	time.sleep(seconds_to_sleep)
 	return True
 
 
@@ -341,14 +345,14 @@ if __name__ == "__main__":
 	)
 
 
-	parser.add_argument('--skipConfirmation', action='store_true')
+	# parser.add_argument('--skipConfirmation', action='store_true')
 
 	parser.add_argument('--all', action='store_true')
 
 
 	args = parser.parse_args()
-	skipConfirmation = args.skipConfirmation
-	print(f"skipConfirmation: {skipConfirmation}")
+	skipConfirmation = False #args.skipConfirmation
+	# print(f"skipConfirmation: {skipConfirmation}")
 	if args.all:
 		print("🚀 Testing all test vectors...")
 

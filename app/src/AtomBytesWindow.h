@@ -1,7 +1,6 @@
 #ifndef ATOMBYTESWINDOW_H
 #define ATOMBYTESWINDOW_H
 
-
 #include "ByteInterval.h"
 #include "common_macros.h"
 #include "ParticleField.h"

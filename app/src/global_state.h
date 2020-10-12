@@ -3,6 +3,7 @@
 #include "aes.h"
 #include "AtomBytesWindow.h"
 #include "ParticleMetaData.h"
+#include "ParticlesCounter.h"
 
 typedef struct {
 	size_t cipher_text_byte_count;
@@ -37,14 +38,14 @@ typedef struct {
 #define MAX_SERIALIZER_LENGTH 100
 
 typedef struct {
+
+	bool __DEBUG_MODE_skip_short_transfer_reviews;
+
 	bool is_users_public_key_calculated;
 	cx_ecfp_public_key_t my_public_key_compressed;
 
-	// Should be able to safely remove this, should mirror 'number_of_identified_up_particles'
-    uint8_t number_of_particle_meta_data_received;
+	ParticlesCounter up_particles_counter;
 
-    uint8_t number_of_identified_up_particles;
-    uint8_t number_of_up_particles;
 	bool user_has_accepted_non_transfer_data;
 
 	AtomBytesWindow atom_bytes_window;
