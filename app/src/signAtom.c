@@ -146,7 +146,7 @@ static void parse_atom() {
         receive_bytes_and_update_hash_and_update_ux();
         counter++;
     }
-    FATAL_ERROR("APABANAN reached end of 'parse_atom'");
+    PRINTF("APABANAN reached end of 'parse_atom'\n");
 }
 
 void handleSignAtom(
@@ -169,9 +169,8 @@ void handleSignAtom(
     ctx->ux_state.__DEBUG_MODE_skip_short_transfer_reviews = true;
 	parse_bip_and_atom_size(dataBuffer, dataLength);
     parse_atom();
-
-    ask_user_to_verify_hash();
-    *flags |= IO_ASYNCH_REPLY;
+    *flags |= IO_ASYNCH_REPLY; 
+    ask_user_to_verify_hash_before_signing();
 
     PRINTF("\n\n\n\n._-=~$#@   END OF SIGN ATOM   @#$=~-_.\n\n\n\n");
 }
