@@ -4,6 +4,8 @@
 #include "base_conversion.h"
 #include "common_macros.h"
 
+
+
 static signAtomContext_t *ctx = &global.signAtomContext;
 
 typedef enum {
@@ -71,52 +73,38 @@ static void prepare_display_with_transfer_data_step(ReviewAtomStep step)
 }
 // ===== END ===== HELPERS =========
 
-static void didFinishSignAtomFlow()
-{
-    int tx = derive_sign_move_to_global_buffer(ctx->bip32_path, ctx->hash);
-	io_exchange_with_code(SW_OK, tx);
-    ui_idle();
-}
 
-void ask_user_for_confirmation_of_signing_hash();
+static void do_ask_user_for_confirmation_of_signing_hash();
 
-static void prepareForDisplayingHash()
-{
+static void prepareForDisplayingHash() {
     size_t lengthOfHashString = HASH256_BYTE_COUNT * 2 + 1; // + 1 for NULL
-
     hexadecimal_string_from(ctx->hash, HASH256_BYTE_COUNT, G_ui_state.lower_line_long);
-
     G_ui_state.length_lower_line_long = lengthOfHashString;
-
-    display_value("Verify Hash", ask_user_for_confirmation_of_signing_hash);
-}
-
-
-static bool done_with_ux_for_atom_parsing() {
-    return ctx->ux_state.number_of_identified_up_particles == ctx->ux_state.number_of_up_particles;
-}
-
-static void ask_user_to_verify_hash() {
-    prepareForDisplayingHash();
 }
 
 static void continue_sign_atom_flow() {
-    if (done_with_ux_for_atom_parsing()) {
-        PRINTF("Done with parsing atom => confirm hash\n");
-        ask_user_to_verify_hash();
-    } else {
-        io_exchange_with_code(SW_OK, 0);
-        // Display back the original UX
-        ui_idle();
-    }
+    PRINTF("APABANAN 'continue_sign_atom_flow' start'\n");
+    io_exchange_with_code(SW_OK, 0);
+    ui_idle();
+    PRINTF("APABANAN 'continue_sign_atom_flow' END\n");
 }
 
+static void didFinishSignAtomFlow()
+{
+    PRINTF("APABANAN 'didFinishSignAtomFlow' start: calling 'io_exchange(IO_RETURN_AFTER_TX)'\n");
+    int tx = derive_sign_move_to_global_buffer(ctx->bip32_path, ctx->hash);
+	io_exchange_with_code(SW_OK, tx);
+    ui_idle();
+    PRINTF("APABANAN 'didFinishSignAtomFlow' END\n");
+}
 
 static void didApproveTransfer() {
+    PRINTF("APABANAN signAtomUI 'didApproveTransfer'\n");
     continue_sign_atom_flow();
 }
 
 static void didApproveNonTransferData() {
+    PRINTF("APABANAN signAtomUI 'didApproveNonTransferData'\n");
     continue_sign_atom_flow();
 }
 
@@ -136,34 +124,22 @@ static void prepareForApprovalOfAddress() {
     display_value("To address:", prepareForApprovalOfAmount);
 }
 
-bool is_transfer_change_back_to_me() {
-    if (!ctx->ux_state.is_users_public_key_calculated) {
-        derive_radix_key_pair(
-            ctx->bip32_path, 
-            &ctx->ux_state.my_public_key_compressed, 
-            NULL // dont write private key
-        );
-        ctx->ux_state.is_users_public_key_calculated = true;
-    }
-
-    return matchesPublicKey(&ctx->ux_state.transfer.address, &ctx->ux_state.my_public_key_compressed);
+static void do_ask_user_for_confirmation_of_signing_hash() {
+    display_lines("Sign content", "Confirm?", didFinishSignAtomFlow);
 }
 
-void ask_user_for_confirmation_of_signing_hash() {
-    display_lines("Sign content", "Confirm?", didFinishSignAtomFlow);
-    io_exchange(IO_ASYNCH_REPLY, 0);
+void ask_user_to_verify_hash_before_signing() {
+    prepareForDisplayingHash();
+    display_value("Verify Hash", do_ask_user_for_confirmation_of_signing_hash);
 }
 
 void ask_user_for_confirmation_of_non_transfer_data() {
     display_lines("WARNING", "DATA Found", didApproveNonTransferData);
-    io_exchange(IO_ASYNCH_REPLY, 0);
 }
 
 void ask_user_for_confirmation_of_transfer_if_to_other_address() {
-    if (is_transfer_change_back_to_me()) {
-        PRINTF("SKIPPED ASKING FOR USER INPUT ON LEDGER DEVICE FOR TRANSFER since it was 'change' back to user herself...\n");     
-    } else {
-        display_lines("Review", "transfer", prepareForApprovalOfAddress);
-        io_exchange(IO_ASYNCH_REPLY, 0);
-    }
+    bool flow_is_short = ctx->ux_state.__DEBUG_MODE_skip_short_transfer_reviews;
+    callback_t review_tx_callback = flow_is_short ? didApproveTransfer : prepareForApprovalOfAddress;
+    display_lines("Review", "transfer", review_tx_callback);
+    
 }

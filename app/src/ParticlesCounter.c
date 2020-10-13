@@ -1,18 +1,6 @@
 #include "ParticlesCounter.h"
 #include "common_macros.h"
 
-static uint8_t number_of_non_transferrable_tokens_particles_in_atom(
-    ParticlesCounter *counter
-) {
-    return counter->in_atom.non_transfer;
-}
-
-static uint8_t number_of_non_transferrable_tokens_particles_identified(
-    ParticlesCounter *counter
-) {
-    return counter->identified.non_transfer;
-}
-
 static void print_left_to_identify(ParticlesCounter *counter) {
     PRINTF("Identified %d/%d TTPs and %d/%d NON TTPs\n", counter->identified.transferrable_tokens_particle, counter->in_atom.transferrable_tokens_particle, counter->identified.non_transfer, counter->in_atom.non_transfer);
 }
@@ -82,6 +70,5 @@ void identified_a_non_transferrable_tokens_particle(
 bool has_identified_all_particles(
     ParticlesCounter *counter
 ) {
-    print_left_to_identify(counter);
     return have_identified_all_up_transferrable_tokens_particles(counter) && have_identified_all_non_up_transferrable_tokens_particles(counter);
 }

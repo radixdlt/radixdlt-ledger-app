@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-
 from ledgerblue.comm import getDongle
 from ledgerblue.commException import CommException
 from typing import List
 import argparse
+from enum import Enum
 import struct
 import math
 import binascii
@@ -331,21 +331,54 @@ Contains non transfer data: {}
 	time.sleep(seconds_to_sleep)
 	return True
 
+scenario_A_vector_name = 'no_data_single_transfer_small_amount_no_change'
+scenario_B_vector_name = 'data_single_transfer_small_amount_no_change'
+scenario_C_vector_name = 'data_multiple_transfers_small_amounts_with_change_unique'
+scenario_D_vector_name = 'data_no_transfer_message_action'
+
+class Scenario(Enum):
+	A = 'A'
+	B = 'B'
+	C = 'C'
+	D = 'D'
+
+	def vector_name(self) -> str:
+		if self == Scenario.A:
+			return scenario_A_vector_name
+		elif self == Scenario.B: 
+			return scenario_B_vector_name
+		elif self == Scenario.C: 
+			return scenario_C_vector_name
+		elif self == Scenario.D:
+			return scenario_D_vector_name
+		else:
+			raise "Invalid case" 
+
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description="Stream CBOR encoded atom to Ledger for signing.")
 	
-	parser.add_argument(
-		'--inputAtomVector', 
-		'-i', 
-		default='./vectors/sign_atom/huge_atom.json',
-		type=str, 
-		help='Path to JSON file containing test vector with CBOR encoded Atom, the particle meta data, description of atom contents and expected hash and signature.\n\nDefaults to %(default)',
-		metavar='FILE'
-	)
+	# parser.add_argument(
+	# 	'--inputAtomVector', 
+	# 	'-i', 
+	# 	default='./vectors/sign_atom/huge_atom.json',
+	# 	type=str, 
+	# 	help='Path to JSON file containing test vector with CBOR encoded Atom, the particle meta data, description of atom contents and expected hash and signature.\n\nDefaults to %(default)',
+	# 	metavar='FILE'
+	# )
 
+	# parser.add_argument(
+	# 	'--scenario', 
+	# 	'-s', 
+	# 	default='A',
+	# 	type=str, 
+	# 	help='test scenario\nDefaults to %(default)',
+	# 	metavar='FILE'
+	# )
 
-	# parser.add_argument('--skipConfirmation', action='store_true')
+	parser.add_argument('--scenario', '-s', type=Scenario, choices=Scenario)
+
+	# # parser.add_argument('--skipConfirmation', action='store_true')
 
 	parser.add_argument('--all', action='store_true')
 
@@ -368,9 +401,16 @@ if __name__ == "__main__":
 					print("\n🛑 Interrupting testing of all vectors since you rejected the last atom, or signature did not match the expected one?\bBye bye!")
 					break
 
-	else:
-		json_file_path = args.inputAtomVector
+	elif args.scenario:
+		scenario = args.scenario
+		vector_name = scenario.vector_name() + ".json"
+		source_file_dir = Path(__file__).parent.absolute()
+		vectors_dir = source_file_dir.joinpath("vectors", "sign_atom")
+		json_file_path = vectors_dir.joinpath(vector_name)
+		print(f"Running scenario={scenario}, vector named: {vector_name}, json_file_path: {json_file_path}")
 
 		with open(json_file_path) as json_file:
 			vector = TestVector(json_file.read())
 			send_large_atom_to_ledger_in_many_chunks(vector=vector, skipConfirmation=skipConfirmation)
+	else:
+		raise RuntimeError("Invalid args={args}") 
