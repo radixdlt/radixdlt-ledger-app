@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-from ledgerblue.comm import getDongle
+from ledgerblue.comm import getDongle, Dongle
 from ledgerblue.commException import CommException
-from typing import List
+from typing import List, Tuple, Optional
 import argparse
 from enum import Enum
 import struct
@@ -20,7 +20,6 @@ CommExceptionUserRejection = 0x6985
 STREAM_LEN = 255 # Stream in batches of STREAM_LEN bytes each.
 
 def bip32_path_big_endian_encoded():
-	# return b"\x80000002" + struct.pack(">I", 1, 3)
 	return bytes.fromhex("800000020000000100000003")
 
 
@@ -48,8 +47,14 @@ class ByteInterval(object):
 		self.byteCount = nextInt16()
 		assert len(bytes) == 0
 
+	def end_index(self) -> int:
+		return self.startsAtByte + self.byteCount
+
 	def __repr__(self):
-		return f"@{self.startsAtByte}#{self.byteCount}"
+		if self.byteCount == 0:
+			assert self.startsAtByte == 0
+			return "<EMPTY>"
+		return f"[{self.startsAtByte}-{self.end_index()}] (#{self.byteCount} bytes)"
 
 
 class ParticleMetaData(object):
@@ -72,8 +77,21 @@ class ParticleMetaData(object):
 		self.bytes = bytes_copy
 		assert len(self.bytes) == 20
 
-	def __repr__(self):
-		return f"⚛{self.particleItself}: ({self.addressByteInterval}, {self.amountByteInterval}, {self.serializerByteInterval}, {self.tokenDefinitionReferenceByteInterval})\nraw: {self.bytes.hex()}\n"
+	def __repr__(self) -> str:
+		return """
+  ⚛ Particle in atom {}, fields: (
+    address: 	{},
+    amount: 	{},
+    serializer:	{},
+    tokenDefRef:{}
+  )
+""".format(
+		self.particleItself,
+		self.addressByteInterval,
+		self.amountByteInterval,
+		self.serializerByteInterval,
+		self.tokenDefinitionReferenceByteInterval
+	)
 
 	def start_index_in_atom(self) -> int:
 		return self.particleItself.startsAtByte
@@ -118,10 +136,12 @@ class TestVector(object):
 		return self.atomDescription['cborEncodedHex']
 
 	def atom_cbor_encoded(self) -> bytearray:
-		return bytearray.fromhex(self.cbor_encoded_hex())
+		atom_bytes = bytearray.fromhex(self.cbor_encoded_hex())
+		assert(len(atom_bytes) == self.atom_byte_count())
+		return atom_bytes
 
 	def atom_byte_count(self) -> int:
-		return len(self.cbor_encoded_hex())/2
+		return int(len(self.cbor_encoded_hex())/2)
 
 	def expected_hash_hex(self) -> str:
 		return self.expected['shaSha256HashOfAtomCborHex']
@@ -145,15 +165,12 @@ class TestVector(object):
 	def contains_non_transfer_data(self) -> bool:
 		return (self.total_number_of_up_particles() - self.number_of_transferrable_tokens_particles_with_spin_up()) > 0
 
-	def apdu_prefix_initial_payload(self, skipConfirmation: bool) -> bytearray:
+	def apdu_prefix_initial_payload(self) -> bytearray:
 		# https://en.wikipedia.org/wiki/Smart_card_application_protocol_data_unit
 		CLA = bytes.fromhex("AA")
 		INS = b"\x02" # `02` is command "SIGN_ATOM"
 		P1 = struct.pack(">B", self.total_number_of_up_particles())
 		P2 = struct.pack(">B", self.number_of_transferrable_tokens_particles_with_spin_up())
-		if skipConfirmation:
-			raise "Not supported."
-
 		return CLA + INS + P1 + P2
 
 	def particle_group_count(self) -> int:
@@ -169,242 +186,261 @@ def apdu_prefix_particle_metadata(is_particle_meta_data: bool) -> bytearray:
 		P2 = b"\x00"
 		return CLA + INS + P1 + P2
 
-def send_large_atom_to_ledger_in_many_chunks(vector: TestVector, skipConfirmation: bool) -> bool:
-	"""
-	Returns true if user did sign the atom and if the signature matches the expected one specified
-	in the TestVector 'vector'
-	"""
-
-	letDongleOutputDebugPrintStatements = False
-	dongle = getDongle(debug=letDongleOutputDebugPrintStatements)
-
-	print(
-		"""
-🚀 Streaming Atom from vector to Ledger:
-Atom byte count: #{}bytes
-Particle groups: #{}
-Particles with spin UP: #{}
-Contains non transfer data: {}
-		""".format(
-			vector.atom_byte_count(),
-			vector.particle_group_count(),
-			vector.up_particles_dict(),
-			vector.contains_non_transfer_data()
-		)
-	)
-
-	bip_32_path_bytes = bip32_path_big_endian_encoded()
-	# particles_meta_data_bytes = vector.particle_meta_data()
-	atom_bytes = vector.atom_cbor_encoded()
-
-	hasher = hashlib.sha256()
-	hasher.update(atom_bytes)
-	first_digest = hasher.digest()
-	hasher = hashlib.sha256()
-	hasher.update(first_digest)
-	hash_of_atom = hasher.hexdigest()
-
-	if hash_of_atom != vector.expected_hash_hex():
-		print("\n ☢️ Hash mismatch ☢️\n")
-		print(f"Expected hash: {vector.expected_hash_hex()}") 
-		print(f"But calculated hash: {hash_of_atom}")
-
-
-	atom_byte_count = len(atom_bytes)
-	assert(atom_byte_count == vector.atom_byte_count())
-
-	atom_byte_count_encoded = struct.pack(">h", atom_byte_count) # `>` means big endian, `h` means `short` -> 2 bytes
-
-	prefix = vector.apdu_prefix_initial_payload(skipConfirmation=skipConfirmation)
-
-	payload = bip_32_path_bytes + atom_byte_count_encoded
-
-	print("Sending payload: " + payload.hex())
-
-
-	L_c = bytes([len(payload)])
+def sendToLedger(dongle: Dongle, prefix: bytearray, payload: bytearray) -> Tuple[bool, bytearray]:
+	payload_size = len(payload)
+	L_c = bytes([payload_size])
 	apdu = prefix + L_c + payload
+	try:
+		result = dongle.exchange(apdu)
+		return [True, result]
+	except CommException as commException:
+		if commException.sw == CommExceptionUserRejection:
+			print("🙅🏿‍♀️ You rejected the atom...Aborting vector.")
+			dongle.close()
+			return [False, b''] # fail
+		else:
+			raise commException # unknown error, interrupt exection and propage the error.
 
-	result = dongle.exchange(apdu)
+class StreamVector(object):
+	def __init__(self, vector: TestVector, allow_debug_prints_by_this_program: bool=True, allow_debug_prints_from_ledger: bool=False):
+		self.vector = vector
+		self.dongle = getDongle(debug=allow_debug_prints_from_ledger)
+		self.allow_debug_prints_by_this_program = allow_debug_prints_by_this_program
+		self.remaining_atom_bytes = vector.atom_cbor_encoded().copy()
+		self.count_bytes_sent_to_ledger = 0
+		self.list_of_particle_meta_data = vector.particle_meta_data_list()
+		self.number_of_metadata_to_send = vector.total_number_of_up_particles()
 
-	print(f"got result back from Ledger for intial payload={result}")
+	def atom_size_in_bytes(self) -> int:
+		return self.vector.atom_byte_count()
 
-	count_bytes_sent_to_ledger = 0
+	def print_vector(self) -> None:
+		vector = self.vector
+		print( # looks like it is badly formatted, but in fact this results in correct output in terminal.
+			"""
+\n\n\n\n\n\n\n
+🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀
+🚀                                🚀  
+🚀  Streaming Atom to Ledger:     🚀	
+🚀  # Bytes in Atom: 	{}	  🚀
+🚀  # ParticleGroups:	{}	  🚀
+🚀  # UpParticles: 	{}	  🚀
+🚀                                🚀  
+🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀
+			""".format(
+				vector.atom_byte_count(),
+				vector.particle_group_count(),
+				vector.total_number_of_up_particles(),
+			)
+		)
 
-	# chunk_index = 0
-	# number_of_chunks_to_send = int(math.ceil(atom_byte_count / STREAM_LEN))
-	# print(f"Atom will be sent in #chunks: {number_of_chunks_to_send}")
+	def number_of_particle_metadata_left_to_send_to_ledger(self) -> int:
+		return int(len(self.list_of_particle_meta_data))
 
-	atom_bytes_chunked = atom_bytes.copy()
+	def number_of_particle_metadata_sent_to_ledger(self) -> int:
+		return self.number_of_metadata_to_send - self.number_of_particle_metadata_left_to_send_to_ledger()
 
-	particleMetaDataList = vector.particle_meta_data_list()
-	particleMetaDataSize = len(particleMetaDataList)
-	particleMetaDataSent = 0
-
-	def sendToLedger(prefix: bytearray, payload: bytearray) -> bool:
-		nonlocal result
-		payload_size = len(payload)
-		L_c = bytes([payload_size])
-		apdu = prefix + L_c + payload
-		try:
-			result = dongle.exchange(apdu)
-			return True # success
-		except CommException as commException:
-			if commException.sw == CommExceptionUserRejection:
-				print("🙅🏿‍♀️ You rejected the atom...Aborting vector.")
-				dongle.close()
-				return False # fail
-			else:
-				raise commException # unknown error, interrupt exection and propage the error.
-
-
-	def sendToLedgerParticleMetaData(particleMetaData: ParticleMetaData):
-		print(f"Sending particle metadata to Ledger: {particleMetaData}")
-
-		particle_start = particleMetaData.start_index_in_atom()
-		if count_bytes_sent_to_ledger > particle_start:
-			raise RuntimeError("FATAL ERROR! Flawed logic in this Python script. Sending ParticleMetaData which 'startsAt={particle_start}', however we have already sent #{count_bytes_sent_to_ledger} bytes to the Ledger. Thus the Ledger has missed some relevant bytes for parsing.")
-
-		print(f"#{count_bytes_sent_to_ledger} sent to Ledger, sending MetaData about particle starting at: {particle_start}")
-
-		success = sendToLedger(
+	def sendToLedgerParticleMetaData(self, payload: ParticleMetaData) -> Tuple[bool, bytearray]:
+		particle_meta_data = payload
+	
+		if self.allow_debug_prints_by_this_program:
+			print(f"\nSending meta data about particle ({self.number_of_particle_metadata_sent_to_ledger() + 1}/{self.number_of_metadata_to_send}) to Ledger: {	particle_meta_data}")
+	
+		return sendToLedger(
+			dongle=self.dongle,
 			prefix=apdu_prefix_particle_metadata(True),
-			payload=particleMetaData.bytes
+			payload=particle_meta_data.bytes
 		)
-		if not success:
-			raise RuntimeError("Failed sending meta data to Ledger")
+	
+	
+	def sendToLedgerAtomBytes(self, payload: bytearray) -> Tuple[bool, bytearray]:
+		atom_bytes = payload
+		if self.allow_debug_prints_by_this_program:
+			size_of_payload = len(atom_bytes)
+			index_of_last_byte_being_sent = self.count_bytes_sent_to_ledger + size_of_payload
+			print(f"Sending atom (size={self.atom_size_in_bytes()}) byte window to ledger: [{self.count_bytes_sent_to_ledger}-{	index_of_last_byte_being_sent}] (#{size_of_payload})")
 
-
-	def sendToLedgerAtomBytes(atomBytes: bytearray):
-		byteCount = len(atomBytes)
-		w_sta = count_bytes_sent_to_ledger
-		w_end = w_sta + byteCount
-		print(f"Sending atom bytes to ledger - window [{w_sta}-{w_end}] (#{byteCount}), bytes:\n")
-		print(atomBytes.hex())
-		success = sendToLedger(
+		return sendToLedger(
+			dongle=self.dongle,
 			prefix=apdu_prefix_particle_metadata(False),
-			payload=atomBytes
+			payload=atom_bytes
+		)
+
+	def send_initial_setup_payload_to_ledger(self):
+		(success, _) = sendToLedger(
+			self.dongle,
+			prefix=vector.apdu_prefix_initial_payload(), 
+			payload=bip32_path_big_endian_encoded() + struct.pack(">h", self.atom_size_in_bytes())
 		)
 
 		if not success:
-			raise RuntimeError("Failed sending atom bytes to Ledger")
-	
-	# Keep streaming data into the device till we run out of it.
-	while count_bytes_sent_to_ledger < atom_byte_count - 1:
-		print(f"len(particleMetaDataList)={len(particleMetaDataList)}")
-		nextRelevantEnd = (atom_byte_count - 1) if len(particleMetaDataList) == 0 else particleMetaDataList[0].start_index_in_atom()
-		nextParticleMetaData = particleMetaDataList[0] if len(particleMetaDataList) else None
+			raise "Failed to send initial setup payload"
 
-
-		if not nextParticleMetaData is None and count_bytes_sent_to_ledger == nextParticleMetaData.start_index_in_atom():
-			sendToLedgerParticleMetaData(nextParticleMetaData)
-			particleMetaDataSent += 1
-			particleMetaDataList.pop(0)
-			print(f"Finished sending ParticleMetaData: {particleMetaDataSent}/{particleMetaDataSize}")
+	def next_particle_metadata_or_none(self) -> Optional[ParticleMetaData]:
+		if self.number_of_particle_metadata_left_to_send_to_ledger() == 0:
+			return None
 		else:
-			count = min(STREAM_LEN, nextRelevantEnd - count_bytes_sent_to_ledger)
-			chunk = atom_bytes_chunked[0:count]
-			atom_bytes_chunked = atom_bytes_chunked[count:]
-			sendToLedgerAtomBytes(chunk)
-			count_bytes_sent_to_ledger += count
+			return self.list_of_particle_meta_data[0]
 
-		print(f"result: {result.hex()}")
+
+	def stream_all_bytes_except_last_one___MEGA_UGLY_HACK___to_ledger(self) -> None:
+		
+		
+		# Keep streaming data into the device till we run out of it.
+		while self.count_bytes_sent_to_ledger < self.atom_size_in_bytes() - 1:
+
+			next_particle_metadata = self.next_particle_metadata_or_none()
+
+			should_send_metadata = not next_particle_metadata is None and self.count_bytes_sent_to_ledger == next_particle_metadata.start_index_in_atom()
+
+
+			if should_send_metadata:
+				
+				self.sendToLedgerParticleMetaData(
+					payload=next_particle_metadata
+				)
+
+				self.list_of_particle_meta_data.pop(0)
+
+			else:
+				next_relevant_end = None
+				if not next_particle_metadata is None:
+					next_relevant_end = next_particle_metadata.start_index_in_atom()
+				else:
+					# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+					# !!!!!🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉!!!!!
+					# !!!!!🐉🐉  BEWARE HERE BE DRAGONS  🐉🐉!!!!!
+					# !!!!!🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉!!!!!
+					# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	
+					# This is the UGLIEST HACK in history of man
+					# we stop streaming up until the last byte of 
+					# the atom. We save that last byte until later
+					# in order to workaround tricky internal state
+					# of ledger device relating to 'io_exchange'
+					# and blocking UX. Which is why we subtract `1`
+					size_of_atom___MEGA_UGLY_HACK___minus_one = self.atom_size_in_bytes() - 1
+					next_relevant_end = size_of_atom___MEGA_UGLY_HACK___minus_one
+
+				number_of_atom_bytes_to_send = min(STREAM_LEN, next_relevant_end - self.count_bytes_sent_to_ledger)
+
+				self.sendToLedgerAtomBytes(
+					payload=self.remaining_atom_bytes[0:number_of_atom_bytes_to_send], 
+				)
+
+				self.remaining_atom_bytes = self.remaining_atom_bytes[number_of_atom_bytes_to_send:]
+				self.count_bytes_sent_to_ledger += number_of_atom_bytes_to_send
+
+			if self.allow_debug_prints_by_this_program:
+				percent = int(100 * self.count_bytes_sent_to_ledger/self.atom_size_in_bytes())
+				print(f"Sent %{percent} of all atom bytes and metadata about #{self.number_of_particle_metadata_sent_to_ledger()}/{self.number_of_metadata_to_send} particles.")
+
+		print( # looks like it is badly formatted, but in fact this results in correct output in terminal.
+			"""
+🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮
+🔮                                          🔮
+🔮    FINISHED STREAMING ALL ATOM BYTES     🔮
+🔮 	   _except_ for the FINAL byte      🔮
+🔮         to the ledger device.            🔮
+🔮                                          🔮
+🔮 Due to internal state of ledger it was   🔮
+🔮 easiest to send the last byte separatly. 🔮
+🔮                                          🔮
+🔮  🤷‍♂️🤷‍♂️🤷‍♂️ SORRY! 🤷‍♂️🤷‍♂️🤷‍♂️              🔮
+🔮                                          🔮
+🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮
+			"""
+		)
 
 
-	# timeout_signature = 10
-	print(f"🔮 Finished streaming all chunks to the ledger.\n💡 Expected Hash: {vector.expected_hash_hex()}\nWaiting for signature...")
+	def send_last_atom_byte____MEGA_UGLY_HACK___to_ledger_and_return_signature_produced_by_ledger(self) -> Tuple[bool, bytearray]:
 
-	# dongle.device.set_nonblocking(False)
-	# result = dongle.waitFirstResponse(timeout_signature)
-	print("Sending ugly empty package...")
-	assert len(atom_bytes_chunked) == 1, "Expected len(atom_bytes_chunked) == 1"
-	assert count_bytes_sent_to_ledger == atom_byte_count - 1, "Expected count_bytes_sent_to_ledger == atom_byte_count - 1"
-	sendToLedger(
-		prefix=apdu_prefix_particle_metadata(False),
-		payload=atom_bytes_chunked
+		assert len(self.remaining_atom_bytes) == 1
+		assert self.count_bytes_sent_to_ledger == self.atom_size_in_bytes() - 1
+		assert self.remaining_atom_bytes[0] == 0xFF
+
+		print( # looks like it is badly formatted, but in fact this results in correct output in terminal.
+			"""
+🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉
+🐉                                🐉
+🐉 !!! BEWARE HERE BE DRAGONS !!! 🐉
+🐉 Sending the last byte (=0xFF)  🐉
+🐉 in the atom alone. The whole   🐉
+🐉 solution depends on this.      🐉
+🐉 (So sorry, please excuse me.)  🐉
+🐉                                🐉
+🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉
+			"""
+		)
+
+		print(f"\n💡 Expected Hash (verify on Ledger): {vector.expected_hash_hex()}\n")
+
+		return sendToLedger(
+			self.dongle,
+			prefix=apdu_prefix_particle_metadata(False),
+			payload=self.remaining_atom_bytes
+		)
+
+
+	def assert_correct_signature(self, signature_from_ledger: bytearray) -> bool:
+		expected_signature_hex = self.vector.expected_signature_rs_hex()
+
+		if expected_signature_hex == signature_from_ledger:
+			print(f"\n✅ Awesome! Signature from ledger matches that from Swift library ✅\nSignature: {signature_from_ledger}")
+			return True
+		else:
+			print("\n ☢️ Signature mismatch ☢️\n")
+			print(f"Expected signature: {expected_signature_hex}") 
+			print(f"But got signature from ledger: {signature_from_ledger}")
+			return False
+
+
+	def start(self) -> bool:
+		"""
+		Returns true if user did sign the atom and if the signature matches the expected one specified
+		in the TestVector 'vector'
+		"""
+		self.print_vector()
+		self.send_initial_setup_payload_to_ledger()
+		self.stream_all_bytes_except_last_one___MEGA_UGLY_HACK___to_ledger()
+		(success, signature_from_ledger_bytes) = self.send_last_atom_byte____MEGA_UGLY_HACK___to_ledger_and_return_signature_produced_by_ledger()
+		if not success:
+			print("Failed to get signature from ledger")
+			return False
+
+		self.dongle.close()
+
+		if not self.assert_correct_signature(signature_from_ledger_bytes.hex()):
+			return False
+
+		print("⭐️ DONE! ⭐️")
+		return True
+
+
+
+
+def main_args_parser() -> argparse.ArgumentParser:
+	parser = argparse.ArgumentParser(description="Stream CBOR encoded atom to Ledger for signing.")
+	
+	parser.add_argument(
+		'--inputAtomVector', 
+		'-i', 
+		default='./vectors/sign_atom/huge_atom.json',
+		type=str, 
+		help='Path to JSON file containing test vector with CBOR encoded Atom, the particle meta data, description of atom contents and expected hash and signature.\n\nDefaults to %(default)',
+		metavar='FILE'
 	)
-	print("Got result from ledger")
+	parser.add_argument('--all', action='store_true')
+	return parser
 
-	signature_from_ledger_device = result.hex()
-	expected_signature_hex = vector.expected_signature_rs_hex()
 
-	if expected_signature_hex == signature_from_ledger_device:
-		print(f"\n✅ Awesome! Signature from ledger matches that from Swift library ✅\nSignature: {signature_from_ledger_device}")
-	else:
-		print("\n ☢️ Signature mismatch ☢️\n")
-		print(f"Expected signature: {expected_signature_hex}") 
-		print(f"But got signature from ledger: {signature_from_ledger_device}")
-		return False
-
-	print("⭐️ DONE! ⭐️")
-	dongle.close()
-	seconds_to_sleep = 1
-	print(f"(sleeping {seconds_to_sleep} seconds)\n")
-	time.sleep(seconds_to_sleep)
-	return True
-
-scenario_A_vector_name = 'no_data_single_transfer_small_amount_no_change'
-scenario_B_vector_name = 'data_single_transfer_small_amount_no_change'
-scenario_C_vector_name = 'data_multiple_transfers_small_amounts_with_change_unique'
-scenario_D_vector_name = 'data_no_transfer_message_action'
-scenario_E_vector_name = 'huge_atom'
-
-class Scenario(Enum):
-	A = 'A'
-	B = 'B'
-	C = 'C'
-	D = 'D'
-	E = 'E'
-
-	def vector_name(self) -> str:
-		if self == Scenario.A:
-			return scenario_A_vector_name
-		elif self == Scenario.B: 
-			return scenario_B_vector_name
-		elif self == Scenario.C: 
-			return scenario_C_vector_name
-		elif self == Scenario.D:
-			return scenario_D_vector_name
-		elif self == Scenario.E:
-			return scenario_E_vector_name
-		else:
-			raise "Invalid case" 
 
 
 if __name__ == "__main__":
-	parser = argparse.ArgumentParser(description="Stream CBOR encoded atom to Ledger for signing.")
-	
-	# parser.add_argument(
-	# 	'--inputAtomVector', 
-	# 	'-i', 
-	# 	default='./vectors/sign_atom/huge_atom.json',
-	# 	type=str, 
-	# 	help='Path to JSON file containing test vector with CBOR encoded Atom, the particle meta data, description of atom contents and expected hash and signature.\n\nDefaults to %(default)',
-	# 	metavar='FILE'
-	# )
-
-	# parser.add_argument(
-	# 	'--scenario', 
-	# 	'-s', 
-	# 	default='A',
-	# 	type=str, 
-	# 	help='test scenario\nDefaults to %(default)',
-	# 	metavar='FILE'
-	# )
-
-	parser.add_argument('--scenario', '-s', type=Scenario, choices=Scenario)
-
-	# # parser.add_argument('--skipConfirmation', action='store_true')
-
-	parser.add_argument('--all', action='store_true')
-
-
+	parser = main_args_parser()
 	args = parser.parse_args()
-	skipConfirmation = False #args.skipConfirmation
-	# print(f"skipConfirmation: {skipConfirmation}")
 	if args.all:
-		print("🚀 Testing all test vectors...")
+		print("🥁 Testing all test vectors...")
 
 		source_file_dir = Path(__file__).parent.absolute()
 		vectors_dir = source_file_dir.joinpath("vectors", "sign_atom")
@@ -413,21 +449,16 @@ if __name__ == "__main__":
 			with open(vector_file_path) as json_file:
 				print(f"Found test vector in file: {json_file.name}")
 				vector = TestVector(json_file.read())
-				did_sign_and_signature_matches = send_large_atom_to_ledger_in_many_chunks(vector=vector, skipConfirmation=skipConfirmation)
+				stream_test = StreamVector(vector=vector)
+				did_sign_and_signature_matches = stream_test.start()
 				if not did_sign_and_signature_matches:
 					print("\n🛑 Interrupting testing of all vectors since you rejected the last atom, or signature did not match the expected one?\bBye bye!")
 					break
 
-	elif args.scenario:
-		scenario = args.scenario
-		vector_name = scenario.vector_name() + ".json"
-		source_file_dir = Path(__file__).parent.absolute()
-		vectors_dir = source_file_dir.joinpath("vectors", "sign_atom")
-		json_file_path = vectors_dir.joinpath(vector_name)
-		print(f"Running scenario={scenario}, vector named: {vector_name}, json_file_path: {json_file_path}")
+	else:
+		json_file_path = args.inputAtomVector
 
 		with open(json_file_path) as json_file:
 			vector = TestVector(json_file.read())
-			send_large_atom_to_ledger_in_many_chunks(vector=vector, skipConfirmation=skipConfirmation)
-	else:
-		raise RuntimeError("Invalid args={args}") 
+			stream_test = StreamVector(vector=vector)
+			did_sign_and_signature_matches = stream_test.start()
