@@ -169,6 +169,7 @@ void handleSignAtom(
     ctx->ux_state.__DEBUG_MODE_skip_short_transfer_reviews = true;
 	parse_bip_and_atom_size(dataBuffer, dataLength);
     parse_atom();
+    PRINTF("Finished parsing atom?\n");
     *flags |= IO_ASYNCH_REPLY; 
     ask_user_to_verify_hash_before_signing();
 
