@@ -290,9 +290,9 @@ Contains non transfer data: {}
 			raise RuntimeError("Failed sending atom bytes to Ledger")
 	
 	# Keep streaming data into the device till we run out of it.
-	while count_bytes_sent_to_ledger < atom_byte_count:
+	while count_bytes_sent_to_ledger < atom_byte_count - 1:
 		print(f"len(particleMetaDataList)={len(particleMetaDataList)}")
-		nextRelevantEnd = atom_byte_count if len(particleMetaDataList) == 0 else particleMetaDataList[0].start_index_in_atom()
+		nextRelevantEnd = (atom_byte_count - 1) if len(particleMetaDataList) == 0 else particleMetaDataList[0].start_index_in_atom()
 		nextParticleMetaData = particleMetaDataList[0] if len(particleMetaDataList) else None
 
 
@@ -311,7 +311,20 @@ Contains non transfer data: {}
 		print(f"result: {result.hex()}")
 	
 
-	print(f"🔮 Finished streaming all chunks to the ledger.\n💡 Expected Hash: {vector.expected_hash_hex()}\nWaiting for your to press the Ledger's buttons...")
+
+	# timeout_signature = 10
+	print(f"🔮 Finished streaming all chunks to the ledger.\n💡 Expected Hash: {vector.expected_hash_hex()}\nWaiting for signature...")
+
+	# dongle.device.set_nonblocking(False)
+	# result = dongle.waitFirstResponse(timeout_signature)
+	print("Sending ugly empty package...")
+	assert len(atom_bytes_chunked) == 1, "Expected len(atom_bytes_chunked) == 1"
+	assert count_bytes_sent_to_ledger == atom_byte_count - 1, "Expected count_bytes_sent_to_ledger == atom_byte_count - 1"
+	sendToLedger(
+		prefix=apdu_prefix_particle_metadata(False),
+		payload=atom_bytes_chunked
+	)
+	print("Got result from ledger")
 
 	signature_from_ledger_device = result.hex()
 	expected_signature_hex = vector.expected_signature_rs_hex()
@@ -326,7 +339,7 @@ Contains non transfer data: {}
 
 	print("⭐️ DONE! ⭐️")
 	dongle.close()
-	seconds_to_sleep = 5
+	seconds_to_sleep = 1
 	print(f"(sleeping {seconds_to_sleep} seconds)\n")
 	time.sleep(seconds_to_sleep)
 	return True
@@ -335,12 +348,14 @@ scenario_A_vector_name = 'no_data_single_transfer_small_amount_no_change'
 scenario_B_vector_name = 'data_single_transfer_small_amount_no_change'
 scenario_C_vector_name = 'data_multiple_transfers_small_amounts_with_change_unique'
 scenario_D_vector_name = 'data_no_transfer_message_action'
+scenario_E_vector_name = 'huge_atom'
 
 class Scenario(Enum):
 	A = 'A'
 	B = 'B'
 	C = 'C'
 	D = 'D'
+	E = 'E'
 
 	def vector_name(self) -> str:
 		if self == Scenario.A:
@@ -351,6 +366,8 @@ class Scenario(Enum):
 			return scenario_C_vector_name
 		elif self == Scenario.D:
 			return scenario_D_vector_name
+		elif self == Scenario.E:
+			return scenario_E_vector_name
 		else:
 			raise "Invalid case" 
 
