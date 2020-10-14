@@ -8,6 +8,7 @@
 #include <os_io_seproxyhal.h>
 #include "key_and_signatures.h"
 #include "ui.h"
+#include "ux.h"
 #include "global_state.h"
 #include "sha256_hash.h"
 #include "dson.h"
@@ -67,14 +68,7 @@ static bool has_particle_meta_data() {
     return ux_state->particle_meta_data.is_initialized;
 }
 
-static bool finished_parsing_all_particles() {
-    bool parsed_all_particles = has_identified_all_particles(&ux_state->up_particles_counter);
-    return parsed_all_particles;
-}
 
-static bool finished_parsing_whole_atom() {
-    return ctx->number_of_atom_bytes_received == ctx->atom_byte_count && finished_parsing_all_particles();
-}
 
 static uint16_t offset_of_field_in_atom_bytes_window(
     ParticleField *particle_field
@@ -195,10 +189,6 @@ static void user_accepted_transfer_data() {
 }
 
 static void UX_BLOCK() {
-
-    if (finished_parsing_all_particles() && ctx->number_of_atom_bytes_received == ctx->atom_byte_count) {
-        PRINTF("UX_BLOCK: DONE with atom, calling 'io_exchange(IO_ASYNCH_REPLY) which might block.'\n");
-    }
     io_exchange(IO_ASYNCH_REPLY, 0); // BLOCK ux
 }
 

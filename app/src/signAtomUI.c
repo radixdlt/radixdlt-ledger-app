@@ -76,70 +76,88 @@ static void prepare_display_with_transfer_data_step(ReviewAtomStep step)
 
 static void do_ask_user_for_confirmation_of_signing_hash();
 
-static void prepareForDisplayingHash() {
+static void prepare_for_displaying_of_hash() {
     size_t lengthOfHashString = HASH256_BYTE_COUNT * 2 + 1; // + 1 for NULL
     hexadecimal_string_from(ctx->hash, HASH256_BYTE_COUNT, G_ui_state.lower_line_long);
     G_ui_state.length_lower_line_long = lengthOfHashString;
 }
 
+static void unblock_ux(int tx) {
+    PRINTF("unblock_ux START\n");
+    io_exchange_with_code(SW_OK, tx);
+    ui_idle();
+    PRINTF("unblock_ux END\n");
+}
+
 static void continue_sign_atom_flow() {
-    PRINTF("APABANAN 'continue_sign_atom_flow' start'\n");
-    io_exchange_with_code(SW_OK, 0);
-    ui_idle();
-    PRINTF("APABANAN 'continue_sign_atom_flow' END\n");
+    unblock_ux(0);
 }
 
-static void didFinishSignAtomFlow()
-{
-    PRINTF("APABANAN 'didFinishSignAtomFlow' start: calling 'io_exchange(IO_RETURN_AFTER_TX)'\n");
+static void did_approve_signing_of_hash() {
     int tx = derive_sign_move_to_global_buffer(ctx->bip32_path, ctx->hash);
-	io_exchange_with_code(SW_OK, tx);
-    ui_idle();
-    PRINTF("APABANAN 'didFinishSignAtomFlow' END\n");
+	unblock_ux(tx);
 }
 
-static void didApproveTransfer() {
-    PRINTF("APABANAN signAtomUI 'didApproveTransfer'\n");
+static void finished_approving_transfer() {
+    PRINTF("finished_approving_transfer START'\n");
     continue_sign_atom_flow();
 }
 
-static void didApproveNonTransferData() {
-    PRINTF("APABANAN signAtomUI 'didApproveNonTransferData'\n");
+static void did_approve_rri() {
+    finished_approving_transfer();
+}
+
+static void did_approve_non_transfer_data() {
+    PRINTF("did_approve_non_transfer_data START\n");
     continue_sign_atom_flow();
 }
 
-static void prepareForApprovalOfRRI()
+static void prepare_for_approval_of_rri()
 {
     prepare_display_with_transfer_data_step(ReviewRRI);
-    display_value("Token:", didApproveTransfer);
+    display_value("Token:", did_approve_rri);
 }
 
-static void prepareForApprovalOfAmount() {
+static void prepare_for_approval_of_amount() {
     prepare_display_with_transfer_data_step(ReviewAmount);
-    display_value("Amount:", prepareForApprovalOfRRI);
+    display_value("Amount:", prepare_for_approval_of_rri);
 }
 
-static void prepareForApprovalOfAddress() {
+static void prepare_for_approval_of_address() {
     prepare_display_with_transfer_data_step(ReviewAddress);
-    display_value("To address:", prepareForApprovalOfAmount);
+    display_value("To address:", prepare_for_approval_of_amount);
 }
 
 static void do_ask_user_for_confirmation_of_signing_hash() {
-    display_lines("Sign content", "Confirm?", didFinishSignAtomFlow);
+    display_lines("Sign content", "Confirm?", did_approve_signing_of_hash);
 }
 
+bool finished_parsing_all_particles() {
+    bool parsed_all_particles = has_identified_all_particles(&ctx->ux_state.up_particles_counter);
+    return parsed_all_particles;
+}
+
+
+bool finished_parsing_whole_atom() {
+    return ctx->number_of_atom_bytes_received == ctx->atom_byte_count && finished_parsing_all_particles();
+}
+
+
 void ask_user_to_verify_hash_before_signing() {
-    prepareForDisplayingHash();
+    PRINTF("ask_user_to_verify_hash_before_signing START\n");
+    prepare_for_displaying_of_hash();
     display_value("Verify Hash", do_ask_user_for_confirmation_of_signing_hash);
 }
 
 void ask_user_for_confirmation_of_non_transfer_data() {
-    display_lines("WARNING", "DATA Found", didApproveNonTransferData);
+    PRINTF("ask_user_for_confirmation_of_non_transfer_data START\n");
+    display_lines("WARNING", "DATA Found", did_approve_non_transfer_data);
 }
 
 void ask_user_for_confirmation_of_transfer_if_to_other_address() {
+    PRINTF("ask_user_for_confirmation_of_transfer_if_to_other_address START\n");
     bool flow_is_short = ctx->ux_state.__DEBUG_MODE_skip_short_transfer_reviews;
-    callback_t review_tx_callback = flow_is_short ? didApproveTransfer : prepareForApprovalOfAddress;
+    callback_t review_tx_callback = flow_is_short ? finished_approving_transfer : prepare_for_approval_of_address;
     display_lines("Review", "transfer", review_tx_callback);
     
 }
