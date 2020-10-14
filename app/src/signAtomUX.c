@@ -68,8 +68,6 @@ static bool has_particle_meta_data() {
     return ux_state->particle_meta_data.is_initialized;
 }
 
-
-
 static uint16_t offset_of_field_in_atom_bytes_window(
     ParticleField *particle_field
 ) {
@@ -188,7 +186,7 @@ static void user_accepted_transfer_data() {
     PRINTF("user_accepted_transfer_data END\n");
 }
 
-static void UX_BLOCK() {
+static void ux_block() {
     io_exchange(IO_ASYNCH_REPLY, 0); // BLOCK ux
 }
 
@@ -215,7 +213,7 @@ static void do_parse_field_from_atom_bytes(
             if (ask_user_to_confirm_transfer) {
                 PRINTF("Is transfer to another -> asking for confirmation from user\n");
                 ask_user_for_confirmation_of_transfer_if_to_other_address();
-                UX_BLOCK();
+                ux_block();
                 PRINTF("unblocked asking confirmation of transfer\n");
             }
             user_accepted_transfer_data();
@@ -231,7 +229,7 @@ static void do_parse_field_from_atom_bytes(
             } else {
                 PRINTF("Asking user to confirm non TTP data\n");
                 ask_user_for_confirmation_of_non_transfer_data();
-                UX_BLOCK();
+                ux_block();
                 PRINTF("unblocked asking confirmation of non transfer data\n");
                 user_accepted_non_transfer_data();
             }
