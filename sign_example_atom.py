@@ -386,7 +386,7 @@ class StreamVector(object):
 		expected_signature_hex = self.vector.expected_signature_rs_hex()
 
 		if expected_signature_hex == signature_from_ledger:
-			print(f"\n✅ Awesome! Signature from ledger matches that from Swift library ✅\nSignature: {signature_from_ledger}")
+			print(f"✅ Awesome! Signature from ledger matches that from Swift library ✅\nSignature: {signature_from_ledger}\n")
 			return True
 		else:
 			print("\n ☢️ Signature mismatch ☢️\n")
@@ -413,7 +413,16 @@ class StreamVector(object):
 		if not self.assert_correct_signature(signature_from_ledger_bytes.hex()):
 			return False
 
-		print("⭐️ DONE! ⭐️")
+		print( # looks like it is badly formatted, but in fact this results in correct output in terminal.
+			"""
+⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️
+⭐️              ⭐️
+⭐️     DONE     ⭐️
+⭐️              ⭐️
+⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️
+\n\n
+			"""
+		)
 		return True
 
 
@@ -447,7 +456,7 @@ if __name__ == "__main__":
 
 		for vector_file_path in vectors_dir.rglob("*.json"):   
 			with open(vector_file_path) as json_file:
-				print(f"Found test vector in file: {json_file.name}")
+				print(f"\n\n🗂 🗂 🗂\nFound test vector in file: {json_file.name}\ntesting it by streaming it to the ledger...\n📒 📒 📒\n")
 				vector = TestVector(json_file.read())
 				stream_test = StreamVector(vector=vector)
 				did_sign_and_signature_matches = stream_test.start()
