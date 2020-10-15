@@ -64,7 +64,6 @@ static void update_hash(
     uint16_t byte_count, 
     bool should_finalize_hash
 ) {
-    PRINTF("Updating hash with #%d bytes\n", byte_count);
     update_hash_and_maybe_finalize(
         bytes,
         byte_count,
@@ -78,14 +77,14 @@ static void update_hash(
 static void receive_bytes_and_update_hash_and_update_ux() {
     // Get bytes from host machine
     if (G_io_apdu_buffer[OFFSET_LC] == 0) {
-        PRINTF("Requesting more bytes from host machine\n");
+        // Requesting more bytes from host machine
         empty_buffer();
         G_io_apdu_buffer[0] = 0x90; // 0x9000 == 'SW_OK'
         G_io_apdu_buffer[1] = 0x00; // 0x9000 == 'SW_OK'
         io_exchange(CHANNEL_APDU, 2);
         
     } else {
-        PRINTF("Got bytes during UX flow\n");
+       // Got bytes during UX flow... nothing to do.
     }
 
     uint8_t p1 = G_io_apdu_buffer[OFFSET_P1];
@@ -94,7 +93,6 @@ static void receive_bytes_and_update_hash_and_update_ux() {
     G_io_apdu_buffer[OFFSET_LC] = 0;
 
     PayloadType payloadType = p1;
-    PRINTF("\n===================================================\n");
 
     uint16_t bytes_received_before_this_payload = ctx->number_of_atom_bytes_received;
     uint16_t bytes_received_incl_this_payload = bytes_received_before_this_payload + number_of_bytes_received;
@@ -105,9 +103,7 @@ static void receive_bytes_and_update_hash_and_update_ux() {
     case PayloadTypeIsAtomBytes:
         ctx->number_of_atom_bytes_received = bytes_received_incl_this_payload;
         
-        PRINTF("Received payload from host machine - atom bytes window: [%d-%d] (#%d bytes)\n", bytes_received_before_this_payload, bytes_received_incl_this_payload, number_of_bytes_received); 
-
-        PRINTF("in total received %d/%d atom bytes\n", bytes_received_incl_this_payload, ctx->atom_byte_count);
+        PRINTF("Received atom bytes window: [%d-%d] (#%d), got #%d/#%d of whole atom.\n", bytes_received_before_this_payload, bytes_received_incl_this_payload, number_of_bytes_received, bytes_received_incl_this_payload, ctx->atom_byte_count); 
 
         // Update hash
         bool should_finalize_hash = bytes_received_incl_this_payload == ctx->atom_byte_count;
@@ -131,6 +127,7 @@ static void receive_bytes_and_update_hash_and_update_ux() {
             dataBuffer, 
             number_of_bytes_received
         );
+        print_particle_metadata();PRINTF("\n");
 
         break;
     default:
@@ -140,13 +137,9 @@ static void receive_bytes_and_update_hash_and_update_ux() {
 
 static void parse_atom() {
     empty_buffer();
-    int counter = 0;
     while (ctx->number_of_atom_bytes_received < ctx->atom_byte_count) {
-        PRINTF("~~~ parse_atom loop: %d ~~~\n", counter);
         receive_bytes_and_update_hash_and_update_ux();
-        counter++;
     }
-    PRINTF("APABANAN reached end of 'parse_atom'\n");
 }
 
 void handleSignAtom(
@@ -158,7 +151,7 @@ void handleSignAtom(
     volatile unsigned int *tx)
 {
 
-    PRINTF("\n\n\n\n._-=~$#@   START OF SIGN ATOM   @#$=~-_.\n\n\n\n");
+    PRINTF("\n\n\n._-=~$#@   START OF SIGN ATOM   @#$=~-_.\n\n\n");
 
 	initiate_state();
     init_particles_counter(
@@ -169,9 +162,9 @@ void handleSignAtom(
     ctx->ux_state.__DEBUG_MODE_skip_short_transfer_reviews = true;
 	parse_bip_and_atom_size(dataBuffer, dataLength);
     parse_atom();
-    PRINTF("Finished parsing atom?\n");
     *flags |= IO_ASYNCH_REPLY; 
+
+    PRINTF("  ---> Waiting for input from user on Ledger device, needs to verify the hash, and confirm signing of it.\n");
     ask_user_to_verify_hash_before_signing();
 
-    PRINTF("\n\n\n\n._-=~$#@   END OF SIGN ATOM   @#$=~-_.\n\n\n\n");
 }

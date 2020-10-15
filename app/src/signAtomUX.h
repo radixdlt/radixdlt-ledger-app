@@ -15,4 +15,8 @@ void received_atom_bytes_from_host_machine(
     uint16_t number_of_bytes_received
 );
 
+void print_atom_bytes_window();
+
+void print_particle_metadata();
+
 #endif
