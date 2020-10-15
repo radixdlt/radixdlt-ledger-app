@@ -54,8 +54,8 @@ static void parse_bip_and_atom_size(
 }
 
 typedef enum {
-    PayloadTypeIsParticleMetaData = 3,
-    PayloadTypeIsAtomBytes = 4
+    PayloadTypeIsAtomBytes = 100,
+    PayloadTypeIsParticleFieldMetaData = 101
 } PayloadType;
 
 
@@ -88,6 +88,7 @@ static void receive_bytes_and_update_hash_and_update_ux() {
     }
 
     uint8_t p1 = G_io_apdu_buffer[OFFSET_P1];
+    uint8_t p2 = G_io_apdu_buffer[OFFSET_P2];
     uint8_t* dataBuffer = G_io_apdu_buffer + OFFSET_CDATA;
     uint16_t number_of_bytes_received = G_io_apdu_buffer[OFFSET_LC];
     G_io_apdu_buffer[OFFSET_LC] = 0;
@@ -120,14 +121,16 @@ static void receive_bytes_and_update_hash_and_update_ux() {
         );
     
         break;
-    case PayloadTypeIsParticleMetaData:
-        PRINTF("Received payload from host machine - Particle Meta Data\n");
-
-        received_particle_meta_data_bytes_from_host_machine(
+    case PayloadTypeIsParticleFieldMetaData:
+        PRINTF("Received payload from host machine - particle field metadata\n");
+        ParticleFieldType particle_field_type = (ParticleFieldType) p2;
+        assert(is_valid_particle_field_type(particle_field_type));
+        received_particle_field_metadata_bytes_from_host_machine(
+            particle_field_type,
             dataBuffer, 
             number_of_bytes_received
         );
-        print_particle_metadata();PRINTF("\n");
+        print_next_particle_field_to_parse();PRINTF("\n");
 
         break;
     default:
