@@ -2,7 +2,6 @@
 #include "Transfer.h"
 #include "aes.h"
 #include "AtomBytesWindow.h"
-#include "ParticleMetaData.h"
 #include "ParticlesCounter.h"
 
 typedef struct {
@@ -49,7 +48,7 @@ typedef struct {
 	bool user_has_accepted_non_transfer_data;
 
 	AtomBytesWindow atom_bytes_window;
-	ParticleMetaData particle_meta_data; 
+	ParticleField next_particle_field_to_parse; 
 	Transfer transfer;
 } signAtomUX_t;
 
