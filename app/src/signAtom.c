@@ -159,12 +159,12 @@ void handleSignAtom(
         p1, // total_number_of_up_particles
         p2 // number_of_up_transferrable_tokens_particles
     );
-    ctx->ux_state.__DEBUG_MODE_skip_short_transfer_reviews = true;
+    ctx->ux_state.__DEBUG_MODE_skip_short_transfer_reviews = false;
 	parse_bip_and_atom_size(dataBuffer, dataLength);
     parse_atom();
     *flags |= IO_ASYNCH_REPLY; 
 
-    PRINTF("  ---> Waiting for input from user on Ledger device, needs to verify the hash, and confirm signing of it.\n");
+    PRINTF("\n\n  ---> Waiting for input from user on Ledger device, needs to verify the hash, and confirm signing of it.\n");
     ask_user_to_verify_hash_before_signing();
 
 }

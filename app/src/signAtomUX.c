@@ -23,6 +23,7 @@ static signAtomUX_t *ux_state = &global.signAtomContext.ux_state;
 
 
 static void empty_particle_meta_data() {
+    PRINTF("\n\n\n~~~### EMPTYING META DATA ###~~~\n\n\n");
     zero_out_particle_metadata(&ux_state->particle_meta_data);
 }
 
@@ -188,14 +189,14 @@ static void do_parse_field_from_atom_bytes(
     switch (parse_result) {
         case ParseFieldResultFinishedParsingTransfer:
             
-            PRINTF("\n-=#$ Finished parsing whole transfer $#=-\n");
+            PRINTF("\n-=#$ Finished parsing whole transfer $#=-\n\n");
 
             did_identify_a_transferrable_tokens_particle();
 
             bool ask_user_to_confirm_transfer = !is_transfer_change_back_to_me();
             if (ask_user_to_confirm_transfer) {
                 ask_user_for_confirmation_of_transfer_if_to_other_address();
-                PRINTF("  ---> Waiting for input from user on Ledger device, needs to review & accept the transfer.\n");
+                PRINTF("\n\n  ---> Waiting for input from user on Ledger device, needs to review & accept the transfer.\n");
                 ux_block();
             }
             user_accepted_transfer_data();
@@ -209,7 +210,7 @@ static void do_parse_field_from_atom_bytes(
                 user_accepted_non_transfer_data();
             } else {
                 ask_user_for_confirmation_of_non_transfer_data();
-                PRINTF("  ---> Waiting for input from user on Ledger device, needs to accept non-transfer data.\n");
+                PRINTF("\n\n  ---> Waiting for input from user on Ledger device, needs to accept non-transfer data.\n");
                 ux_block();
                 user_accepted_non_transfer_data();
             }

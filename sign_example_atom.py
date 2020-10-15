@@ -17,7 +17,7 @@ from pathlib import Path
 CommExceptionUserRejection = 0x6985
 
 
-STREAM_LEN = 255 # Stream in batches of STREAM_LEN bytes each.
+MAX_SIZE_PAYLOAD = 255 # Stream in batches of MAX_SIZE_PAYLOAD bytes each.
 
 def bip32_path_big_endian_encoded():
 	return bytes.fromhex("800000020000000100000003")
@@ -41,7 +41,7 @@ class ByteInterval(object):
 			two_bytes = bytes[0:2]
 			integer = struct.unpack('>h', two_bytes)[0]
 			bytes = bytes[2:]
-			return integer
+			return int(integer)
 
 		self.startsAtByte = nextInt16()
 		self.byteCount = nextInt16()
@@ -70,9 +70,13 @@ class ParticleMetaData(object):
 
 		self.particleItself = nextInterval()
 		self.addressByteInterval = nextInterval()
+		assert self.addressByteInterval.byteCount <= MAX_SIZE_PAYLOAD
 		self.amountByteInterval = nextInterval()
+		assert self.amountByteInterval.byteCount <= MAX_SIZE_PAYLOAD
 		self.serializerByteInterval = nextInterval()
+		assert self.serializerByteInterval.byteCount <= MAX_SIZE_PAYLOAD
 		self.tokenDefinitionReferenceByteInterval = nextInterval()
+		assert self.tokenDefinitionReferenceByteInterval.byteCount <= MAX_SIZE_PAYLOAD
 		assert len(bytes) == 0
 		self.bytes = bytes_copy
 		assert len(self.bytes) == 20
@@ -96,8 +100,41 @@ class ParticleMetaData(object):
 	def start_index_in_atom(self) -> int:
 		return self.particleItself.startsAtByte
 
-	def end_index_in_atom(self) -> int:
-		return self.start_index_in_atom() + self.particleItself.byteCount
+	def end_index_of_particle_itself_in_atom(self) -> int:
+		return self.particleItself.end_index()
+
+	def end_index_of_last_relevant_field_in_atom(self) -> int:
+		if self.is_transferrable_tokens_particle():
+			return self.tokenDefinitionReferenceByteInterval.end_index()
+		else:
+			return self.serializerByteInterval.end_index()
+
+	def is_transferrable_tokens_particle(self) -> bool:
+		is_ttp = self.addressByteInterval.byteCount > 0 or self.amountByteInterval.byteCount > 0 or self.tokenDefinitionReferenceByteInterval.byteCount > 0
+		if is_ttp:
+			assert self.addressByteInterval.byteCount > 0 and self.amountByteInterval.byteCount > 0 and self.tokenDefinitionReferenceByteInterval.byteCount > 0
+		return is_ttp
+
+class Transfer(object):
+	def __init__(self, dict):
+		self.address = dict['recipient'] # string
+		self.amount = int(dict['amount'])
+		self.is_transfer_change_back_to_sender = bool(dict['isChangeBackToUserHerself'])
+		self.token_definition_reference = dict['tokenDefinitionReference'] # string
+
+
+	def __repr__(self) -> str:
+		return """
+Transfer(
+    address: 	{},
+    amount: 	{},
+    tokenDefRef:{}
+)
+""".format(
+		self.address,
+		self.amount,
+		self.token_definition_reference
+	)
 
 class TestVector(object):
 	def __init__(self, j):
@@ -106,8 +143,11 @@ class TestVector(object):
 	def description(self) -> str:
 		return self.descriptionOfTest
 
-	def transfers_human_readable(self) -> str:
-		return self.transfersHumanReadable
+	def get_list_of_transfers(self) -> List[Transfer]:
+		transfers_list = self.transfers
+		transfers = list(map(lambda t: Transfer(t), transfers_list))
+		assert len(transfers) == self.number_of_transferrable_tokens_particles_with_spin_up()
+		return transfers
 
 	def addresses(self) -> List[str]:
 		return self.atomDescription['allAddresses']
@@ -186,8 +226,9 @@ def apdu_prefix_particle_metadata(is_particle_meta_data: bool) -> bytearray:
 		P2 = b"\x00"
 		return CLA + INS + P1 + P2
 
-def sendToLedger(dongle: Dongle, prefix: bytearray, payload: bytearray) -> Tuple[bool, bytearray]:
+def send_to_ledger(dongle: Dongle, prefix: bytearray, payload: bytearray) -> Tuple[bool, bytearray]:
 	payload_size = len(payload)
+	assert payload_size <= MAX_SIZE_PAYLOAD
 	L_c = bytes([payload_size])
 	apdu = prefix + L_c + payload
 	try:
@@ -210,6 +251,8 @@ class StreamVector(object):
 		self.count_bytes_sent_to_ledger = 0
 		self.list_of_particle_meta_data = vector.particle_meta_data_list()
 		self.number_of_metadata_to_send = vector.total_number_of_up_particles()
+		self.transfers_not_yet_identified = vector.get_list_of_transfers()
+		self.current_particle_being_sent = None
 
 	def atom_size_in_bytes(self) -> int:
 		return self.vector.atom_byte_count()
@@ -240,34 +283,36 @@ class StreamVector(object):
 	def number_of_particle_metadata_sent_to_ledger(self) -> int:
 		return self.number_of_metadata_to_send - self.number_of_particle_metadata_left_to_send_to_ledger()
 
-	def sendToLedgerParticleMetaData(self, payload: ParticleMetaData) -> Tuple[bool, bytearray]:
+	def send_to_ledger_particle_meta_data(self, payload: ParticleMetaData) -> Tuple[bool, bytearray]:
 		particle_meta_data = payload
 	
 		if self.allow_debug_prints_by_this_program:
 			print(f"\nSending meta data about particle ({self.number_of_particle_metadata_sent_to_ledger() + 1}/{self.number_of_metadata_to_send}) to Ledger: {	particle_meta_data}")
+
+		self.current_particle_being_sent = particle_meta_data
 	
-		return sendToLedger(
+		return send_to_ledger(
 			dongle=self.dongle,
 			prefix=apdu_prefix_particle_metadata(True),
 			payload=particle_meta_data.bytes
 		)
 	
 	
-	def sendToLedgerAtomBytes(self, payload: bytearray) -> Tuple[bool, bytearray]:
+	def send_to_ledger_atom_bytes(self, payload: bytearray) -> Tuple[bool, bytearray]:
 		atom_bytes = payload
 		if self.allow_debug_prints_by_this_program:
 			size_of_payload = len(atom_bytes)
 			index_of_last_byte_being_sent = self.count_bytes_sent_to_ledger + size_of_payload
 			print(f"Sending atom (size={self.atom_size_in_bytes()}) byte window to ledger: [{self.count_bytes_sent_to_ledger}-{	index_of_last_byte_being_sent}] (#{size_of_payload})")
 
-		return sendToLedger(
+		return send_to_ledger(
 			dongle=self.dongle,
 			prefix=apdu_prefix_particle_metadata(False),
 			payload=atom_bytes
 		)
 
 	def send_initial_setup_payload_to_ledger(self):
-		(success, _) = sendToLedger(
+		(success, _) = send_to_ledger(
 			self.dongle,
 			prefix=vector.apdu_prefix_initial_payload(), 
 			payload=bip32_path_big_endian_encoded() + struct.pack(">h", self.atom_size_in_bytes())
@@ -282,26 +327,19 @@ class StreamVector(object):
 		else:
 			return self.list_of_particle_meta_data[0]
 
-
 	def stream_all_bytes_except_last_one___MEGA_UGLY_HACK___to_ledger(self) -> None:
 		
 		
 		# Keep streaming data into the device till we run out of it.
 		while self.count_bytes_sent_to_ledger < self.atom_size_in_bytes() - 1:
-
 			next_particle_metadata = self.next_particle_metadata_or_none()
-
 			should_send_metadata = not next_particle_metadata is None and self.count_bytes_sent_to_ledger == next_particle_metadata.start_index_in_atom()
 
-
 			if should_send_metadata:
-				
-				self.sendToLedgerParticleMetaData(
+				self.send_to_ledger_particle_meta_data(
 					payload=next_particle_metadata
 				)
-
 				self.list_of_particle_meta_data.pop(0)
-
 			else:
 				next_relevant_end = None
 				if not next_particle_metadata is None:
@@ -322,9 +360,19 @@ class StreamVector(object):
 					size_of_atom___MEGA_UGLY_HACK___minus_one = self.atom_size_in_bytes() - 1
 					next_relevant_end = size_of_atom___MEGA_UGLY_HACK___minus_one
 
-				number_of_atom_bytes_to_send = min(STREAM_LEN, next_relevant_end - self.count_bytes_sent_to_ledger)
+				number_of_atom_bytes_to_send = min(MAX_SIZE_PAYLOAD, next_relevant_end - self.count_bytes_sent_to_ledger)
 
-				self.sendToLedgerAtomBytes(
+				# Debug print transfer at the right moment in time
+				if self.current_particle_being_sent is not None:
+					if self.current_particle_being_sent.end_index_of_last_relevant_field_in_atom() <= (self.count_bytes_sent_to_ledger + number_of_atom_bytes_to_send):
+						if self.current_particle_being_sent.is_transferrable_tokens_particle():
+							transfer = self.transfers_not_yet_identified.pop(0)
+							if not transfer.is_transfer_change_back_to_sender:
+								print(f"Verify that transfer identified by ledger matches this:\n{transfer}\n")
+						self.current_particle_being_sent = None
+
+
+				self.send_to_ledger_atom_bytes(
 					payload=self.remaining_atom_bytes[0:number_of_atom_bytes_to_send], 
 				)
 
@@ -375,7 +423,7 @@ class StreamVector(object):
 
 		print(f"\n💡 Expected Hash (verify on Ledger): {vector.expected_hash_hex()}\n")
 
-		return sendToLedger(
+		return send_to_ledger(
 			self.dongle,
 			prefix=apdu_prefix_particle_metadata(False),
 			payload=self.remaining_atom_bytes
@@ -415,11 +463,11 @@ class StreamVector(object):
 
 		print( # looks like it is badly formatted, but in fact this results in correct output in terminal.
 			"""
-⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️
+⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️
 ⭐️              ⭐️
 ⭐️     DONE     ⭐️
 ⭐️              ⭐️
-⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️
+⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️
 \n\n
 			"""
 		)

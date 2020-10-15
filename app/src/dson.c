@@ -52,7 +52,7 @@ bool parseSerializer_is_ttp(
 
     bool is_TTP = is_transferrable_tokens_particle_serializer(textString, valueByteCount);
     if (!is_TTP) {
-        PRINTF("\n@ Identified non TransferrableTokensParticle: '%s'\n", textString);
+        PRINTF("\n@ Identified non TransferrableTokensParticle: '%s'\n\n", textString);
     }
     return is_TTP;
 }
