@@ -49,8 +49,12 @@ bool parseSerializer_is_ttp(
     }
 
     assert(numberOfBytesReadByCBORParser == valueByteCount);
-    PRINTF("\n===####!!!$$$ PARSED PARTICLE SERIALIZER $$$!!!###===\n    '%s'\n", textString);
-    return is_transferrable_tokens_particle_serializer(textString, valueByteCount);
+
+    bool is_TTP = is_transferrable_tokens_particle_serializer(textString, valueByteCount);
+    if (!is_TTP) {
+        PRINTF("\n@ Identified non TransferrableTokensParticle: '%s'\n", textString);
+    }
+    return is_TTP;
 }
 
 static void parse_particle_field(
@@ -91,11 +95,6 @@ ParseFieldResult parse_field_from_bytes_and_populate_transfer(
     uint8_t *bytes,
     Transfer *transfer
 ) {
-
-    // PRINTF("About to CBOR/DSON decode field\n");
-    // print_particle_field(particle_field);
-    // PRINTF("\n");
-
     size_t field_byte_count = particle_field->byte_interval.byteCount;
 
     CborParser cborParser;
@@ -123,7 +122,7 @@ ParseFieldResult parse_field_from_bytes_and_populate_transfer(
 
     switch (particle_field->field_type)
     {
-        case ParticleFieldTypeNoField: 
+    case ParticleFieldTypeNoField: 
         FATAL_ERROR("Incorrect impl");
     case ParticleFieldTypeAddress:
         assert(type == CborByteStringType);
@@ -137,7 +136,6 @@ ParseFieldResult parse_field_from_bytes_and_populate_transfer(
         );
         
         transfer->is_address_set = true;
-        PRINTF("\n===####!!!$$$ PARSED PARTICLE ADDRESS $$$!!!###===\n");
         return ParseFieldResultParsedPartOfTransfer;
 
     case ParticleFieldTypeAmount:
@@ -152,7 +150,6 @@ ParseFieldResult parse_field_from_bytes_and_populate_transfer(
             &transfer->amount.bytes
         );
         transfer->is_amount_set = true;
-        PRINTF("\n===####!!!$$$ PARSED PARTICLE AMOUNT $$$!!!###===\n");
         return ParseFieldResultParsedPartOfTransfer;
 
     case ParticleFieldTypeSerializer:
@@ -186,7 +183,6 @@ ParseFieldResult parse_field_from_bytes_and_populate_transfer(
         );
 
         transfer->is_token_definition_reference_set = true;
-        PRINTF("\n===####!!!$$$ PARSED PARTICLE TokenDefRef $$$!!!###===\n");
         return ParseFieldResultFinishedParsingTransfer;
     }
 }

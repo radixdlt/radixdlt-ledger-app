@@ -83,10 +83,8 @@ static void prepare_for_displaying_of_hash() {
 }
 
 static void unblock_ux(int tx) {
-    PRINTF("unblock_ux START\n");
     io_exchange_with_code(SW_OK, tx);
     ui_idle();
-    PRINTF("unblock_ux END\n");
 }
 
 static void continue_sign_atom_flow() {
@@ -94,12 +92,17 @@ static void continue_sign_atom_flow() {
 }
 
 static void did_approve_signing_of_hash() {
+
     int tx = derive_sign_move_to_global_buffer(ctx->bip32_path, ctx->hash);
+    assert(tx == ECSDA_SIGNATURE_BYTE_COUNT);
+
+    PRINTF("Signed atom, resulting signature: %.*h\n", ECSDA_SIGNATURE_BYTE_COUNT, G_io_apdu_buffer);
+    PRINTF("\n\n._-=~$#@   END OF SIGN ATOM   @#$=~-_.\n\n");
+    
 	unblock_ux(tx);
 }
 
 static void finished_approving_transfer() {
-    PRINTF("finished_approving_transfer START'\n");
     continue_sign_atom_flow();
 }
 
@@ -108,7 +111,6 @@ static void did_approve_rri() {
 }
 
 static void did_approve_non_transfer_data() {
-    PRINTF("did_approve_non_transfer_data START\n");
     continue_sign_atom_flow();
 }
 
@@ -144,18 +146,15 @@ bool finished_parsing_whole_atom() {
 
 
 void ask_user_to_verify_hash_before_signing() {
-    PRINTF("ask_user_to_verify_hash_before_signing START\n");
     prepare_for_displaying_of_hash();
     display_value("Verify Hash", do_ask_user_for_confirmation_of_signing_hash);
 }
 
 void ask_user_for_confirmation_of_non_transfer_data() {
-    PRINTF("ask_user_for_confirmation_of_non_transfer_data START\n");
     display_lines("WARNING", "DATA Found", did_approve_non_transfer_data);
 }
 
 void ask_user_for_confirmation_of_transfer_if_to_other_address() {
-    PRINTF("ask_user_for_confirmation_of_transfer_if_to_other_address START\n");
     bool flow_is_short = ctx->ux_state.__DEBUG_MODE_skip_short_transfer_reviews;
     callback_t review_tx_callback = flow_is_short ? finished_approving_transfer : prepare_for_approval_of_address;
     display_lines("Review", "transfer", review_tx_callback);

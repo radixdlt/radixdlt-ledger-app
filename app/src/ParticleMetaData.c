@@ -125,10 +125,8 @@ void do_populate_particle_meta_data(
     // READ meta data about particles from first chunk, available directly
     assert(number_of_particle_meta_data_bytes == 20);
     
-    // PRINTF("Received particle meta data hex string:\n%.*H\n", number_of_particle_meta_data_bytes, bytes);
     uint16_t offset = 0;
 
-    // PRINTF("Zeroing out old particle meta data now...\n");
     zero_out_particle_metadata(particle_meta_data);
 
 	populate_interval(&particle_meta_data->byte_interval_of_particle_itself, bytes, &offset);
@@ -144,8 +142,6 @@ void do_populate_particle_meta_data(
 
 	populate_field(&particle_meta_data->token_definition_reference_field, bytes, &offset);
 	particle_meta_data->token_definition_reference_field.field_type = ParticleFieldTypeTokenDefinitionReference;
-
-    PRINTF("Finished parsing particle meta data...\n");
 
     particle_meta_data->is_initialized = true;
 	assert(offset == number_of_particle_meta_data_bytes);

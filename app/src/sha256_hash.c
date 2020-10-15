@@ -75,7 +75,6 @@ void update_hash_and_maybe_finalize(
 
         assert(success);
 
-        PRINTF("Finalized hash to:\n");
-        PRINTF("%.*h\n", HASH256_BYTE_COUNT, output_bytes);
+        PRINTF("Finalized hash to: '%.*h'\n", HASH256_BYTE_COUNT, output_bytes);
     }
 }
