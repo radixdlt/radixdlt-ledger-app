@@ -180,7 +180,7 @@ class TestVector(object):
 
 	def get_list_of_transfers(self) -> List[Transfer]:
 		if self.__dict__.get('transfers') is None:
-			print("🔴 NO TRANSFERS")
+			assert self.number_of_transferrable_tokens_particles_with_spin_up() == 0, "Expected number of TTP to be zero."
 			return None
 
 		transfers_list = self.transfers
