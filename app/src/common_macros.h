@@ -1,3 +1,7 @@
+#ifndef COMMONMACROS_H
+#define COMMONMACROS_H
+
+
 #include "stdint.h"
 #include <seproxyhal_protocol.h>
 #include <os_io_seproxyhal.h>
@@ -65,3 +69,5 @@
 #define HASH512_LEN 64
 #define UNPUBLIC_KEY_COMPRESSEED_BYTE_COUNT 65
 #define BIP32_PATH_LEN 12
+
+#endif

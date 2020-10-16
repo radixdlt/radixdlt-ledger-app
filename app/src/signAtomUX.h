@@ -17,8 +17,7 @@ void received_atom_bytes_from_host_machine(
     uint16_t number_of_bytes_received
 );
 
-void print_atom_bytes_window();
+void print_next_particle_field_to_parse();
 
-void print_particle_metadata();
-
+void empty_buffer();
 #endif

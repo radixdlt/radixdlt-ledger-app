@@ -6,12 +6,14 @@ import argparse
 from enum import Enum, unique
 import struct
 import math
+import base58
 import binascii
 import json
 import hashlib
 import glob
 import os
-import time
+from cbor2 import loads
+from functools import reduce
 from pathlib import Path
 
 CommExceptionUserRejection = 0x6985
@@ -43,22 +45,22 @@ class ByteInterval(object):
 			bytes = bytes[2:]
 			return int(integer)
 
-		self.startsAtByte = nextInt16()
-		self.byteCount = nextInt16()
+		self.starts_at_byte = nextInt16()
+		self.byte_count = nextInt16()
 		assert len(bytes) == 0
 		assert len(self.bytes) == 4
 
 	def end_index(self) -> int:
-		return self.startsAtByte + self.byteCount
+		return self.starts_at_byte + self.byte_count
 
 	def __repr__(self):
-		if self.byteCount == 0:
-			assert self.startsAtByte == 0
+		if self.byte_count == 0:
+			assert self.starts_at_byte == 0
 			return "<EMPTY>"
-		return f"[{self.startsAtByte}-{self.end_index()}] (#{self.byteCount} bytes)"
+		return f"[{self.starts_at_byte}-{self.end_index()}] (#{self.byte_count} bytes)"
 
 @unique
-class ParticleFieldType(Enum)
+class ParticleFieldType(Enum):
 	ADDRESS = 200# "address"
 	AMOUNT = 201 #"amount"
 	SERIALIZER = 202 # "serializer"
@@ -67,22 +69,40 @@ class ParticleFieldType(Enum)
 	def integer_identifier(self) -> int:
 		return self.value
 
+	def __repr__(self):
+		if self == ParticleFieldType.ADDRESS:
+			return "Address"
+		elif self == ParticleFieldType.AMOUNT:
+			return "Amount"
+		elif self == ParticleFieldType.SERIALIZER:
+			return "Serializer"
+		elif self == ParticleFieldType.TOKEN_DEFINITION_REFERENCE:
+			return "TokenDefinitionReference"
+		else:
+			raise "Unknown field"
+
 class ParticleField(object):
 	def __init__(self, byte_interval: ByteInterval, field_type: ParticleFieldType):
 		self.byte_interval = byte_interval
 
-		assert self.byte_interval.byteCount <= MAX_SIZE_PAYLOAD
+		assert self.byte_interval.byte_count <= MAX_SIZE_PAYLOAD
 		self.field_type = field_type
+		self.bytes = byte_interval.bytes
 
 	def start_index_in_atom(self) -> int:
-		assert !self.has_been_sent_to_ledger
-		return self.byte_interval.startsAtByte
+		return self.byte_interval.starts_at_byte
 
 	def is_empty(self) -> bool:
-		return self.byte_interval.byteCount == 0
+		return self.atom_byte_count() == 0
 
 	def is_non_empty(self) -> bool:
 		return not self.is_empty()
+
+	def atom_byte_count(self) -> int:
+		return self.byte_interval.byte_count
+
+	def __repr__(self):
+		return "Field({}: {})".format(self.field_type, self.byte_interval)
 
 
 class ParticleMetaData(object):
@@ -96,40 +116,24 @@ class ParticleMetaData(object):
 			return interval
 
 		self.particle_itself_intervals = nextInterval() # not used
-		self.address_field = ParticleField(byte_interval: nextInterval(), field_type: ParticleFieldType.ADDRESS)
-
-		self.amount_field = ParticleField(byte_interval: nextInterval(), field_type: ParticleFieldType.AMOUNT)
-		self.serializer_field = ParticleField(byte_interval: nextInterval(), field_type: ParticleFieldType.SERIALIZER)
-		self.token_definition_reference_field = ParticleField(byte_interval: nextInterval(), field_type: ParticleFieldType.TOKEN_DEFINITION_REFERENCE)
+		self.address_field = ParticleField(byte_interval=nextInterval(), field_type=ParticleFieldType.ADDRESS)
+		self.amount_field = ParticleField(byte_interval=nextInterval(), field_type=ParticleFieldType.AMOUNT)
+		self.serializer_field = ParticleField(byte_interval=nextInterval(), field_type=ParticleFieldType.SERIALIZER)
+		self.token_definition_reference_field = ParticleField(byte_interval=nextInterval(), field_type=ParticleFieldType.TOKEN_DEFINITION_REFERENCE)
 		assert len(bytes) == 0
-
-	def __repr__(self) -> str:
-		return """
-  ⚛ Particle(
-    address: 	{},
-    amount: 	{},
-    serializer:	{},
-    tokenDefRef:{}
-  )
-""".format(
-		self.address_field.byte_interval,
-		self.amount_field.byte_interval,
-		self.serializer_field.byte_interval,
-		self.token_definition_reference_field.byte_interval
-	)
 
 	def all_particle_fields(self) -> List[ParticleField]:
 		return [self.address_field, self.amount_field, self.serializer_field, self.token_definition_reference_field]
 
 	def non_empty_particle_fields(self) -> List[ParticleField]:
-		return list(map(lambda f: f.is_non_empty(), self.all_particle_fields()))
+		return list(filter(lambda f: f.is_non_empty(), self.all_particle_fields()))
 
 	def next_particle_field_or_none(self) -> Optional[ParticleField]:
 		fields = self.particle_fields_not_yet_sent_to_ledger()
 		return fields[0] if len(fields) > 0 else None
 
 	def start_index_in_atom(self) -> int:
-		return self.particleItself.startsAtByte
+		return self.particleItself.starts_at_byte
 
 	def end_index_of_particle_itself_in_atom(self) -> int:
 		return self.particleItself.end_index()
@@ -141,9 +145,9 @@ class ParticleMetaData(object):
 			return self.serializerByteInterval.end_index()
 
 	def is_transferrable_tokens_particle(self) -> bool:
-		is_ttp = self.addressByteInterval.byteCount > 0 or self.amountByteInterval.byteCount > 0 or self.tokenDefinitionReferenceByteInterval.byteCount > 0
+		is_ttp = self.addressByteInterval.byte_count > 0 or self.amountByteInterval.byte_count > 0 or self.tokenDefinitionReferenceByteInterval.byte_count > 0
 		if is_ttp:
-			assert self.addressByteInterval.byteCount > 0 and self.amountByteInterval.byteCount > 0 and self.tokenDefinitionReferenceByteInterval.byteCount > 0
+			assert self.addressByteInterval.byte_count > 0 and self.amountByteInterval.byte_count > 0 and self.tokenDefinitionReferenceByteInterval.byte_count > 0
 		return is_ttp
 
 class Transfer(object):
@@ -279,6 +283,62 @@ def send_to_ledger(dongle: Dongle, prefix: bytearray, payload: bytearray) -> Tup
 		else:
 			raise commException # unknown error, interrupt exection and propage the error.
 
+def flatten(itr):
+	t = tuple()
+	for e in itr:
+		try:
+			t += flatten(e)
+		except:
+			t += (e,)
+	return t
+
+# Please see column "Additional info" in table "CBOR Major types": https://radixdlt.atlassian.net/wiki/spaces/AM/pages/56557727/DSON+Encoding
+class CBORByteStringType(Enum):
+	ADDRESS = 0x04
+
+	# Used for `amount` (uint256)
+	AMOUNT = 0x05
+
+	# Used for `token_definition_reference` (rri)
+	TOKEN_DEFINITION_REFERENCE = 0x06
+
+	def __repr__(self):
+		if self == CBORByteStringType.ADDRESS:
+			return "Address"
+		elif self == CBORByteStringType.AMOUNT:
+			return "UInt256 (Amount)"
+		elif self == CBORByteStringType.TOKEN_DEFINITION_REFERENCE:
+			return "RRI"
+		else:
+			raise "Unknown field"
+
+
+def cbor_decode_bytes(particle_field: ParticleField, atom_bytes: bytearray):
+	# print(f"\nCBOR decoding particle field={particle_field}, from bytes: {atom_bytes.hex()}\n")
+	assert particle_field.atom_byte_count() == len(atom_bytes)
+	decoded = loads(atom_bytes)
+	if particle_field.field_type != ParticleFieldType.SERIALIZER:
+		cbor_byte_prefix = decoded[0]
+		decoded = decoded[1:]
+		cbor_byte_string_type = CBORByteStringType(cbor_byte_prefix)
+
+		if particle_field.field_type == ParticleFieldType.ADDRESS:
+			assert cbor_byte_string_type == CBORByteStringType.ADDRESS, "Expected `cbor_byte_prefix == CBORByteStringType.ADDRESS`"
+			decoded = str(base58.b58encode(decoded), "utf-8")
+		elif particle_field.field_type == ParticleFieldType.AMOUNT:
+			assert cbor_byte_string_type == CBORByteStringType.AMOUNT, "Expected `cbor_byte_prefix == CBORByteStringType.AMOUNT`"
+			decoded = int(decoded.hex(), 16)
+		elif particle_field.field_type == ParticleFieldType.TOKEN_DEFINITION_REFERENCE:
+			assert cbor_byte_string_type == CBORByteStringType.TOKEN_DEFINITION_REFERENCE, "Expected `cbor_byte_prefix == CBORByteStringType.TOKEN_DEFINITION_REFERENCE`"
+			decoded = str(decoded)
+		else:
+			raise "Unsupported case...."
+	else:
+		assert isinstance(decoded, str), "Expected string"
+
+	# print(f"🧩 CBOR decoded result='{decoded}'")
+
+	return decoded
 
 class StreamVector(object):
 
@@ -292,14 +352,24 @@ class StreamVector(object):
 		self.allow_debug_prints_by_this_program = allow_debug_prints_by_this_program
 		self.remaining_atom_bytes = vector.atom_cbor_encoded().copy()
 		self.count_bytes_sent_to_ledger = 0
-		self.relevant_particle_fields_to_send_to_ledger = list(reduce(lambda pmd: pmd.non_empty_particle_fields(), vector.particle_meta_data_list()))
-	
-		last_field
+
+		rel_fields = []
+		particle_metadata_list = vector.particle_meta_data_list()
+		for pmd in particle_metadata_list:
+			rel_fields.extend(pmd.non_empty_particle_fields())
+		self.relevant_particle_fields_to_send_to_ledger = rel_fields
+
+		# print(f"\n\n🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱\nThese are the expected fields to send to Ledger:\n\n")
+		# for field in self.relevant_particle_fields_to_send_to_ledger:
+		# 	print(f"{field}\n\n")
+		# print("\n\n\n🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱\n")
+
+		last_field = None
 		for field in self.relevant_particle_fields_to_send_to_ledger:
-			assert isinstance(particle_fieldfield_type, ParticleField), "Wrong type, expected 'ParticleField'"
-			assert field.byte_interval.byteCount > 0, "Expected field to be non empty"
+			assert isinstance(field, ParticleField), "Wrong type, expected 'ParticleField'"
+			assert field.byte_interval.byte_count > 0, "Expected field to be non empty"
 			if last_field is not None:
-				assert last_field.byte_interval.startsAtByte < field.byte_interval.startsAtByte, "Expected strictly increasing order of fields"
+				assert last_field.byte_interval.starts_at_byte < field.byte_interval.starts_at_byte, "Expected strictly increasing order of fields"
 			last_field = field
 
 		self.transfers_not_yet_identified = vector.get_list_of_transfers()
@@ -347,20 +417,31 @@ class StreamVector(object):
 			prefix=apdu_prefix_particle_field(particle_field),
 			payload=particle_field.bytes
 		)
-	
-	
-	def send_to_ledger_atom_bytes(self, payload: bytearray) -> Tuple[bool, bytearray]:
-		atom_bytes = payload
-		if self.allow_debug_prints_by_this_program:
-			size_of_payload = len(atom_bytes)
-			index_of_last_byte_being_sent = self.count_bytes_sent_to_ledger + size_of_payload
-			print(f"Sending atom (size={self.atom_size_in_bytes()}) byte window to ledger: [{self.count_bytes_sent_to_ledger}-{	index_of_last_byte_being_sent}] (#{size_of_payload})")
 
-		return send_to_ledger(
+	def send_to_ledger_atom_bytes(self, atom_bytes: bytearray) -> Tuple[bool, bytearray]:
+		byte_count = len(atom_bytes)
+		if self.allow_debug_prints_by_this_program:
+			index_of_last_byte_being_sent = self.count_bytes_sent_to_ledger + byte_count
+			print(f"Sending atom (size={self.atom_size_in_bytes()}) byte window to ledger: [{self.count_bytes_sent_to_ledger}-{	index_of_last_byte_being_sent}] (#{byte_count})")
+
+
+		if (self.count_bytes_sent_to_ledger + byte_count) == self.atom_size_in_bytes():
+					print(f"\n💡 Expected Hash (verify on Ledger): {vector.expected_hash_hex()}\n")
+
+		result = send_to_ledger(
 			dongle=self.dongle,
 			prefix=apdu_prefix_atom_bytes(),
 			payload=atom_bytes
 		)
+
+		self.remaining_atom_bytes = self.remaining_atom_bytes[byte_count:]
+		self.count_bytes_sent_to_ledger += byte_count
+
+		return result
+
+	def send_to_ledger_atom_bytes_count(self, byte_count: int) -> Tuple[bool, bytearray]:
+		atom_bytes = self.remaining_atom_bytes[0:byte_count]
+		return self.send_to_ledger_atom_bytes(atom_bytes)
 
 	def send_initial_setup_payload_to_ledger(self):
 		(success, _) = send_to_ledger(
@@ -372,121 +453,52 @@ class StreamVector(object):
 		if not success:
 			raise "Failed to send initial setup payload"
 
-	# def next_particle_metadata_or_none(self) -> Optional[ParticleMetaData]:
-	# 	if self.number_of_particle_metadata_left_to_send_to_ledger() == 0:
-	# 		return None
-	# 	else:
-	# 		return self.list_of_particle_meta_data[0]
 
-	def next_relevant_particle_field_or_none(self) -> Optional[ParticleField]:
-		return self.relevant_particle_fields_to_send_to_ledger.pop(0)
-
-
-	def stream_all_bytes_except_last_one___MEGA_UGLY_HACK___to_ledger(self) -> None:
-		
+	def stream_atom_to_ledger(self) -> None:
+		result = None # Tuple[bool, bytearray] 
 		
 		# Keep streaming data into the device till we run out of it.
-		while self.count_bytes_sent_to_ledger < self.atom_size_in_bytes() - 1:
-			next_particle_field = self.next_relevant_particle_field_or_none()
+		while self.count_bytes_sent_to_ledger < self.atom_size_in_bytes():
+			next_particle_field = self.relevant_particle_fields_to_send_to_ledger[0] if len(self.relevant_particle_fields_to_send_to_ledger) > 0 else None
 			should_send_particle_field_metadata = False
+			next_relevant_end = self.atom_size_in_bytes()
 			if not next_particle_field is None:
-			 	if self.count_bytes_sent_to_ledger == next_particle_field.start_index_in_atom()
+				next_relevant_end = next_particle_field.start_index_in_atom()
+				if self.count_bytes_sent_to_ledger == next_particle_field.start_index_in_atom():
+					should_send_particle_field_metadata = True
 
 			if should_send_particle_field_metadata:
-				self.send_to_ledger_particle_field(
-					payload=next_particle_field
-				)
+
+				self.send_to_ledger_particle_field(next_particle_field)
+
+
+				self.relevant_particle_fields_to_send_to_ledger.pop(0)
 				self.last_particle_field_sent_to_ledger = next_particle_field
 
+				particle_field_atom_byte_count = next_particle_field.byte_interval.byte_count
+
+				particle_field_atom_bytes = self.remaining_atom_bytes[0:particle_field_atom_byte_count]
+				decoded_atom_bytes = cbor_decode_bytes(next_particle_field, particle_field_atom_bytes)
+
+				if next_particle_field.field_type == ParticleFieldType.TOKEN_DEFINITION_REFERENCE:
+					transfer = self.transfers_not_yet_identified.pop(0)
+					if not transfer.is_transfer_change_back_to_sender:
+						print(f"  --> Verify that transfer identified by ledger matches this:\n{transfer}\n")
+				elif next_particle_field.field_type == ParticleFieldType.SERIALIZER:
+					serializer = decoded_atom_bytes 
+					if not serializer == "radix.particle.transferrable_tokens_particle":
+						print("  --> Found non transferrable tokens particle with serializer: '{serializer}', confirm on Ledger device?")	
+				self.send_to_ledger_atom_bytes(particle_field_atom_bytes)
+
 			else:
-				next_relevant_end = None
-				if not next_particle_field is None:
-					# Send "non particle field bytes" up until start of next relevant field
-					next_relevant_end = next_particle_field.start_index_in_atom()
-				else:
-					# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-					# !!!!!🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉!!!!!
-					# !!!!!🐉🐉  BEWARE HERE BE DRAGONS  🐉🐉!!!!!
-					# !!!!!🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉!!!!!
-					# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	
-					# This is the UGLIEST HACK in history of man
-					# we stop streaming up until the last byte of 
-					# the atom. We save that last byte until later
-					# in order to workaround tricky internal state
-					# of ledger device relating to 'io_exchange'
-					# and blocking UX. Which is why we subtract `1`
-					size_of_atom___MEGA_UGLY_HACK___minus_one = self.atom_size_in_bytes() - 1
-					next_relevant_end = size_of_atom___MEGA_UGLY_HACK___minus_one
-
 				number_of_atom_bytes_to_send = min(MAX_SIZE_PAYLOAD, next_relevant_end - self.count_bytes_sent_to_ledger)
-
-				# Debug print transfer at the right moment in time
-				if self.last_particle_field_sent_to_ledger is not None:
-					if self.last_particle_field_sent_to_ledger.end_index() <= (self.count_bytes_sent_to_ledger + number_of_atom_bytes_to_send):
-						if self.last_particle_field_sent_to_ledger.field_type == ParticleField.TOKEN_DEFINITION_REFERENCE:
-							transfer = self.transfers_not_yet_identified.pop(0)
-							if not transfer.is_transfer_change_back_to_sender:
-								print(f"Verify that transfer identified by ledger matches this:\n{transfer}\n")
-						self.last_particle_field_sent_to_ledger = None	
-
-				self.send_to_ledger_atom_bytes(
-					payload=self.remaining_atom_bytes[0:number_of_atom_bytes_to_send], 
-				)
-
-				self.remaining_atom_bytes = self.remaining_atom_bytes[number_of_atom_bytes_to_send:]
-				self.count_bytes_sent_to_ledger += number_of_atom_bytes_to_send
+				result = self.send_to_ledger_atom_bytes_count(number_of_atom_bytes_to_send)
 
 			if self.allow_debug_prints_by_this_program:
 				percent = int(100 * self.count_bytes_sent_to_ledger/self.atom_size_in_bytes())
 				print(f"Sent %{percent} of all atom bytes")
 
-		print( # looks like it is badly formatted, but in fact this results in correct output in terminal.
-			"""
-🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮
-🔮                                          🔮
-🔮    FINISHED STREAMING ALL ATOM BYTES     🔮
-🔮 	   _except_ for the FINAL byte      🔮
-🔮         to the ledger device.            🔮
-🔮                                          🔮
-🔮 Due to internal state of ledger it was   🔮
-🔮 easiest to send the last byte separatly. 🔮
-🔮                                          🔮
-🔮  🤷‍♂️🤷‍♂️🤷‍♂️ SORRY! 🤷‍♂️🤷‍♂️🤷‍♂️              🔮
-🔮                                          🔮
-🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮🔮
-			"""
-		)
-
-
-	def send_last_atom_byte____MEGA_UGLY_HACK___to_ledger_and_return_signature_produced_by_ledger(self) -> Tuple[bool, bytearray]:
-
-		assert len(self.remaining_atom_bytes) == 1
-		assert self.count_bytes_sent_to_ledger == self.atom_size_in_bytes() - 1
-		assert self.remaining_atom_bytes[0] == 0xFF
-
-		print( # looks like it is badly formatted, but in fact this results in correct output in terminal.
-			"""
-🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉
-🐉                                🐉
-🐉 !!! BEWARE HERE BE DRAGONS !!! 🐉
-🐉 Sending the last byte (=0xFF)  🐉
-🐉 in the atom alone. The whole   🐉
-🐉 solution depends on this.      🐉
-🐉 (So sorry, please excuse me.)  🐉
-🐉                                🐉
-🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉🐉
-			"""
-		)
-
-		print(f"\n💡 Expected Hash (verify on Ledger): {vector.expected_hash_hex()}\n")
-
-		return send_to_ledger(
-			self.dongle,
-			prefix=apdu_prefix_particle_metadata(False),
-			payload=self.remaining_atom_bytes
-		)
-
+		return result
 
 	def assert_correct_signature(self, signature_from_ledger: bytearray) -> bool:
 		expected_signature_hex = self.vector.expected_signature_rs_hex()
@@ -508,8 +520,7 @@ class StreamVector(object):
 		"""
 		self.print_vector()
 		self.send_initial_setup_payload_to_ledger()
-		self.stream_all_bytes_except_last_one___MEGA_UGLY_HACK___to_ledger()
-		(success, signature_from_ledger_bytes) = self.send_last_atom_byte____MEGA_UGLY_HACK___to_ledger_and_return_signature_produced_by_ledger()
+		(success, signature_from_ledger_bytes) = self.stream_atom_to_ledger()
 		if not success:
 			print("Failed to get signature from ledger")
 			return False
@@ -540,7 +551,7 @@ def main_args_parser() -> argparse.ArgumentParser:
 	parser.add_argument(
 		'--inputAtomVector', 
 		'-i', 
-		default='./vectors/sign_atom/huge_atom.json',
+		default='./vectors/sign_atom/data_multiple_transfers_small_amounts_with_change_unique.json',
 		type=str, 
 		help='Path to JSON file containing test vector with CBOR encoded Atom, the particle meta data, description of atom contents and expected hash and signature.\n\nDefaults to %(default)',
 		metavar='FILE'

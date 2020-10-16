@@ -32,6 +32,7 @@ void initialize_particle_field_with_bytes(
         &field->byte_interval,
         bytes
     );
+    field->field_type = field_type;
     field->is_destroyed = false;
     assert(field->byte_interval.byteCount > 0);
 }

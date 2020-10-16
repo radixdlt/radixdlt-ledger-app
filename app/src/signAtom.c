@@ -33,10 +33,6 @@ static void initiate_state() {
     initiate_hasher();
 }
 
-static void empty_buffer() {
-    explicit_bzero(G_io_apdu_buffer, IO_APDU_BUFFER_SIZE);
-}
-
 static void parse_bip_and_atom_size(
     uint8_t *dataBuffer,
     const uint16_t dataLength
@@ -49,8 +45,13 @@ static void parse_bip_and_atom_size(
     uint16_t expected_data_length = expected_bip32_byte_count + byte_count_of_atom_size;
 
     assert(dataLength == expected_data_length);
-    parse_bip32_path_from_apdu_command(dataBuffer, ctx->bip32_path, NULL, 0);
+
+    uint8_t bip_32_string[BIP32_PATH_STRING_MAX_LENGTH];
+
+    parse_bip32_path_from_apdu_command(dataBuffer, ctx->bip32_path, bip_32_string, BIP32_PATH_STRING_MAX_LENGTH);
     ctx->atom_byte_count = U2BE(dataBuffer, expected_bip32_byte_count);
+
+    PRINTF("Finished parsing initial setup package specifying that the Atom we are about to parse contains #%d bytes and #%d up particles and is to be signed with key at BIP32 derivation path: '%s'\n", ctx->atom_byte_count, total_number_of_up_particles(&ctx->ux_state.up_particles_counter.in_atom), bip_32_string);
 }
 
 typedef enum {

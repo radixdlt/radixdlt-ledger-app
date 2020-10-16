@@ -1,8 +1,13 @@
+#ifndef GLOBALSTATE_H
+#define GLOBALSTATE_H
+
+
 #include "key_and_signatures.h"
 #include "Transfer.h"
 #include "aes.h"
-#include "AtomBytesWindow.h"
 #include "ParticlesCounter.h"
+#include "ParticleField.h"
+#include "common_macros.h"
 
 typedef struct {
 	size_t cipher_text_byte_count;
@@ -47,7 +52,6 @@ typedef struct {
 
 	bool user_has_accepted_non_transfer_data;
 
-	AtomBytesWindow atom_bytes_window;
 	ParticleField next_particle_field_to_parse; 
 	Transfer transfer;
 } signAtomUX_t;
@@ -72,3 +76,5 @@ typedef union {
     decryptDataContext_t decryptDataContext;
 } commandContext;
 extern commandContext global;
+
+#endif
