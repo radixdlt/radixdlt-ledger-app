@@ -18,4 +18,6 @@ typedef struct {
     RadixResourceIdentifier token_definition_reference;
 } Transfer;
 
+void print_transfer(Transfer *transfer);
+
 #endif
