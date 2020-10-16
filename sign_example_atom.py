@@ -179,6 +179,10 @@ class TestVector(object):
 		return self.descriptionOfTest
 
 	def get_list_of_transfers(self) -> List[Transfer]:
+		if self.__dict__.get('transfers') is None:
+			print("🔴 NO TRANSFERS")
+			return None
+
 		transfers_list = self.transfers
 		transfers = list(map(lambda t: Transfer(t), transfers_list))
 		assert len(transfers) == self.number_of_transferrable_tokens_particles_with_spin_up()
@@ -314,7 +318,6 @@ class CBORByteStringType(Enum):
 
 
 def cbor_decode_bytes(particle_field: ParticleField, atom_bytes: bytearray):
-	# print(f"\nCBOR decoding particle field={particle_field}, from bytes: {atom_bytes.hex()}\n")
 	assert particle_field.atom_byte_count() == len(atom_bytes)
 	decoded = loads(atom_bytes)
 	if particle_field.field_type != ParticleFieldType.SERIALIZER:
@@ -336,15 +339,9 @@ def cbor_decode_bytes(particle_field: ParticleField, atom_bytes: bytearray):
 	else:
 		assert isinstance(decoded, str), "Expected string"
 
-	# print(f"🧩 CBOR decoded result='{decoded}'")
-
 	return decoded
 
 class StreamVector(object):
-
-	# class State(object):
-	# 	def __init__(self):
-	# 		self.type_of_last_field_sent_to_ledger = None # Optional[ParticleFieldType]
 
 	def __init__(self, vector: TestVector, allow_debug_prints_by_this_program: bool=True, allow_debug_prints_from_ledger: bool=False):
 		self.vector = vector
@@ -359,11 +356,6 @@ class StreamVector(object):
 			rel_fields.extend(pmd.non_empty_particle_fields())
 		self.relevant_particle_fields_to_send_to_ledger = rel_fields
 
-		# print(f"\n\n🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱\nThese are the expected fields to send to Ledger:\n\n")
-		# for field in self.relevant_particle_fields_to_send_to_ledger:
-		# 	print(f"{field}\n\n")
-		# print("\n\n\n🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱🌱\n")
-
 		last_field = None
 		for field in self.relevant_particle_fields_to_send_to_ledger:
 			assert isinstance(field, ParticleField), "Wrong type, expected 'ParticleField'"
@@ -375,7 +367,7 @@ class StreamVector(object):
 		self.transfers_not_yet_identified = vector.get_list_of_transfers()
 
 		self.last_particle_field_sent_to_ledger = None
-		# self.state = State()
+		self.pending_transfer = None # Optional[Transfer] - used only to validate correctnes...
 
 
 	def atom_size_in_bytes(self) -> int:
@@ -418,15 +410,27 @@ class StreamVector(object):
 			payload=particle_field.bytes
 		)
 
-	def send_to_ledger_atom_bytes(self, atom_bytes: bytearray) -> Tuple[bool, bytearray]:
+	def send_to_ledger_atom_bytes(self, atom_bytes: bytearray, field: ParticleField = None) -> Tuple[bool, bytearray]:
 		byte_count = len(atom_bytes)
 		if self.allow_debug_prints_by_this_program:
 			index_of_last_byte_being_sent = self.count_bytes_sent_to_ledger + byte_count
 			print(f"Sending atom (size={self.atom_size_in_bytes()}) byte window to ledger: [{self.count_bytes_sent_to_ledger}-{	index_of_last_byte_being_sent}] (#{byte_count})")
 
+		if field is not None:
+			decoded_field = cbor_decode_bytes(field, atom_bytes)
+			self.pending_transfer
+			if field.field_type == ParticleFieldType.TOKEN_DEFINITION_REFERENCE:
+				transfer = self.transfers_not_yet_identified.pop(0)
+				if not transfer.is_transfer_change_back_to_sender:
+					print(f"  --> Verify that transfer identified by ledger matches this:\n{transfer}\n")
+			elif field.field_type == ParticleFieldType.SERIALIZER:
+				serializer = decoded_field 
+				if not serializer == "radix.particle.transferrable_tokens_particle":
+					print(f"  --> Found non transferrable tokens particle with serializer: '{serializer}', confirm on Ledger device?")
+
 
 		if (self.count_bytes_sent_to_ledger + byte_count) == self.atom_size_in_bytes():
-					print(f"\n💡 Expected Hash (verify on Ledger): {vector.expected_hash_hex()}\n")
+				print(f"\n💡 Expected Hash (verify on Ledger): {vector.expected_hash_hex()}\n")
 
 		result = send_to_ledger(
 			dongle=self.dongle,
@@ -478,17 +482,7 @@ class StreamVector(object):
 				particle_field_atom_byte_count = next_particle_field.byte_interval.byte_count
 
 				particle_field_atom_bytes = self.remaining_atom_bytes[0:particle_field_atom_byte_count]
-				decoded_atom_bytes = cbor_decode_bytes(next_particle_field, particle_field_atom_bytes)
-
-				if next_particle_field.field_type == ParticleFieldType.TOKEN_DEFINITION_REFERENCE:
-					transfer = self.transfers_not_yet_identified.pop(0)
-					if not transfer.is_transfer_change_back_to_sender:
-						print(f"  --> Verify that transfer identified by ledger matches this:\n{transfer}\n")
-				elif next_particle_field.field_type == ParticleFieldType.SERIALIZER:
-					serializer = decoded_atom_bytes 
-					if not serializer == "radix.particle.transferrable_tokens_particle":
-						print("  --> Found non transferrable tokens particle with serializer: '{serializer}', confirm on Ledger device?")	
-				self.send_to_ledger_atom_bytes(particle_field_atom_bytes)
+				self.send_to_ledger_atom_bytes(particle_field_atom_bytes, field=next_particle_field)
 
 			else:
 				number_of_atom_bytes_to_send = min(MAX_SIZE_PAYLOAD, next_relevant_end - self.count_bytes_sent_to_ledger)
