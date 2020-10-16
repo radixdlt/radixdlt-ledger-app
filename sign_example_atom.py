@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 from ledgerblue.comm import getDongle, Dongle
 from ledgerblue.commException import CommException
 from typing import List, Tuple, Optional
@@ -105,6 +106,39 @@ class ParticleField(object):
 		return "Field({}: {})".format(self.field_type, self.byte_interval)
 
 
+class Transfer(object):
+	def __init__(self, dict=None):
+		if dict is None:
+			self.address = None
+			self.amount = None
+			self.is_transfer_change_back_to_sender = None
+			self.token_definition_reference = None
+			return
+
+		self.address = dict['recipient'] # string
+		self.amount = int(dict['amount'])
+		self.is_transfer_change_back_to_sender = bool(dict['isChangeBackToUserHerself'])
+		self.token_definition_reference = dict['tokenDefinitionReference'] # string
+
+
+	def __repr__(self) -> str:
+		return """
+"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+Transfer(
+    Address b58: {}
+    Amount (dec): {} E-18
+    Token symbol: {}
+)
+"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+""".format(
+		self.address,
+		self.amount,
+		self.token_definition_reference.split("/")[-1] # last element after split on '/' == Token symbol
+	)
+
+	def equals(self, other: Transfer) -> bool:
+		return self.address == other.address and self.amount == other.amount and self.token_definition_reference == other.token_definition_reference
+
 class ParticleMetaData(object):
 	def __init__(self, bytes: bytearray):
 		assert len(bytes) == 20
@@ -149,27 +183,6 @@ class ParticleMetaData(object):
 		if is_ttp:
 			assert self.addressByteInterval.byte_count > 0 and self.amountByteInterval.byte_count > 0 and self.tokenDefinitionReferenceByteInterval.byte_count > 0
 		return is_ttp
-
-class Transfer(object):
-	def __init__(self, dict):
-		self.address = dict['recipient'] # string
-		self.amount = int(dict['amount'])
-		self.is_transfer_change_back_to_sender = bool(dict['isChangeBackToUserHerself'])
-		self.token_definition_reference = dict['tokenDefinitionReference'] # string
-
-
-	def __repr__(self) -> str:
-		return """
-Transfer(
-    address: 	{},
-    amount: 	{},
-    tokenDefRef:{}
-)
-""".format(
-		self.address,
-		self.amount,
-		self.token_definition_reference
-	)
 
 class TestVector(object):
 	def __init__(self, j):
@@ -333,7 +346,8 @@ def cbor_decode_bytes(particle_field: ParticleField, atom_bytes: bytearray):
 			decoded = int(decoded.hex(), 16)
 		elif particle_field.field_type == ParticleFieldType.TOKEN_DEFINITION_REFERENCE:
 			assert cbor_byte_string_type == CBORByteStringType.TOKEN_DEFINITION_REFERENCE, "Expected `cbor_byte_prefix == CBORByteStringType.TOKEN_DEFINITION_REFERENCE`"
-			decoded = str(decoded)
+			decoded = decoded.decode('utf-8')
+			assert isinstance(decoded, str), "Expected string"
 		else:
 			raise "Unsupported case...."
 	else:
@@ -417,17 +431,35 @@ class StreamVector(object):
 			print(f"Sending atom (size={self.atom_size_in_bytes()}) byte window to ledger: [{self.count_bytes_sent_to_ledger}-{	index_of_last_byte_being_sent}] (#{byte_count})")
 
 		if field is not None:
+
 			decoded_field = cbor_decode_bytes(field, atom_bytes)
-			self.pending_transfer
-			if field.field_type == ParticleFieldType.TOKEN_DEFINITION_REFERENCE:
+			
+			if field.field_type == ParticleFieldType.ADDRESS:
+				assert self.pending_transfer is None
+				self.pending_transfer = Transfer()
+				self.pending_transfer.address = decoded_field
+			elif field.field_type == ParticleFieldType.AMOUNT:
+				assert not self.pending_transfer is None
+				self.pending_transfer.amount = decoded_field
+			elif field.field_type == ParticleFieldType.SERIALIZER:
+				serializer = decoded_field
+				if not serializer == "radix.particles.transferrable_tokens":
+					assert self.pending_transfer is None
+					print(f"  --> Found non transferrable tokens particle with serializer: '{serializer}', confirm on Ledger device?")
+				else:
+					assert not self.pending_transfer is None
+
+			elif field.field_type == ParticleFieldType.TOKEN_DEFINITION_REFERENCE:
+				assert not self.pending_transfer is None
+				self.pending_transfer.token_definition_reference = decoded_field
+
 				transfer = self.transfers_not_yet_identified.pop(0)
+				assert transfer.equals(self.pending_transfer), "Expected transfers to equal..."
 				if not transfer.is_transfer_change_back_to_sender:
 					print(f"  --> Verify that transfer identified by ledger matches this:\n{transfer}\n")
-			elif field.field_type == ParticleFieldType.SERIALIZER:
-				serializer = decoded_field 
-				if not serializer == "radix.particle.transferrable_tokens_particle":
-					print(f"  --> Found non transferrable tokens particle with serializer: '{serializer}', confirm on Ledger device?")
-
+				self.pending_transfer = None
+			else:
+				raise ValueError("Unsupported field type")
 
 		if (self.count_bytes_sent_to_ledger + byte_count) == self.atom_size_in_bytes():
 				print(f"\n💡 Expected Hash (verify on Ledger): {vector.expected_hash_hex()}\n")

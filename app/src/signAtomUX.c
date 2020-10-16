@@ -99,8 +99,14 @@ static void do_parse_field_from_atom_bytes(
 
             bool ask_user_to_confirm_transfer = !is_transfer_change_back_to_me();
             if (ask_user_to_confirm_transfer) {
+            
                 ask_user_for_confirmation_of_transfer_if_to_other_address();
                 PRINTF("\n\n  ---> Waiting for input from user on Ledger device, needs to review & accept the transfer.\n");
+                
+                Transfer deep_copy_transfer;
+                os_memcpy(&deep_copy_transfer, &ux_state->transfer, sizeof(Transfer));
+                print_transfer(&deep_copy_transfer);
+
                 ux_block();
             }
             user_accepted_transfer_data();
