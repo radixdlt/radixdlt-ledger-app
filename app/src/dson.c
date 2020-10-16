@@ -1,4 +1,5 @@
 #include "dson.h"
+#include "common_macros.h"
 
 CBORBytePrefixForByteArray cborBytePrefixForParticleFieldType(ParticleFieldType field)
 {
@@ -45,7 +46,7 @@ bool parseSerializer_is_ttp(
 
     if (cborError)
     {
-        FATAL_ERROR("Error parsing 'serializer' field in atomSlice, CBOR eror: '%s'\n", cbor_error_string(cborError));
+        FATAL_ERROR("Error parsing 'serializer' field in atomSlice, CBOR error: '%s'\n", cbor_error_string(cborError));
     }
 
     assert(numberOfBytesReadByCBORParser == valueByteCount);
@@ -76,17 +77,20 @@ static void parse_particle_field(
 
     if (cborError)
     {
-        FATAL_ERROR("Error parsing field in atomSlice, CBOR eror: '%s'\n", cbor_error_string(cborError));
+        FATAL_ERROR("Error parsing field in atomSlice, CBOR error: '%s'\n", cbor_error_string(cborError));
     }
 
     // Sanity check
     assert(numberOfBytesReadByCBORParser == valueByteCount);
     assert(byteString[0] == cborBytePrefix);
 
+    // PRINTF("Parsed field value: ");
+    // PRINTF("%.*h\n", valueByteCount - 1, byteString + 1);
+
     os_memcpy(
         output_buffer,
         byteString + 1, // Drop first CBOR prefix byte
-        valueByteCount);
+        valueByteCount - 1);
 }
 
 
@@ -95,8 +99,12 @@ ParseFieldResult parse_field_from_bytes_and_populate_transfer(
     uint8_t *bytes,
     Transfer *transfer
 ) {
-    size_t field_byte_count = particle_field->byte_interval.byteCount;
+    // PRINTF("Parse field and populate transfer START\n");
+    // print_particle_field(particle_field);
+    // PRINTF("\nFrom bytes:\n");
+    // PRINTF("%.*h\n", field_byte_count, bytes);
 
+    size_t field_byte_count = particle_field->byte_interval.byteCount;
     CborParser cborParser;
     CborValue cborValue;
     CborError cborError = cbor_parser_init(
@@ -173,7 +181,7 @@ ParseFieldResult parse_field_from_bytes_and_populate_transfer(
         assert(transfer->has_confirmed_serializer);
         assert(transfer->is_address_set);
         assert(transfer->is_amount_set);
-        assert(transfer->is_token_definition_reference_set);
+        assert(!transfer->is_token_definition_reference_set);
         
         parse_particle_field(
             readLength, 

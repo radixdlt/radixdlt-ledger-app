@@ -15,7 +15,6 @@
 #include "base_conversion.h"
 #include "signAtomUI.h"
 #include "common_macros.h"
-#include "AtomBytesWindow.h"
 #include "RadixAddress.h"
 
 static signAtomContext_t *ctx = &global.signAtomContext;
@@ -34,18 +33,6 @@ static void empty_particle_field() {
     ux_state->next_particle_field_to_parse.is_destroyed = true;
 }
 
-static void empty_atom_bytes_window() {
-    empty_bytes(&ux_state->atom_bytes_window);
-}
-
-static uint16_t end_of_atom_bytes_window() {
-    return get_end_of_atom_bytes_window(&ux_state->atom_bytes_window);
-}
-
-static uint16_t start_of_atom_bytes_window() {
-    return get_start_of_atom_bytes_window(&ux_state->atom_bytes_window);
-}
-
 static void did_identify_a_transferrable_tokens_particle() {
     identified_a_transferrable_tokens_particle(&ux_state->up_particles_counter);
 }
@@ -58,41 +45,8 @@ static bool has_particle_field() {
     return !ux_state->next_particle_field_to_parse.is_destroyed;
 }
 
-static uint16_t offset_of_field_in_atom_bytes_window(
-    ParticleField *particle_field
-) {
-    PRINTF("\n\nDELETE THIS METHOD\n\n");PLOC();
-    uint16_t offset = particle_field->byte_interval.startsAt - start_of_atom_bytes_window();
-    assert(offset == 0);
-    return offset;
-}
-
 static bool user_has_accepted_non_transfer_data() {
     return ux_state->user_has_accepted_non_transfer_data;
-}
-
-static void update_atom_bytes_window_by_sliding_bytes_since_parsed_field(
-    ParticleField *parsed_particle_field
-) {
-    do_update_atom_bytes_window_by_sliding_bytes_since_parsed_field(
-        &ux_state->atom_bytes_window,
-        parsed_particle_field
-    );
-}
-
-static void update_atom_bytes_window_with_new_bytes(
-    uint8_t *bytes,
-    uint16_t number_of_newly_received_atom_bytes
-) {
-
-    uint16_t number_of_processed_bytes_before_this_payload = ctx->number_of_atom_bytes_received - number_of_newly_received_atom_bytes;
-
-    do_update_atom_bytes_window_with_new_bytes(
-        &ux_state->atom_bytes_window,
-        bytes,
-        number_of_processed_bytes_before_this_payload,
-        number_of_newly_received_atom_bytes
-    );
 }
 
 void reset_ux_state();
@@ -124,7 +78,6 @@ static void user_accepted_transfer_data() {
 static void ux_block() {
     io_exchange(IO_ASYNCH_REPLY, 0); // BLOCK ux
 }
-
 static void do_parse_field_from_atom_bytes(
     ParticleField *particle_field,
     uint8_t *bytes
@@ -134,6 +87,8 @@ static void do_parse_field_from_atom_bytes(
         bytes,
         &ux_state->transfer
     );
+
+    empty_buffer();
    
     switch (parse_result) {
         case ParseFieldResultFinishedParsingTransfer:
@@ -169,46 +124,29 @@ static void do_parse_field_from_atom_bytes(
     }
 }
 
-static bool should_try_parsing_atom_bytes() {
-    if (finished_parsing_all_particles()) {
-        return false;
-    }
-
-    if (!has_particle_field()) {
-        return false;
-    }
-
-    return true;
+void empty_buffer() {
+    explicit_bzero(G_io_apdu_buffer, IO_APDU_BUFFER_SIZE);
 }
-
-static void try_parsing_atom_bytes_if_needed() {
-    
-    ParticleField next_particle_field;
-
-    while (should_try_parsing_atom_bytes()) {
-     
-        do_parse_field_from_atom_bytes(
-            &ux_state->next_particle_field_to_parse,
-            ux_state->atom_bytes_window.bytes + offset_of_field_in_atom_bytes_window(&ux_state->next_particle_field_to_parse)
-        );
-
-        update_atom_bytes_window_by_sliding_bytes_since_parsed_field(
-            &next_particle_field
-        );
-    }
-}
-
 
 void received_atom_bytes_from_host_machine(
     uint8_t *bytes,
     uint16_t number_of_newly_received_atom_bytes
 ) {
-    if (!should_try_parsing_atom_bytes()) {
+    if (finished_parsing_all_particles() || !has_particle_field()) {
+        // PRINTF("Skipping parsing field, finished parsing particles: %s, has particle field: %s\n", finished_parsing_all_particles() ? "TRUE" : "FALSE", has_particle_field() ? "TRUE" : "FALSE");
         return;
     }
+     
+    do_parse_field_from_atom_bytes(
+        &ux_state->next_particle_field_to_parse,
+        bytes
+    );
+    ux_state->next_particle_field_to_parse.is_destroyed = true;
+  
+}
 
-    update_atom_bytes_window_with_new_bytes(bytes, number_of_newly_received_atom_bytes);
-    try_parsing_atom_bytes_if_needed();
+void print_next_particle_field_to_parse() {
+    print_particle_field(&ux_state->next_particle_field_to_parse);
 }
 
 void received_particle_field_metadata_bytes_from_host_machine(
@@ -224,7 +162,13 @@ void received_particle_field_metadata_bytes_from_host_machine(
         number_of_bytes_received
     );
 
-    assert(ux_state->next_particle_field_to_parse->byte_interval.startsAt == ctx->number_of_atom_bytes_received);
+    if (ux_state->next_particle_field_to_parse.byte_interval.startsAt != ctx->number_of_atom_bytes_received) {
+
+        print_next_particle_field_to_parse();
+        PRINTF("\nnumber_of_atom_bytes_received: %d\n", ctx->number_of_atom_bytes_received);
+        FATAL_ERROR("Expected next_particle_field_to_parse.byte_interval.startsAt == ctx->number_of_atom_bytes_received but it is not");
+    }
+    assert(ux_state->next_particle_field_to_parse.byte_interval.startsAt == ctx->number_of_atom_bytes_received);
 }
 
 void reset_ux_state() {
@@ -233,13 +177,4 @@ void reset_ux_state() {
     
     empty_particle_field();
     empty_transfer();
-    empty_atom_bytes_window();
-}
-
-void print_atom_bytes_window() {
-    do_print_atom_bytes_window(&ux_state->atom_bytes_window);
-}
-
-void print_next_particle_field_to_parse() {
-    print_particle_field(&ux_state->next_particle_field_to_parse);
 }
