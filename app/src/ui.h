@@ -1,5 +1,5 @@
-#ifndef RADIX_TOKEN_NANOS_UX_H
-#define RADIX_TOKEN_NANOS_UX_H
+#ifndef UI_H
+#define UI_H
 
 #include "stdint.h"
 #include <seproxyhal_protocol.h>

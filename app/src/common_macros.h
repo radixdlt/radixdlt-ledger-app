@@ -1,3 +1,7 @@
+#ifndef COMMONMACROS_H
+#define COMMONMACROS_H
+
+
 #include "stdint.h"
 #include <seproxyhal_protocol.h>
 #include <os_io_seproxyhal.h>
@@ -55,11 +59,8 @@
 #define NUMBER_OF_BIP32_COMPONENTS_IN_PATH 5
 #define MAX_CHUNK_SIZE 255 
 
-#define MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP 6
-#define MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP 15 // 240/16, where 16 is size of `ParticleMetaData` and 240 is MAX_CHUNK_SIZE-2-12, where 2 is number of bytes to encode AtomSize and 12 is number of bytes for BIP32 path
-
 // The biggest of a value split across chunks might be the `rri`
-#define MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS (RADIX_RRI_MAX_BYTE_COUNT - 1)
+#define MAX_ATOM_SLICE_SIZE MAX_CHUNK_SIZE
 
 #define HASH256_BYTE_COUNT 32
 
@@ -68,3 +69,5 @@
 #define HASH512_LEN 64
 #define UNPUBLIC_KEY_COMPRESSEED_BYTE_COUNT 65
 #define BIP32_PATH_LEN 12
+
+#endif

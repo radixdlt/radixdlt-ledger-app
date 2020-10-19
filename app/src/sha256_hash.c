@@ -5,6 +5,7 @@
 #include <os_io_seproxyhal.h>
 #include "key_and_signatures.h"
 #include "ui.h"
+#include "common_macros.h"
 
 bool sha256_hash(
     cx_sha256_t *hash_context,
@@ -38,4 +39,42 @@ bool sha256_hash(
     );
 
     return true;
+}
+
+void update_hash_and_maybe_finalize(
+    uint8_t* bytes, 
+    uint16_t byte_count, 
+    bool should_finalize_hash,
+    cx_sha256_t *hasher,
+    uint8_t* output_bytes
+) {
+    // UPDATE HASH
+    bool success = sha256_hash(
+        hasher,
+        bytes,
+        byte_count,
+        should_finalize_hash,
+        output_bytes);
+
+    assert(success);
+
+    if (should_finalize_hash) {
+        cx_sha256_init(hasher);
+
+        // tmp copy of firstHash
+        uint8_t hashedOnce[HASH256_BYTE_COUNT];
+        os_memcpy(hashedOnce, output_bytes, HASH256_BYTE_COUNT);
+
+        success = sha256_hash(
+            hasher,
+            hashedOnce,
+            HASH256_BYTE_COUNT,
+            true,
+            output_bytes // put hash of hash in ctx->hash
+        );
+
+        assert(success);
+
+        PRINTF("Finalized hash to: '%.*h'\n", HASH256_BYTE_COUNT, output_bytes);
+    }
 }

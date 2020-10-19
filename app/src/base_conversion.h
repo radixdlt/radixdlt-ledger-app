@@ -1,3 +1,7 @@
+#ifndef BASECONVERSION_H
+#define BASECONVERSION_H
+
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -12,3 +16,5 @@ uint16_t hexadecimal_string_from(
     int byte_count, 
     char *output_buffer
 );
+
+#endif

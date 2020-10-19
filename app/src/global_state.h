@@ -1,9 +1,13 @@
+#ifndef GLOBALSTATE_H
+#define GLOBALSTATE_H
+
+
 #include "key_and_signatures.h"
 #include "Transfer.h"
-#include "common_macros.h"
-#include "ParticleMetaData.h"
-#include "RadixParticleTypes.h"
 #include "aes.h"
+#include "ParticlesCounter.h"
+#include "ParticleField.h"
+#include "common_macros.h"
 
 typedef struct {
 	size_t cipher_text_byte_count;
@@ -35,61 +39,31 @@ typedef struct {
 	uint8_t hash[HASH256_BYTE_COUNT];
 } signHashContext_t;
 
+#define MAX_SERIALIZER_LENGTH 100
+
 typedef struct {
-	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
-	
-    uint16_t atomByteCount;
-    uint16_t atomByteCountParsed;
 
+	bool __DEBUG_MODE_skip_short_transfer_reviews;
+
+	bool is_users_public_key_calculated;
+	cx_ecfp_public_key_t my_public_key_compressed;
+
+	ParticlesCounter up_particles_counter;
+
+	bool user_has_accepted_non_transfer_data;
+
+	ParticleField next_particle_field_to_parse; 
+	Transfer transfer;
+} signAtomUX_t;
+
+typedef struct {
+    uint16_t atom_byte_count;
+    uint16_t number_of_atom_bytes_received;
 	cx_sha256_t hasher;
-
-	// Only written to when the digest is finalized, after having received the
-	// last byte of the atom
 	uint8_t hash[HASH256_BYTE_COUNT];
+	uint32_t bip32_path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
 
-	// Array of memory offsets from start of Atom to particles with spin up,
-	// and the byte count per particle, total 16 bytes, with max length of 15
-	// particles => 240 bytes.
-	ParticleMetaData metaDataAboutParticles[MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP]; // variable-length
-
-    // The de-facto length of the array `offsetsOfParticlesWithSpinUp`, read from APDU instr
-    uint8_t numberOfParticlesWithSpinUp;
-
-	uint8_t numberOfNonTransferrableTokensParticlesIdentified;
-    uint8_t numberOfTransferrableTokensParticlesParsed;
-
-    uint8_t numberOfTransfersToNotMyAddress;
-	uint8_t indiciesTransfersToNotMyAddress[MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP];
-
-	uint8_t numberOfTransfersToNotMyAddressApproved;
-
-	// This might only contains `MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP` many Non-TTP particles, if the number
-	// of TTP particles is 0....
-	RadixParticleTypes nonTransferrableTokensParticlesIdentified[MAX_AMOUNT_OF_PARTICLES_WITH_SPIN_UP];
-
-	// The number of cached bytes from last chunk, bound by `MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS`
-	uint8_t numberOfCachedBytes;
-
-	// Sometimes a particle might span across multiple chunks and thus some relevant
-	// info, such as `serializer` (type of Particle), `amount`, `recepientAddress`,
-	// `rri` (RadixResourceIdentifier - which toke type) etc might get split. This will
-	// be "cached"/"carried over" to the next chunk, and should be copied over to
-	// the beginning of this atomSlice buffer in between chunk parsing. We must also set
-	// `numberOfCachedBytes`
-   	uint8_t atomSlice[MAX_AMOUNT_OF_CACHED_BYTES_BETWEEN_CHUNKS + MAX_CHUNK_SIZE];
-
-	// A temporary value helping construction of a Transfer
-	RadixAddress parsedAddressInTransfer;
-
-	// A temporary value helping construction of a Transfer
-	TokenAmount parsedAmountInTransfer;
-
-	// A temporary value helping construction of a Transfer
-	bool hasConfirmedSerializerOfTransferrableTokensParticle;
-
-	// At max all particles with spin up are transferrableTokensParticles that we
-	// need to parse into transfers.
-	Transfer transfers[MAX_AMOUNT_OF_TRANSFERRABLE_TOKENS_PARTICLES_WITH_SPIN_UP];
+	signAtomUX_t ux_state;
 } signAtomContext_t;
 
 // To save memory, we store all the context types in a single global union,
@@ -102,3 +76,5 @@ typedef union {
     decryptDataContext_t decryptDataContext;
 } commandContext;
 extern commandContext global;
+
+#endif

@@ -1,3 +1,7 @@
+#ifndef RADIXRESOURCEIDENTIFIER_H
+#define RADIXRESOURCEIDENTIFIER_H
+
+
 #include <stdint.h>
 #include "RadixAddress.h"
 
@@ -24,3 +28,7 @@ size_t to_string_rri_null_term_or_not(
     const size_t size_of_buffer,
     bool skip_address,
     bool null_terminate);
+
+void printRRI(RadixResourceIdentifier *rri);
+
+#endif
