@@ -64,7 +64,7 @@ Please refer to [these codes found in `os.h`](https://github.com/LedgerHQ/nanos-
 --------------
 
 # Generate Radix Address
-## INS_GEN_RADIX_ADDR
+## `INS_GEN_RADIX_ADDR`
 
 ## Command
 
@@ -104,9 +104,9 @@ The base58 encoding of the RadixAddress results in a 51-52 b58 characters long s
 | SW1-SW2 | byte (2)  | Return code           | see list of return codes |
 
 # Sign Atom
-## INS_SIGN_ATOM_SECP256K1
+## `INS_SIGN_ATOM_SECP256K1`
 
-*For full documentation see [`SIGN_ATOM.MD`](SIGN_ATOM.MD)*
+**For full documentation see [`SIGN_ATOM`](app/src/sign_atom/README.md)**
 
 Streaming of Atom data in multiple packets, the first one is a special intial "setup" packet, containing the BIP32 derivation path to the key used to sign as well as the size of the atom in bytes as payload, these two byte strings are **required** to hash and sign the atom. The packet also contains `P1` telling the Ledger App the total number of UP particles in the atom, and `P2` the total number of transferrable tokens particle with spin UP.
 
@@ -144,7 +144,7 @@ If `P1==101` then `P2` contains the identifier for a paritcle field byte interva
 | Field | Type      | Content                            | Expected  |
 | ----- | --------- | ---------------------------------- | --------- |
 | P1    | byte (1)  | PayloadTypeIdentifier   | `100=bytes in atom` or `101=payload is ParticleFieldTypeIdentifier` |
-| P2    | byte (1)  | If P1==100: ParticleFieldTypeIdentifier (see [`SIGN_ATOM.MD`](SIGN_ATOM.MD))| ?  |
+| P2    | byte (1)  | If P1==100: ParticleFieldTypeIdentifier (see [`SIGN_ATOM`](app/src/sign_atom/README.md))| ?  |
 | L  		| byte (1)  | Length of Payload          | ?   |
 | PAYLOAD | byte (L) | Either "raw" atom bytes (P1==100) or 4 bytes particle field byte interval                |  MAX 255 bytes    |
 
@@ -159,7 +159,7 @@ If `P1==101` then `P2` contains the identifier for a paritcle field byte interva
 --------------
 
 # Sign Hash
-## INS_SIGN_HASH_SECP256K1
+## `INS_SIGN_HASH_SECP256K1`
 (This command might be removed in the future in favour of `INS_SIGN_ATOM_SECP256K1`)
 
 ### Command
@@ -185,7 +185,7 @@ If `P1==101` then `P2` contains the identifier for a paritcle field byte interva
 
 
 # Get Public Key
-## INS_GET_PUB_KEY_SECP256K1
+## `INS_GET_PUB_KEY_SECP256K1`
 (This command might be removed in the future in favour of `INS_GET_ADDR_SECP256K1`)
 
 
@@ -213,7 +213,7 @@ If `P1==101` then `P2` contains the identifier for a paritcle field byte interva
 
 
 # Decrypt Data (message)
-## INS_DECRYPT_DATA
+## `INS_DECRYPT_DATA`
 
 Streaming of ECIES encrypted data in multiple chunks/packets, first chunk will contain everything BUT the actual cipher text. After this initial chunk we expect the host machine to stream 1-N chunks where each chunk must be 240 bytes (or less). The size of the chunk MUST be a multiple of 16 (AES block size).
 
