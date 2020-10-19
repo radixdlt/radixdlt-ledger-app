@@ -14,7 +14,7 @@
 #include "sign_atom_ui.h"
 #include "common_macros.h"
 
-static sign_atom_context_t *ctx = &global.signAtomContext;
+static sign_atom_context_t *ctx = &global.sign_atom_context;
 
 static void reset_state() {
     ctx->atom_byte_count = 0;

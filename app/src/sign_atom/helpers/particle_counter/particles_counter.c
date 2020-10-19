@@ -38,9 +38,8 @@ void init_particles_counter(
     uint8_t total_number_of_up_particles,
     uint8_t number_of_up_transferrable_tokens_particles
 ) {
-    uint8_t number_of_non_transferrable_tokens_particles = total_number_of_up_particles - number_of_up_transferrable_tokens_particles;
 
-    counter->in_atom.non_transfer = number_of_non_transferrable_tokens_particles;
+    counter->in_atom.non_transfer = total_number_of_up_particles - number_of_up_transferrable_tokens_particles;
     counter->in_atom.transferrable_tokens_particle = number_of_up_transferrable_tokens_particles;
  
     counter->identified.non_transfer = 0;

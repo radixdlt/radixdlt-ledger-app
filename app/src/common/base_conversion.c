@@ -55,10 +55,10 @@ static uint16_t convert_byte_buffer_into_digits_with_base(uint8_t *bytes, int le
 uint16_t convert_byte_buffer_into_decimal(uint8_t *bytes, int length, char *buffer)
 {
 	uint8_t number_of_digits = convert_byte_buffer_into_digits_with_base(bytes, length, buffer, 10);
-	uint8_t asciiOffset_decimal = '0';
-	for (unsigned int digitIndex = 0; digitIndex < number_of_digits; ++digitIndex)
+	uint8_t ascii_offset_decimal = '0';
+	for (unsigned int digit_index = 0; digit_index < number_of_digits; ++digit_index)
 	{	
-		buffer[digitIndex] += asciiOffset_decimal;
+		buffer[digit_index] += ascii_offset_decimal;
 	}
 	buffer[number_of_digits] = '\0'; // NULL terminate
 	return number_of_digits;
@@ -70,10 +70,10 @@ uint16_t convert_byte_buffer_into_base58(uint8_t *bytes, int length, char *buffe
 
     static const char base58_digits[] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
-    for (unsigned int digitIndex = 0; digitIndex < number_of_digits; ++digitIndex)
+    for (unsigned int digit_index = 0; digit_index < number_of_digits; ++digit_index)
     {
-        uint8_t base58DigitIndex = (uint8_t) buffer[digitIndex];
-        buffer[digitIndex] = base58_digits[base58DigitIndex];
+        uint8_t base58_digit_index = (uint8_t) buffer[digit_index];
+        buffer[digit_index] = base58_digits[base58_digit_index];
     }
     buffer[number_of_digits] = '\0'; // NULL terminate
     return number_of_digits;
@@ -85,10 +85,10 @@ static uint16_t convert_byte_buffer_into_hexadecimal(uint8_t *bytes, int length,
 
     static const char base16_digits[] = "0123456789abcdef";
 
-    for (unsigned int digitIndex = 0; digitIndex < number_of_digits; ++digitIndex)
+    for (unsigned int digit_index = 0; digit_index < number_of_digits; ++digit_index)
     {
-        uint8_t base16DigitIndex = (uint8_t) buffer[digitIndex];
-        buffer[digitIndex] = base16_digits[base16DigitIndex];
+        uint8_t base16_digit_index = (uint8_t) buffer[digit_index];
+        buffer[digit_index] = base16_digits[base16_digit_index];
     }
     buffer[number_of_digits] = '\0'; // NULL terminate
     return number_of_digits;

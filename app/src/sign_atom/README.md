@@ -7,7 +7,7 @@ Signing a transaction (list of user actions), that is represented by an "Atom" o
 
 Since our CBOR encoding **sorts** key-value pairs of "map" type (CBOR major type 5) in **lexicographical order** and since the key describing the type of particle is "serializer", it comes late in the encoding of said particle. Naive solution would be to put the serializer key-value first by changing it to "!serializer" or similar. However that only solves one problem - identifying the type of the particle. We still have the problem with large particles and the fact that the Ledger app only gets to see 255 bytes of chunk at any time. And any key or value of a field might be split across chunks. So instead of trying to CBOR decode every byte in the Atom we have chosen to use a different solution - we require any wallet interacting with our Ledger Nano S app to provide meta data about all relevant fields inside all particles with spin UP. That way we only need to try to CBOR decode the values found at these locations (byte intervals). And since we know the byte intervals of fields of interest before we recive the (max 255 bytes large) chunks of data, we can also more easily implement logic taking care of edge cases where these relevant bytes are spread across chunks (e.g. by making sure the bytes for a particle field never is split accross multiple chunks/packets).
 
-The particle field meta data consists of a touple (`startsAtByte`, `byteCount`) each consisting of 2 bytes => the byte interval is thus 4 bytes.
+The particle field meta data consists of a touple (`startsAtByte`, `byte_count`) each consisting of 2 bytes => the byte interval is thus 4 bytes.
 
 These byte intervals points to the following fields within the spun `UP` particle (`address`, `amount`, `serializer`, `tokenDefinitionReference`) - in that order - for being able to parse `TransferableTokensParticles` (TokenTransfers). 
 
@@ -96,7 +96,7 @@ func stream(
 
         if let particleField = maybeField, particleField.startIndexInAtom == atomByteCount {
             sendToLedger(particleField: particleField)
-            sendToLedgerAtomBytes(count: particleField.byteCount)
+            sendToLedgerAtomBytes(count: particleField.byte_count)
         } else {
             let ledgerPayloadMaxSize = 255
             result = sendToLedgerAtomBytes(count: min(ledgerPayloadMaxSize, nextRelevantEnd - numberOfAtomBytesSent))
@@ -121,7 +121,7 @@ func byteIntervalOf(field: Field, in particle: UpParticle) -> byte_interval_t {
 
     return byte_interval_t(
         startsAtByte: particleCBOR.indexOf(fieldCBOR),
-        byteCount: particleCBOR.length
+        byte_count: particleCBOR.length
     )
 }
 
@@ -164,7 +164,7 @@ func metaDataOfParticlesInAtom(atom: Atom) -> [ParticleMetaData]
 
 // Always encode 4 byte, use BigEndian
 func encodeByteInterval(byteInterval: byte_interval_t) -> ByteArray {
-    BigEndian2BytesFromInt16(byteInterval.startsAtByte) || BigEndian2BytesFromInt16(byteInterval.byteCount)
+    BigEndian2BytesFromInt16(byteInterval.startsAtByte) || BigEndian2BytesFromInt16(byteInterval.byte_count)
 }
 
 // Returns 16 BigEndian encoded ByteArray from ParticleMetaData

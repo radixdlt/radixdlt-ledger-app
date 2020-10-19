@@ -1,7 +1,7 @@
 #include "dson.h"
 #include "common_macros.h"
 
-cbor_byte_prefix_t cborBytePrefixForParticleFieldType(particle_field_type_t field)
+cbor_byte_prefix_t cbor_byte_prefix_for_particle_field_type(particle_field_type_t field)
 {
     switch (field)
     {
@@ -31,66 +31,66 @@ bool is_transferrable_tokens_particle_serializer(
     return (strncmp(utf8_string, "radix.particles.transferrable_tokens", string_length) == 0);
 }
 
-// Returns `true` iff `cborValue` indicates a TransferrableTokensParticle
-bool parseSerializer_is_ttp(
-    const size_t valueByteCount,
-    CborValue *cborValue)
+// Returns `true` iff `cbor_value` indicates a TransferrableTokensParticle
+bool parse_serializer_check_if_transferrable_tokens_particle(
+    const size_t value_byte_count,
+    CborValue *cbor_value)
 {
-    size_t numberOfBytesReadByCBORParser = valueByteCount;
-    char textString[valueByteCount]; 
-    CborError cborError = cbor_value_copy_text_string(
-        cborValue,
-        textString,
-        &numberOfBytesReadByCBORParser,
+    size_t number_of_bytes_read_by_cbor_parser = value_byte_count;
+    char text_string[value_byte_count]; 
+    CborError cbor_error = cbor_value_copy_text_string(
+        cbor_value,
+        text_string,
+        &number_of_bytes_read_by_cbor_parser,
         NULL);
 
-    if (cborError)
+    if (cbor_error)
     {
-        FATAL_ERROR("Error parsing 'serializer' field in atomSlice, CBOR error: '%s'\n", cbor_error_string(cborError));
+        FATAL_ERROR("Error parsing 'serializer' field in atomSlice, CBOR error: '%s'\n", cbor_error_string(cbor_error));
     }
 
-    assert(numberOfBytesReadByCBORParser == valueByteCount);
+    assert(number_of_bytes_read_by_cbor_parser == value_byte_count);
 
-    bool is_TTP = is_transferrable_tokens_particle_serializer(textString, valueByteCount);
-    if (!is_TTP) {
-        PRINTF("\n@ Identified non TransferrableTokensParticle: '%s'\n\n", textString);
+    bool is_transferrable_tokens_particle = is_transferrable_tokens_particle_serializer(text_string, value_byte_count);
+    if (!is_transferrable_tokens_particle) {
+        PRINTF("\n@ Identified non TransferrableTokensParticle: '%s'\n\n", text_string);
     }
-    return is_TTP;
+    return is_transferrable_tokens_particle;
 }
 
 static void parse_particle_field(
-    const size_t valueByteCount,
-    CborValue *cborValue,
+    const size_t value_byte_count,
+    CborValue *cbor_value,
     particle_field_type_t field_type,
     uint8_t *output_buffer
 ) {
 
-    cbor_byte_prefix_t cborBytePrefix = cborBytePrefixForParticleFieldType(field_type);
+    cbor_byte_prefix_t cbor_byte_prefix = cbor_byte_prefix_for_particle_field_type(field_type);
 
-    size_t numberOfBytesReadByCBORParser = valueByteCount;
-    uint8_t byteString[valueByteCount];
-    CborError cborError = cbor_value_copy_byte_string(
-        cborValue,
-        byteString,
-        &numberOfBytesReadByCBORParser,
+    size_t number_of_bytes_read_by_cbor_parser = value_byte_count;
+    uint8_t byte_string[value_byte_count];
+    CborError cbor_error = cbor_value_copy_byte_string(
+        cbor_value,
+        byte_string,
+        &number_of_bytes_read_by_cbor_parser,
         NULL);
 
-    if (cborError)
+    if (cbor_error)
     {
-        FATAL_ERROR("Error parsing field in atomSlice, CBOR error: '%s'\n", cbor_error_string(cborError));
+        FATAL_ERROR("Error parsing field in atomSlice, CBOR error: '%s'\n", cbor_error_string(cbor_error));
     }
 
     // Sanity check
-    assert(numberOfBytesReadByCBORParser == valueByteCount);
-    assert(byteString[0] == cborBytePrefix);
+    assert(number_of_bytes_read_by_cbor_parser == value_byte_count);
+    assert(byte_string[0] == cbor_byte_prefix);
 
     // PRINTF("Parsed field value: ");
-    // PRINTF("%.*h\n", valueByteCount - 1, byteString + 1);
+    // PRINTF("%.*h\n", value_byte_count - 1, byte_string + 1);
 
     os_memcpy(
         output_buffer,
-        byteString + 1, // Drop first CBOR prefix byte
-        valueByteCount - 1);
+        byte_string + 1, // Drop first CBOR prefix byte
+        value_byte_count - 1);
 }
 
 
@@ -99,33 +99,28 @@ parse_field_result_t parse_field_from_bytes_and_populate_transfer(
     uint8_t *bytes,
     transfer_t *transfer
 ) {
-    // PRINTF("Parse field and populate transfer START\n");
-    // print_particle_field(particle_field);
-    // PRINTF("\nFrom bytes:\n");
-    // PRINTF("%.*h\n", field_byte_count, bytes);
 
-    size_t field_byte_count = particle_field->byte_interval.byteCount;
-    CborParser cborParser;
-    CborValue cborValue;
-    CborError cborError = cbor_parser_init(
+    CborParser cbor_parser;
+    CborValue cbor_value;
+
+    CborError cbor_error = cbor_parser_init(
         bytes,
-        field_byte_count,
+        particle_field->byte_interval.byte_count,
         0, // flags
-        &cborParser,
-        &cborValue);
+        &cbor_parser,
+        &cbor_value
+    );
 
-    if (cborError)
-    {
-        FATAL_ERROR("Failed to init cbor parser, CBOR eror: '%s'\n", cbor_error_string(cborError));
+    if (cbor_error) {
+        FATAL_ERROR("Failed to init cbor parser, CBOR eror: '%s'\n", cbor_error_string(cbor_error));
     }
 
-    CborType type = cbor_value_get_type(&cborValue);
-    size_t readLength;
-    cborError = cbor_value_calculate_string_length(&cborValue, &readLength);
+    CborType type = cbor_value_get_type(&cbor_value);
+    size_t read_length;
+    cbor_error = cbor_value_calculate_string_length(&cbor_value, &read_length);
 
-    if (cborError)
-    {
-        FATAL_ERROR("Failed to calculate length of coming cbor value, CBOR error: '%s'\n", cbor_error_string(cborError));
+    if (cbor_error) {
+        FATAL_ERROR("Failed to calculate length of coming cbor value, CBOR error: '%s'\n", cbor_error_string(cbor_error));
     }
 
     switch (particle_field->field_type)
@@ -137,8 +132,8 @@ parse_field_result_t parse_field_from_bytes_and_populate_transfer(
         assert(!transfer->is_address_set);
 
         parse_particle_field(
-            readLength, 
-            &cborValue, 
+            read_length, 
+            &cbor_value, 
             particle_field->field_type, 
             &transfer->address.bytes
         );
@@ -152,8 +147,8 @@ parse_field_result_t parse_field_from_bytes_and_populate_transfer(
         assert(!transfer->is_amount_set);
 
         parse_particle_field(
-            readLength, 
-            &cborValue, 
+            read_length, 
+            &cbor_value, 
             particle_field->field_type, 
             &transfer->amount.bytes
         );
@@ -164,7 +159,7 @@ parse_field_result_t parse_field_from_bytes_and_populate_transfer(
         assert(type == CborTextStringType);
         assert(!transfer->has_confirmed_serializer);
         
-        bool is_transferrable_tokens_particle_serializer = parseSerializer_is_ttp(readLength, &cborValue);
+        bool is_transferrable_tokens_particle_serializer = parse_serializer_check_if_transferrable_tokens_particle(read_length, &cbor_value);
 
         assert(transfer->is_address_set == is_transferrable_tokens_particle_serializer);
         assert(transfer->is_amount_set == is_transferrable_tokens_particle_serializer);
@@ -184,8 +179,8 @@ parse_field_result_t parse_field_from_bytes_and_populate_transfer(
         assert(!transfer->is_token_definition_reference_set);
         
         parse_particle_field(
-            readLength, 
-            &cborValue, 
+            read_length, 
+            &cbor_value, 
             particle_field->field_type, 
             transfer->token_definition_reference.bytes
         );

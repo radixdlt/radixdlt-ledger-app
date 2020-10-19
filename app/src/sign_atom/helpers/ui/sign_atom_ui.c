@@ -6,7 +6,7 @@
 
 
 
-static sign_atom_context_t *ctx = &global.signAtomContext;
+static sign_atom_context_t *ctx = &global.sign_atom_context;
 
 typedef enum {
     ReviewAddress = 0,

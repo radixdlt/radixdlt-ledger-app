@@ -5,8 +5,8 @@
 #include <stdbool.h>
 
 typedef struct {
-	uint16_t startsAt;
-	uint16_t byteCount;
+	uint16_t start_index_in_atom;
+	uint16_t byte_count;
 } byte_interval_t;
 
 uint16_t end_index(byte_interval_t *interval);

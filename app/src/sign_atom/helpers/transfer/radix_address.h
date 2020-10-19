@@ -13,20 +13,20 @@
 
 typedef struct {
     uint8_t bytes[RADIX_ADDRESS_BYTE_COUNT];
-} RadixAddress;
+} radix_address_t;
 
 size_t to_string_radix_address(
-    RadixAddress *address,
+    radix_address_t *address,
     char *output_buffer,
     const size_t size_of_buffer);
 
-void printRadixAddress(RadixAddress *address);
+void printRadixAddress(radix_address_t *address);
 
-bool matchesPublicKey(RadixAddress *address, cx_ecfp_public_key_t *compressedPublicKey);
-bool matchesPublicKeyBytes(RadixAddress *address, uint8_t *compressedPublicKeyBytes);
+bool does_address_contain_public_key(radix_address_t *address, cx_ecfp_public_key_t *compressed_public_key);
+bool does_address_contain_public_key_bytes(radix_address_t *address, uint8_t *compressed_public_key_bytes);
 
 int generate_public_address_from_pub_key_and_universe_magic(
-    uint8_t magicByte, uint8_t *compressedPublicKeyBytes,
+    uint8_t magicByte, uint8_t *compressed_public_key_bytes,
     char *output_radix_addr_str, const size_t length_of_output_radix_addr_str);
 
 #endif

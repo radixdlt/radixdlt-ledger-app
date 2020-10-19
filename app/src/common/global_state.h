@@ -36,7 +36,7 @@ typedef struct {
 typedef struct {
 	uint32_t bip32_path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
 	uint8_t hash[HASH256_BYTE_COUNT];
-} signHashContext_t;
+} sign_hash_context_t;
 
 #define MAX_SERIALIZER_LENGTH 100
 
@@ -68,11 +68,11 @@ typedef struct {
 // To save memory, we store all the context types in a single global union,
 // taking advantage of the fact that only one command is executed at a time.
 typedef union {
-    generate_radix_address_context_t generateRadixAddressContext;
-    get_public_key_context_t getPublicKeyContext;
-    signHashContext_t signHashContext;
-    sign_atom_context_t signAtomContext;
-    decrypt_data_context_t decryptDataContext;
+    generate_radix_address_context_t generate_radix_address_context;
+    get_public_key_context_t get_public_key_context;
+    sign_hash_context_t sign_hash_context;
+    sign_atom_context_t sign_atom_context;
+    decrypt_data_context_t decrypt_data_context;
 } command_context_u;
 extern command_context_u global;
 

@@ -2,18 +2,18 @@
 #include <os.h>
 
 uint16_t end_index(byte_interval_t *interval) {
-    return interval->startsAt + interval->byteCount;
+    return interval->start_index_in_atom + interval->byte_count;
 }
 
 bool is_interval_empty(byte_interval_t *interval) {
-    return interval->byteCount == 0;
+    return interval->byte_count == 0;
 }
 
 void print_interval(byte_interval_t *interval) {
-    PRINTF("[%d-%d] (#%d bytes)", interval->startsAt, end_index(interval), interval->byteCount);
+    PRINTF("[%d-%d] (#%d bytes)", interval->start_index_in_atom, end_index(interval), interval->byte_count);
 }
 
 void zero_out_interval(byte_interval_t *interval) {
-    interval->byteCount = 0;
-    interval->startsAt = 0;
+    interval->byte_count = 0;
+    interval->start_index_in_atom = 0;
 }
