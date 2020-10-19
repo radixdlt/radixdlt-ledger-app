@@ -188,53 +188,53 @@ static int ecdsa_sign_hash_and_zero_out_private_key(
 // ======= HEADER FUNCTIONS ======================
 
 int parse_bip32_path_from_apdu_command(
-    uint8_t *dataBuffer,
+    uint8_t *data_buffer,
     uint32_t *output_bip32path,
     uint8_t *output_bip32String, // might be null
-    unsigned short output_bip32PathString_length
+    unsigned short output_bip32_pathString_length
 ) {
     uint16_t byte_count_bip_component = 4;
     
-    uint32_t bip32Path[5];
+    uint32_t bip32_path[5];
 
     // BIP32 Purpose
     uint32_t purpose = 44 | 0x80000000; // BIP44 - hardened
-    bip32Path[0] = purpose;
+    bip32_path[0] = purpose;
 
     // BIP32 coin_type
     uint32_t coin_type = 536 | 0x80000000; // Radix - hardened
-    bip32Path[1] = coin_type;
+    bip32_path[1] = coin_type;
 
-    uint32_t account = U4BE(dataBuffer, 0 * byte_count_bip_component) | 0x80000000; // hardened 
-    bip32Path[2] = account;
+    uint32_t account = U4BE(data_buffer, 0 * byte_count_bip_component) | 0x80000000; // hardened 
+    bip32_path[2] = account;
 
-    uint32_t change = U4BE(dataBuffer, 1 * byte_count_bip_component);
+    uint32_t change = U4BE(data_buffer, 1 * byte_count_bip_component);
     if ((change != 0) && (change != 1)) {
         PRINTF("BIP32 'change' must be 0 or 1, but was: %u\n", change);
         THROW(SW_INVALID_PARAM);
     }
  
-    bip32Path[3] = change;
+    bip32_path[3] = change;
 
-    uint32_t address_index = U4BE(dataBuffer, 2 * byte_count_bip_component);
-    bip32Path[4] = address_index;
+    uint32_t address_index = U4BE(data_buffer, 2 * byte_count_bip_component);
+    bip32_path[4] = address_index;
 
-    os_memcpy(output_bip32path, bip32Path, 20);
+    os_memcpy(output_bip32path, bip32_path, 20);
 
     if (output_bip32String) {
-        if (output_bip32PathString_length != BIP32_PATH_STRING_MAX_LENGTH) {
-            PRINTF("Wrong length of output_bip32PathString_length, is: %d, but expected: %d\n", output_bip32PathString_length, BIP32_PATH_STRING_MAX_LENGTH);
+        if (output_bip32_pathString_length != BIP32_PATH_STRING_MAX_LENGTH) {
+            PRINTF("Wrong length of output_bip32_pathString_length, is: %d, but expected: %d\n", output_bip32_pathString_length, BIP32_PATH_STRING_MAX_LENGTH);
             THROW(SW_INVALID_PARAM);
         }
-        char bip32PathString_null_terminated[BIP32_PATH_STRING_MAX_LENGTH];
+        char bip32_pathString_null_terminated[BIP32_PATH_STRING_MAX_LENGTH];
     	int length_of_bip32_string_path = stringify_bip32_path(
             output_bip32path,
             5,
-            bip32PathString_null_terminated
+            bip32_pathString_null_terminated
         );
 
         os_memset(output_bip32String, 0, BIP32_PATH_STRING_MAX_LENGTH);
-    	os_memmove(output_bip32String, bip32PathString_null_terminated, length_of_bip32_string_path);
+    	os_memmove(output_bip32String, bip32_pathString_null_terminated, length_of_bip32_string_path);
 
         return length_of_bip32_string_path;
     } else {

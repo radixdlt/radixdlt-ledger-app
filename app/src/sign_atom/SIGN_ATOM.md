@@ -27,11 +27,11 @@ func calculateMetaDataAboutRelevantFieldsIn(upParticles: [UpParticle], in atom: 
 				transferrableTokensParticle.field(type: .serialzier), 
 				transferrableTokensParticle.field(type: .tokenDefinitionReference)
 			].map { field in 
-				ByteInterval(ofField: field, in: atom) 
+				byte_interval_t(ofField: field, in: atom) 
 			}
 		} else {
 			return [
-				ByteInterval(ofField: upParticle.field(type: .serialzier), in: atom) 
+				byte_interval_t(ofField: upParticle.field(type: .serialzier), in: atom) 
 			]
 		}
 	}
@@ -39,7 +39,7 @@ func calculateMetaDataAboutRelevantFieldsIn(upParticles: [UpParticle], in atom: 
 
 func sendToLedger(p1: Int, p2: Int, payload: [Byte]) -> [Byte] { ... }
 
-func sendToLedger(particleField: ParticleField) {
+func sendToLedger(particleField: particle_field_t) {
 	sendToLedger(
 		p1: PayloadIdentifier.particleField.rawValue, // 101
 		p2: particleField.fieldType, // .address: 200, .amount: 201, .serializer: 202,, .tokenDefRef: 203, 
@@ -49,7 +49,7 @@ func sendToLedger(particleField: ParticleField) {
 
 func stream(
 	atom: Atom, 
-	toLedgerAndSignItWithKeyAtPath bip32Path: BIP32Path
+	toLedgerAndSignItWithKeyAtPath bip32_path: BIP32Path
 ) -> ECDSASignature {
 
 	var particleFields: [ParticleFieldMetadata] = calculateMetaDataAboutRelevantFieldsIn(upParticles: atom.upParticles())
@@ -62,7 +62,7 @@ func stream(
 	sendToLedger(
 		p1: atom.spunParticles(spin: .up).count,
 		p2: atom.transferrableTokensParticles(spin: .up).count,
-		payload: bip32Path.data() + atomByteCount.data()
+		payload: bip32_path.data() + atomByteCount.data()
 	)
 
 	// Stream atom to Ledger
@@ -115,11 +115,11 @@ func stream(
 Swift inspired Pseudocode below constructs a `ParticleMetaData` being a struct of 16 bytes with the four fields in order: `address, amount, serializer, tokenDefinitionReference`, we used to use this struct earlier but now we don't. We only send the fields indiviudall and never the `ParticleMetaData` as a whole.
 
 ```swift
-func byteIntervalOf(field: Field, in particle: UpParticle) -> ByteInterval {
+func byteIntervalOf(field: Field, in particle: UpParticle) -> byte_interval_t {
 	particleCBOR := particle.cborHexString()
 	fieldCBOR := field.name.cborHexString()
 
-	return ByteInterval(
+	return byte_interval_t(
 		startsAtByte: particleCBOR.indexOf(fieldCBOR),
 		byteCount: particleCBOR.length
 	)
@@ -163,7 +163,7 @@ func metaDataOfParticlesInAtom(atom: Atom) -> [ParticleMetaData]
 ```swift
 
 // Always encode 4 byte, use BigEndian
-func encodeByteInterval(byteInterval: ByteInterval) -> ByteArray {
+func encodeByteInterval(byteInterval: byte_interval_t) -> ByteArray {
 	BigEndian2BytesFromInt16(byteInterval.startsAtByte) || BigEndian2BytesFromInt16(byteInterval.byteCount)
 }
 
@@ -178,7 +178,7 @@ func encodeParticleMetaData(particleMetaData: ParticleMetaData) -> ByteArray {
     ]
      
     return fieldsInCorrectAlphabeticalOrder
-    	// convert each `ByteInterval` into ByteArray, each 4 bytes long
+    	// convert each `byte_interval_t` into ByteArray, each 4 bytes long
     	.map(encodeByteInterval)
 	    // concat the four ByteArrays together
     	.reduce( || ) 

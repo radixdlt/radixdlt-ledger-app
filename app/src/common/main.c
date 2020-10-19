@@ -6,7 +6,7 @@
 #include "glyphs.h"
 #include "ui.h"
 
-commandContext global;
+command_context_u global;
 ux_state_t ux;
 
 static const ux_menu_entry_t menu_main[];
@@ -65,31 +65,31 @@ void io_exchange_with_code(uint16_t code, uint16_t tx) {
 // out-parameters that will control the behavior of the next io_exchange call
 // in radix_main. It's common to set *flags |= IO_ASYNC_REPLY, but tx is
 // typically unused unless the handler is immediately sending a response APDU.
-typedef void handler_fn_t(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
-                          uint16_t dataLength, volatile unsigned int *flags,
+typedef void handler_fn_t(uint8_t p1, uint8_t p2, uint8_t *data_buffer,
+                          uint16_t data_length, volatile unsigned int *flags,
                           volatile unsigned int *tx);
 
-handler_fn_t handleGetVersion;
-handler_fn_t handleGenerateRadixAddress;
-handler_fn_t handleSignAtom;
-handler_fn_t handleSignHash;
-handler_fn_t handleGetPublicKey;
-handler_fn_t handleDecryptData;
+handler_fn_t handle_get_version;
+handler_fn_t handle_generate_radix_address;
+handler_fn_t handle_sign_atom;
+handler_fn_t handle_sign_hash;
+handler_fn_t handle_get_public_key;
+handler_fn_t handle_decrypt_data;
 
 static handler_fn_t *lookupHandler(uint8_t ins) {
     switch (ins) {
         case INS_GET_VERSION:
-            return handleGetVersion;
+            return handle_get_version;
         case INS_GEN_RADIX_ADDR:
-            return handleGenerateRadixAddress;
+            return handle_generate_radix_address;
         case INS_SIGN_ATOM:
-            return handleSignAtom;
+            return handle_sign_atom;
         case INS_SIGN_HASH:
-            return handleSignHash;
+            return handle_sign_hash;
         case INS_GET_PUBLIC_KEY:
-            return handleGetPublicKey;
+            return handle_get_public_key;
         case INS_DECRYPT_DATA:
-            return handleDecryptData;
+            return handle_decrypt_data;
         default:
             return NULL;
     }

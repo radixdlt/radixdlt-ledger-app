@@ -13,7 +13,7 @@ static uint8_t divmod(uint8_t *number, uint16_t length, uint8_t divisor) {
 }
 
 // Returns true if first "length" bytes of "bytes" are zero, false otherwise
-static bool allZero(uint8_t *bytes, uint16_t length) {
+static bool all_zero(uint8_t *bytes, uint16_t length) {
 	for (int i = 0; i < length; ++i) {
 		if (bytes[i] != 0) {
 			return false;
@@ -39,9 +39,9 @@ static void reverse(char *array, int length) {
 }
 
 // Convert "bytes" of length "length" into digits of base "base" in "buffer", returning the length
-static uint16_t convertByteBufferIntoDigitsWithBase(uint8_t *bytes, int length, char *buffer, uint8_t base) {
+static uint16_t convert_byte_buffer_into_digits_with_base(uint8_t *bytes, int length, char *buffer, uint8_t base) {
 	uint16_t de_facto_length = 0;
-	while (!allZero(bytes, length)) {
+	while (!all_zero(bytes, length)) {
 		// buffer[de_facto_length++] = '0' + divmod(bytes, length, base);
 		buffer[de_facto_length++] = divmod(bytes, length, base);
 	}
@@ -52,9 +52,9 @@ static uint16_t convertByteBufferIntoDigitsWithBase(uint8_t *bytes, int length, 
 // ##### "PUBLIC" methods (declared in `.h`-file) #####
 
 // Convert "bytes" of length "length" into digits of base 10 in "buffer", returning the length
-uint16_t convertByteBufferIntoDecimal(uint8_t *bytes, int length, char *buffer)
+uint16_t convert_byte_buffer_into_decimal(uint8_t *bytes, int length, char *buffer)
 {
-	uint8_t number_of_digits = convertByteBufferIntoDigitsWithBase(bytes, length, buffer, 10);
+	uint8_t number_of_digits = convert_byte_buffer_into_digits_with_base(bytes, length, buffer, 10);
 	uint8_t asciiOffset_decimal = '0';
 	for (unsigned int digitIndex = 0; digitIndex < number_of_digits; ++digitIndex)
 	{	
@@ -65,8 +65,8 @@ uint16_t convertByteBufferIntoDecimal(uint8_t *bytes, int length, char *buffer)
 }
 
 // Convert "bytes" of length "length" into digits of base 58 in "buffer", returning the length
-uint16_t convertByteBufferIntoBase58(uint8_t *bytes, int length, char *buffer) {
-    uint8_t number_of_digits = convertByteBufferIntoDigitsWithBase(bytes, length, buffer, 58);
+uint16_t convert_byte_buffer_into_base58(uint8_t *bytes, int length, char *buffer) {
+    uint8_t number_of_digits = convert_byte_buffer_into_digits_with_base(bytes, length, buffer, 58);
 
     static const char base58_digits[] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
@@ -80,8 +80,8 @@ uint16_t convertByteBufferIntoBase58(uint8_t *bytes, int length, char *buffer) {
 }
 
 // Convert "bytes" of length "length" into digits of base 16 in "buffer", returning the length
-static uint16_t convertByteBufferIntoHexadecimal(uint8_t *bytes, int length, char *buffer) {
-    uint8_t number_of_digits = convertByteBufferIntoDigitsWithBase(bytes, length, buffer, 16);
+static uint16_t convert_byte_buffer_into_hexadecimal(uint8_t *bytes, int length, char *buffer) {
+    uint8_t number_of_digits = convert_byte_buffer_into_digits_with_base(bytes, length, buffer, 16);
 
     static const char base16_digits[] = "0123456789abcdef";
 
@@ -100,5 +100,5 @@ uint16_t hexadecimal_string_from(
 ) {
 	uint8_t copy[byte_count];
 	os_memcpy(copy, bytes, byte_count);
-	return convertByteBufferIntoHexadecimal(copy, byte_count, output_buffer);
+	return convert_byte_buffer_into_hexadecimal(copy, byte_count, output_buffer);
 }
