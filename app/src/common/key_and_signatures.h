@@ -1,10 +1,10 @@
 #include "stdint.h"
 
 int parse_bip32_path_from_apdu_command(
-    uint8_t *dataBuffer,
+    uint8_t *data_buffer,
     uint32_t *output_bip32path,
     uint8_t *output_bip32String, // might be null
-    unsigned short output_bip32PathString_length
+    unsigned short output_bip32_pathString_length
 );
 
 // derive_radix_key_pair derives a key pair from a BIP32 path and the Ledger

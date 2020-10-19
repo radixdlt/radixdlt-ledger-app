@@ -12,7 +12,7 @@
 static signHashContext_t *ctx = &global.signHashContext;
 
 static void didFinishSignAtomFlow() {
-    int tx = derive_sign_move_to_global_buffer(ctx->bip32Path, ctx->hash);
+    int tx = derive_sign_move_to_global_buffer(ctx->bip32_path, ctx->hash);
     io_exchange_with_code(SW_OK, tx);
     ui_idle();
 }
@@ -27,8 +27,8 @@ static void askUserToConfirmHash() {
     display_value("Verify Hash", proceedToFinalSignatureConfirmation);
 }
 
-void handleSignHash(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
-                    uint16_t dataLength, volatile unsigned int *flags,
+void handle_sign_hash(uint8_t p1, uint8_t p2, uint8_t *data_buffer,
+                    uint16_t data_length, volatile unsigned int *flags,
                     volatile unsigned int *tx) {
 
     uint16_t expected_number_of_bip32_compents = 3;
@@ -37,20 +37,20 @@ void handleSignHash(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
         expected_number_of_bip32_compents * byte_count_bip_component;
 
     uint16_t expected_data_length = expected_bip32_byte_count + HASH256_BYTE_COUNT;
-    if (dataLength != expected_data_length) {
-        PRINTF("'dataLength' must be: %u, but was: %d\n", expected_data_length,
-               dataLength);
+    if (data_length != expected_data_length) {
+        PRINTF("'data_length' must be: %u, but was: %d\n", expected_data_length,
+               data_length);
         THROW(SW_INVALID_PARAM);
     }
 
     // Parse BIP 32
     size_t offset_of_data = 0;
-    parse_bip32_path_from_apdu_command(dataBuffer + offset_of_data,
-                                       ctx->bip32Path, NULL, 0);
+    parse_bip32_path_from_apdu_command(data_buffer + offset_of_data,
+                                       ctx->bip32_path, NULL, 0);
     offset_of_data += expected_bip32_byte_count;
 
     // // Read the hash.
-    os_memmove(ctx->hash, dataBuffer + offset_of_data, sizeof(ctx->hash));
+    os_memmove(ctx->hash, data_buffer + offset_of_data, sizeof(ctx->hash));
 
     askUserToConfirmHash();
 

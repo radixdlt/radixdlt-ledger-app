@@ -1,12 +1,11 @@
 #ifndef GLOBALSTATE_H
 #define GLOBALSTATE_H
 
-
 #include "key_and_signatures.h"
-#include "Transfer.h"
+#include "transfer.h"
 #include "aes.h"
-#include "ParticlesCounter.h"
-#include "ParticleField.h"
+#include "particles_counter.h"
+#include "particle_field.h"
 #include "common_macros.h"
 
 typedef struct {
@@ -20,22 +19,22 @@ typedef struct {
 	uint8_t iv[IV_LEN];
 	cx_ecfp_256_public_key_t ephemeral_pubkey;
 	uint8_t mac[MAC_LEN];
-	uint8_t pointM[UNPUBLIC_KEY_COMPRESSEED_BYTE_COUNT];
-	uint8_t hashH[HASH512_LEN];
-} decryptDataContext_t;
+	uint8_t point_m[UNPUBLIC_KEY_COMPRESSEED_BYTE_COUNT];
+	uint8_t hash_h[HASH512_LEN];
+} decrypt_data_context_t;
 
 typedef struct {
-	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
-} getPublicKeyContext_t;
+	uint32_t bip32_path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
+} get_public_key_context_t;
 
 typedef struct {
-    uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
-    bool requireConfirmationOfAddress;
-    uint8_t radixUniverseMagicByte;
-} generateRadixAddressContext_t;
+    uint32_t bip32_path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
+    bool require_confirmation_of_address;
+    uint8_t radix_universe_magic_byte;
+} generate_radix_address_context_t;
 
 typedef struct {
-	uint32_t bip32Path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
+	uint32_t bip32_path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
 	uint8_t hash[HASH256_BYTE_COUNT];
 } signHashContext_t;
 
@@ -48,13 +47,13 @@ typedef struct {
 	bool is_users_public_key_calculated;
 	cx_ecfp_public_key_t my_public_key_compressed;
 
-	ParticlesCounter up_particles_counter;
+	particles_counter_t up_particles_counter;
 
 	bool user_has_accepted_non_transfer_data;
 
-	ParticleField next_particle_field_to_parse; 
-	Transfer transfer;
-} signAtomUX_t;
+	particle_field_t next_particle_field_to_parse; 
+	transfer_t transfer;
+} parse_atom_t;
 
 typedef struct {
     uint16_t atom_byte_count;
@@ -63,18 +62,18 @@ typedef struct {
 	uint8_t hash[HASH256_BYTE_COUNT];
 	uint32_t bip32_path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
 
-	signAtomUX_t ux_state;
-} signAtomContext_t;
+	parse_atom_t parse_state;
+} sign_atom_context_t;
 
 // To save memory, we store all the context types in a single global union,
 // taking advantage of the fact that only one command is executed at a time.
 typedef union {
-    generateRadixAddressContext_t generateRadixAddressContext;
-    getPublicKeyContext_t getPublicKeyContext;
+    generate_radix_address_context_t generateRadixAddressContext;
+    get_public_key_context_t getPublicKeyContext;
     signHashContext_t signHashContext;
-    signAtomContext_t signAtomContext;
-    decryptDataContext_t decryptDataContext;
-} commandContext;
-extern commandContext global;
+    sign_atom_context_t signAtomContext;
+    decrypt_data_context_t decryptDataContext;
+} command_context_u;
+extern command_context_u global;
 
 #endif
