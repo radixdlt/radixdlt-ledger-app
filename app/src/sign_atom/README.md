@@ -19,92 +19,92 @@ In the case of **non**-`TransferrableTokensParticles` (e.g. `MessageParticle`, `
 
 ```swift
 func calculateMetaDataAboutRelevantFieldsIn(upParticles: [UpParticle], in atom: Atom) -> [ParticleFieldMetadata] {
-	return upParticles.flatMap { upParticle in
-		if let transferrableTokensParticle = upParticle {
-			return [
-				transferrableTokensParticle.field(type: .address),
-				transferrableTokensParticle.field(type: .amount), 
-				transferrableTokensParticle.field(type: .serialzier), 
-				transferrableTokensParticle.field(type: .tokenDefinitionReference)
-			].map { field in 
-				byte_interval_t(ofField: field, in: atom) 
-			}
-		} else {
-			return [
-				byte_interval_t(ofField: upParticle.field(type: .serialzier), in: atom) 
-			]
-		}
-	}
+    return upParticles.flatMap { upParticle in
+        if let transferrableTokensParticle = upParticle {
+            return [
+                transferrableTokensParticle.field(type: .address),
+                transferrableTokensParticle.field(type: .amount), 
+                transferrableTokensParticle.field(type: .serialzier), 
+                transferrableTokensParticle.field(type: .tokenDefinitionReference)
+            ].map { field in 
+                byte_interval_t(ofField: field, in: atom) 
+            }
+        } else {
+            return [
+                byte_interval_t(ofField: upParticle.field(type: .serialzier), in: atom) 
+            ]
+        }
+    }
 }
 
 func sendToLedger(p1: Int, p2: Int, payload: [Byte]) -> [Byte] { ... }
 
 func sendToLedger(particleField: particle_field_t) {
-	sendToLedger(
-		p1: PayloadIdentifier.particleField.rawValue, // 101
-		p2: particleField.fieldType, // .address: 200, .amount: 201, .serializer: 202,, .tokenDefRef: 203, 
-		payload: particleField.rawBytes // 4 bytes
-	)
+    sendToLedger(
+        p1: PayloadIdentifier.particleField.rawValue, // 101
+        p2: particleField.fieldType, // .address: 200, .amount: 201, .serializer: 202,, .tokenDefRef: 203, 
+        payload: particleField.rawBytes // 4 bytes
+    )
 }
 
 func stream(
-	atom: Atom, 
-	toLedgerAndSignItWithKeyAtPath bip32_path: BIP32Path
+    atom: Atom, 
+    toLedgerAndSignItWithKeyAtPath bip32_path: BIP32Path
 ) -> ECDSASignature {
 
-	var particleFields: [ParticleFieldMetadata] = calculateMetaDataAboutRelevantFieldsIn(upParticles: atom.upParticles())
+    var particleFields: [ParticleFieldMetadata] = calculateMetaDataAboutRelevantFieldsIn(upParticles: atom.upParticles())
 
-	var remainingBytesInAtom: [Byte] = atom.dsonEncodedData()
+    var remainingBytesInAtom: [Byte] = atom.dsonEncodedData()
 
-	// Send initial "setup" packet
-	
-	let atomByteCount = remainingBytesInAtom.count
-	sendToLedger(
-		p1: atom.spunParticles(spin: .up).count,
-		p2: atom.transferrableTokensParticles(spin: .up).count,
-		payload: bip32_path.data() + atomByteCount.data()
-	)
+    // Send initial "setup" packet
+    
+    let atomByteCount = remainingBytesInAtom.count
+    sendToLedger(
+        p1: atom.spunParticles(spin: .up).count,
+        p2: atom.transferrableTokensParticles(spin: .up).count,
+        payload: bip32_path.data() + atomByteCount.data()
+    )
 
-	// Stream atom to Ledger
+    // Stream atom to Ledger
 
-	var numberOfAtomBytesSent = 0
+    var numberOfAtomBytesSent = 0
 
-	func sendToLedgerAtomBytes(count atomByteCount: Int) -> [Byte] {
-		// atomBytes: [Byte]
+    func sendToLedgerAtomBytes(count atomByteCount: Int) -> [Byte] {
+        // atomBytes: [Byte]
 
-		let response = sendToLedger(
-			p1: PayloadIdentifier.particleField.rawValue, // 100
-			p2: 0x00,
-			payload: atomBytes
-		)
+        let response = sendToLedger(
+            p1: PayloadIdentifier.particleField.rawValue, // 100
+            p2: 0x00,
+            payload: atomBytes
+        )
 
-		numberOfAtomBytesSent += atomBytes.count
-		remainingBytesInAtom = remainingBytesInAtom.removingFirst(atomBytes.count)
+        numberOfAtomBytesSent += atomBytes.count
+        remainingBytesInAtom = remainingBytesInAtom.removingFirst(atomBytes.count)
 
-		if remainingBytesInAtom.count == 0 {
-			print("💡 Expected Hash (verify on Ledger): \(atom.hash())")
-		}
+        if remainingBytesInAtom.count == 0 {
+            print("💡 Expected Hash (verify on Ledger): \(atom.hash())")
+        }
 
-		return response
-	}
+        return response
+    }
 
-	var result: [Byte]! 
-	while numberOfAtomBytesSent < atomByteCount {
-		let maybeField = particleFields.first()
+    var result: [Byte]! 
+    while numberOfAtomBytesSent < atomByteCount {
+        let maybeField = particleFields.first()
 
-		let nextRelevantEnd = maybeField?.startIndexInAtom ?? atomByteCount
+        let nextRelevantEnd = maybeField?.startIndexInAtom ?? atomByteCount
 
-		if let particleField = maybeField, particleField.startIndexInAtom == atomByteCount {
-			sendToLedger(particleField: particleField)
-			sendToLedgerAtomBytes(count: particleField.byteCount)
-		} else {
-			let ledgerPayloadMaxSize = 255
-			result = sendToLedgerAtomBytes(count: min(ledgerPayloadMaxSize, nextRelevantEnd - numberOfAtomBytesSent))
-		}
-	}
-	guard let signatureFromLedger = result else { fatalError("Expected signature from Ledger") }
+        if let particleField = maybeField, particleField.startIndexInAtom == atomByteCount {
+            sendToLedger(particleField: particleField)
+            sendToLedgerAtomBytes(count: particleField.byteCount)
+        } else {
+            let ledgerPayloadMaxSize = 255
+            result = sendToLedgerAtomBytes(count: min(ledgerPayloadMaxSize, nextRelevantEnd - numberOfAtomBytesSent))
+        }
+    }
+    guard let signatureFromLedger = result else { fatalError("Expected signature from Ledger") }
 
-	return ECDSASignature(bytes: signatureFromLedger)
+    return ECDSASignature(bytes: signatureFromLedger)
 }
 ```
 
@@ -116,46 +116,46 @@ Swift inspired Pseudocode below constructs a `ParticleMetaData` being a struct o
 
 ```swift
 func byteIntervalOf(field: Field, in particle: UpParticle) -> byte_interval_t {
-	particleCBOR := particle.cborHexString()
-	fieldCBOR := field.name.cborHexString()
+    particleCBOR := particle.cborHexString()
+    fieldCBOR := field.name.cborHexString()
 
-	return byte_interval_t(
-		startsAtByte: particleCBOR.indexOf(fieldCBOR),
-		byteCount: particleCBOR.length
-	)
+    return byte_interval_t(
+        startsAtByte: particleCBOR.indexOf(fieldCBOR),
+        byteCount: particleCBOR.length
+    )
 }
 
 func metaDataOfUpParticle(upParticle: UpParticle, in atom: Atom) -> ParticleMetaData
 
-	intervalOf := lambda(f) -> byteIntervalOf(field: f, in: upParticle)
+    intervalOf := lambda(f) -> byteIntervalOf(field: f, in: upParticle)
 
-	if upParticle is TransferrableTokensParticle {
-		metaData := ParticleMetaData(
-			address: intervalOf(.address),
-			amount: intervalOf(.amount),
-			serializer: intervalOf(.serializer),
-			tokenDefinitionReference: intervalOf(.rri),
-	} else {
-		metaData := ParticleMetaData(
-			address: .zero,
-			amount: .zero,
-			serializer: intervalOf(.serializer),
-			tokenDefinitionReference: .zero,
-		)
-	}
+    if upParticle is TransferrableTokensParticle {
+        metaData := ParticleMetaData(
+            address: intervalOf(.address),
+            amount: intervalOf(.amount),
+            serializer: intervalOf(.serializer),
+            tokenDefinitionReference: intervalOf(.rri),
+    } else {
+        metaData := ParticleMetaData(
+            address: .zero,
+            amount: .zero,
+            serializer: intervalOf(.serializer),
+            tokenDefinitionReference: .zero,
+        )
+    }
 
-	atomCBOR := atom.cborHexString()
-	particleCBOR := upParticle.cborHexString()
-	particleOffsetInAtom := atomCBOR.indexOf(particleCBOR)
-	
-	return metaData.withOffsetInAtom(particleOffsetInAtom)
+    atomCBOR := atom.cborHexString()
+    particleCBOR := upParticle.cborHexString()
+    particleOffsetInAtom := atomCBOR.indexOf(particleCBOR)
+    
+    return metaData.withOffsetInAtom(particleOffsetInAtom)
 
 func metaDataOfParticlesInAtom(atom: Atom) -> [ParticleMetaData]
-	metaDataAboutParticles := []
-	forEach upParticle in atom
-		metaData := metaDataOfUpParticle(upParticle, in: atom)
-		metaDataAboutParticles.append(metaData)
-	return metaDataAboutParticles
+    metaDataAboutParticles := []
+    forEach upParticle in atom
+        metaData := metaDataOfUpParticle(upParticle, in: atom)
+        metaDataAboutParticles.append(metaData)
+    return metaDataAboutParticles
 ```
 
 ### MetaData Encoding
@@ -164,12 +164,12 @@ func metaDataOfParticlesInAtom(atom: Atom) -> [ParticleMetaData]
 
 // Always encode 4 byte, use BigEndian
 func encodeByteInterval(byteInterval: byte_interval_t) -> ByteArray {
-	BigEndian2BytesFromInt16(byteInterval.startsAtByte) || BigEndian2BytesFromInt16(byteInterval.byteCount)
+    BigEndian2BytesFromInt16(byteInterval.startsAtByte) || BigEndian2BytesFromInt16(byteInterval.byteCount)
 }
 
 // Returns 16 BigEndian encoded ByteArray from ParticleMetaData
 func encodeParticleMetaData(particleMetaData: ParticleMetaData) -> ByteArray {
-	// MUST be in the same order as the fields are encoded to CBOR:
+    // MUST be in the same order as the fields are encoded to CBOR:
     let fieldsInCorrectAlphabeticalOrder := [
         addressByteInterval,
         amountByteInterval,
@@ -178,9 +178,9 @@ func encodeParticleMetaData(particleMetaData: ParticleMetaData) -> ByteArray {
     ]
      
     return fieldsInCorrectAlphabeticalOrder
-    	// convert each `byte_interval_t` into ByteArray, each 4 bytes long
-    	.map(encodeByteInterval)
-	    // concat the four ByteArrays together
-    	.reduce( || ) 
+        // convert each `byte_interval_t` into ByteArray, each 4 bytes long
+        .map(encodeByteInterval)
+        // concat the four ByteArrays together
+        .reduce( || ) 
 }
 ```
