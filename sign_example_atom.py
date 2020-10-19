@@ -107,19 +107,15 @@ class ParticleField(object):
 
 
 class Transfer(object):
-	def __init__(self, dict=None):
-		if dict is None:
-			self.address = None
-			self.amount = None
-			self.is_transfer_change_back_to_sender = None
-			self.token_definition_reference = None
-			return
+	def __init__(self):
+		self.address = None
+		self.amount = None
+		self.is_transfer_change_back_to_sender = None
+		self.token_definition_reference = None
 
-		self.address = dict['recipient'] # string
-		self.amount = int(dict['amount'])
-		self.is_transfer_change_back_to_sender = bool(dict['isChangeBackToUserHerself'])
-		self.token_definition_reference = dict['tokenDefinitionReference'] # string
-
+	def set_address(self, address: str, sender_address: str) -> None:
+		self.address = address
+		self.is_transfer_change_back_to_sender = address == sender_address
 
 	def __repr__(self) -> str:
 		return """
@@ -135,9 +131,6 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 		self.amount,
 		self.token_definition_reference.split("/")[-1] # last element after split on '/' == Token symbol
 	)
-
-	def equals(self, other: Transfer) -> bool:
-		return self.address == other.address and self.amount == other.amount and self.token_definition_reference == other.token_definition_reference
 
 class ParticleMetaData(object):
 	def __init__(self, bytes: bytearray):
@@ -191,16 +184,6 @@ class TestVector(object):
 	def description(self) -> str:
 		return self.descriptionOfTest
 
-	def get_list_of_transfers(self) -> List[Transfer]:
-		if self.__dict__.get('transfers') is None:
-			assert self.number_of_transferrable_tokens_particles_with_spin_up() == 0, "Expected number of TTP to be zero."
-			return None
-
-		transfers_list = self.transfers
-		transfers = list(map(lambda t: Transfer(t), transfers_list))
-		assert len(transfers) == self.number_of_transferrable_tokens_particles_with_spin_up()
-		return transfers
-
 	def addresses(self) -> List[str]:
 		return self.atomDescription['allAddresses']
 
@@ -208,6 +191,9 @@ class TestVector(object):
 	# using mnemonic: <equip will roof matter pink blind book anxiety banner elbow sun young>
 	def alice_private_key(self) -> str:
 		return self.expected['privateKeyAlice']
+
+	def sender_address(self) -> str:
+		return self.expected['addressAlice']
 
 	def __particle_meta_data(self) -> bytearray:
 		return bytearray.fromhex(self.atomDescription['particleSpinUpMetaDataHex'])
@@ -378,9 +364,6 @@ class StreamVector(object):
 				assert last_field.byte_interval.starts_at_byte < field.byte_interval.starts_at_byte, "Expected strictly increasing order of fields"
 			last_field = field
 
-		self.transfers_not_yet_identified = vector.get_list_of_transfers()
-
-		self.last_particle_field_sent_to_ledger = None
 		self.pending_transfer = None # Optional[Transfer] - used only to validate correctnes...
 
 
@@ -437,7 +420,7 @@ class StreamVector(object):
 			if field.field_type == ParticleFieldType.ADDRESS:
 				assert self.pending_transfer is None
 				self.pending_transfer = Transfer()
-				self.pending_transfer.address = decoded_field
+				self.pending_transfer.set_address(decoded_field, sender_address=vector.sender_address())
 			elif field.field_type == ParticleFieldType.AMOUNT:
 				assert not self.pending_transfer is None
 				self.pending_transfer.amount = decoded_field
@@ -453,10 +436,8 @@ class StreamVector(object):
 				assert not self.pending_transfer is None
 				self.pending_transfer.token_definition_reference = decoded_field
 
-				transfer = self.transfers_not_yet_identified.pop(0)
-				assert transfer.equals(self.pending_transfer), "Expected transfers to equal..."
-				if not transfer.is_transfer_change_back_to_sender:
-					print(f"  --> Verify that transfer identified by ledger matches this:\n{transfer}\n")
+				if not self.pending_transfer.is_transfer_change_back_to_sender:
+					print(f"  --> Verify that transfer identified by ledger matches this:\n{self.pending_transfer}\n")
 				self.pending_transfer = None
 			else:
 				raise ValueError("Unsupported field type")
@@ -475,9 +456,9 @@ class StreamVector(object):
 
 		return result
 
-	def send_to_ledger_atom_bytes_count(self, byte_count: int) -> Tuple[bool, bytearray]:
+	def send_to_ledger_atom_bytes_count(self, byte_count: int, field: ParticleField = None) -> Tuple[bool, bytearray]:
 		atom_bytes = self.remaining_atom_bytes[0:byte_count]
-		return self.send_to_ledger_atom_bytes(atom_bytes)
+		return self.send_to_ledger_atom_bytes(atom_bytes, field)
 
 	def send_initial_setup_payload_to_ledger(self):
 		(success, _) = send_to_ledger(
@@ -504,17 +485,9 @@ class StreamVector(object):
 					should_send_particle_field_metadata = True
 
 			if should_send_particle_field_metadata:
-
 				self.send_to_ledger_particle_field(next_particle_field)
-
-
 				self.relevant_particle_fields_to_send_to_ledger.pop(0)
-				self.last_particle_field_sent_to_ledger = next_particle_field
-
-				particle_field_atom_byte_count = next_particle_field.byte_interval.byte_count
-
-				particle_field_atom_bytes = self.remaining_atom_bytes[0:particle_field_atom_byte_count]
-				self.send_to_ledger_atom_bytes(particle_field_atom_bytes, field=next_particle_field)
+				self.send_to_ledger_atom_bytes_count(next_particle_field.byte_interval.byte_count, field=next_particle_field)
 
 			else:
 				number_of_atom_bytes_to_send = min(MAX_SIZE_PAYLOAD, next_relevant_end - self.count_bytes_sent_to_ledger)
