@@ -1,9 +1,8 @@
-# Radix DLT App - Ledger Nano S
-## General structure
+# General structure
 
 The general structure of commands and responses is as follows:
 
-### Commands
+## Commands
 
 | Field   | Type     | Content                | Note |
 | :------ | :------- | :--------------------- | ---- |
@@ -14,19 +13,19 @@ The general structure of commands and responses is as follows:
 | L       | byte (1) | Bytes in payload       |      |
 | PAYLOAD | byte (L) | Payload                |      |
 
-### Response
+## Response
 
 | Field   | Type     | Content     | Note                     |
 | ------- | -------- | ----------- | ------------------------ |
 | ANSWER  | byte (?) | Answer      | depends on the command   |
 | SW1-SW2 | byte (2) | Return code | see list of return codes |
 
-### Return codes
+## Return codes
 
-#### Ledger's internal return codes
+### Ledger's internal return codes
 Please refer to [these codes found in `os.h`](https://github.com/LedgerHQ/nanos-secure-sdk/blob/master/include/os.h#L828-L846)
 
-#### Radix Ledger app return codes
+### Radix Ledger app return codes
 
 | Return code   | Description             |
 | ------------- | ----------------------- |
@@ -38,11 +37,10 @@ Please refer to [these codes found in `os.h`](https://github.com/LedgerHQ/nanos-
 | 0x6E00        | Incorrect CLA  		  |
 | 0x9000        | Success                 |
 
-## Command definition
+# Get Version
+## `INS_GET_VERSION`
 
-### INS_GET_VERSION
-
-#### Command
+## Command
 
 | Field | Type     | Content                | Expected |
 | ----- | -------- | ---------------------- | -------- |
@@ -52,7 +50,7 @@ Please refer to [these codes found in `os.h`](https://github.com/LedgerHQ/nanos-
 | P2    | byte (1) | Parameter 2            | ignored  |
 | L     | byte (1) | Bytes in payload       | 0        |
 
-#### Response
+## Response
 
 | Field   | Type     | Content          | Note                            |
 | ------- | -------- | ---------------- | ------------------------------- |
@@ -65,9 +63,10 @@ Please refer to [these codes found in `os.h`](https://github.com/LedgerHQ/nanos-
 
 --------------
 
-### INS_GEN_RADIX_ADDR
+# Generate Radix Address
+## INS_GEN_RADIX_ADDR
 
-#### Command
+## Command
 
 | Field      | Type           | Content                        | Expected       |
 | ---------- | -------------- | ------------------------------ | -------------- |
@@ -89,7 +88,7 @@ Please refer to [these codes found in `os.h`](https://github.com/LedgerHQ/nanos-
 
 **First item in the derivation path, data at index 2 (i.e. third component) will be automatically hardened**
 
-#### Response
+## Response
 
 Radix Address is `public key + magicByte + checksum`. Where the `magicByte` is the
 most significant byte of the `Int32` called "magic", identifying the "Radix Universe". 
@@ -104,19 +103,23 @@ The base58 encoding of the RadixAddress results in a 51-52 b58 characters long s
 | ADDR    | byte (max 52) | Radix Address on b58 format  | Variable length 51 or 52 chars |
 | SW1-SW2 | byte (2)  | Return code           | see list of return codes |
 
+# Sign Atom
+## INS_SIGN_ATOM_SECP256K1
 
-### INS_SIGN_ATOM_SECP256K1
+*For full documentation see [`SIGN_ATOM.MD`](SIGN_ATOM.MD)*
 
-Streaming of Atom data in multiple chunks/packets, first chunk will contain meta data about atom and instructions on how to [CBOR - Consice Binary Object Representation](http://cbor.io/) decode the particles in the atom.
+Streaming of Atom data in multiple packets, the first one is a special intial "setup" packet, containing the BIP32 derivation path to the key used to sign as well as the size of the atom in bytes as payload, these two byte strings are **required** to hash and sign the atom. The packet also contains `P1` telling the Ledger App the total number of UP particles in the atom, and `P2` the total number of transferrable tokens particle with spin UP.
 
-#### Command
+## Initial Packet
+
+### Command
 
 | Field | Type      | Content                            | Expected  |
 | ----- | --------- | ---------------------------------- | --------- |
 | CLA   | byte (1)  | Application Identifier             | 0xAA      |
 | INS   | byte (1)  | Instruction ID                     | 0x02      |
 | P1    | byte (1)  | Total no. of particles w spin UP   | ?         |
-| P2    | byte (1)  | ----                               | not used  |
+| P2    | byte (1)  | Total no of TokenParticles w spin UP| ?  |
 | L  		| byte (1)  | Length of Payload          | ?   |
 | |
 | DEFINITION OF PAYLOAD |
@@ -124,22 +127,29 @@ Streaming of Atom data in multiple chunks/packets, first chunk will contain meta
 | Path[3]    | byte (4)       | Derivation Path index 3 Data   | ?              |
 | Path[4]    | byte (4)       | Derivation Path index 4 Data   | ?              |
 | AtomSize | byte (2<sup id="sa1">[1](#sa1)</sup>) | CBOR encoded Atom byte count | ? |
-| MetaData UP Particles<sup id="sa2">[2](#sa2)</sup> | bytes | MetaData about how to CBOR decode each UP particle | `P1` * 16 bytes |
 
 <b id="sa1">1:</b> Atom size as 2 bytes => 16 bits => 2^16 = 65536 bytes being MAX size of any Atom signed.
 
-<b id="sa2">2:</b> Please see [SIGN_ATOM.md](SIGN_ATOM.md) docs for detailed info about this metadata.
-
 **First item in the derivation path, data at index 2 (i.e. third component) will be automatically hardened**
 
-*Other Chunks/Packets*
+### Response
+None
 
-| Field   | Type     | Content                                              | Expected |
-| ------- | -------- | ---------------------------------------------------- | -------- |
-| Atom chunk | bytes... | Chunk of max 255 bytes  |      ?    |
+## Atom Packets
+
+If `P1==101` then `P2` contains the identifier for a paritcle field byte interval.
+
+### Command
+
+| Field | Type      | Content                            | Expected  |
+| ----- | --------- | ---------------------------------- | --------- |
+| P1    | byte (1)  | PayloadTypeIdentifier   | `100=bytes in atom` or `101=payload is ParticleFieldTypeIdentifier` |
+| P2    | byte (1)  | If P1==100: ParticleFieldTypeIdentifier (see [`SIGN_ATOM.MD`](SIGN_ATOM.MD))| ?  |
+| L  		| byte (1)  | Length of Payload          | ?   |
+| PAYLOAD | byte (L) | Either "raw" atom bytes (P1==100) or 4 bytes particle field byte interval                |  MAX 255 bytes    |
 
 
-#### Response
+### Response
 
 | Field   | Type      | Content     | Note                     |
 | ------- | --------- | ----------- | ------------------------ |
@@ -148,10 +158,11 @@ Streaming of Atom data in multiple chunks/packets, first chunk will contain meta
 
 --------------
 
-### INS_SIGN_HASH_SECP256K1
+# Sign Hash
+## INS_SIGN_HASH_SECP256K1
 (This command might be removed in the future in favour of `INS_SIGN_ATOM_SECP256K1`)
 
-#### Command
+### Command
 
 | Field     | Type      | Content                    | Expected  |
 | --------- | --------- | -------------------------- | --------- |
@@ -165,7 +176,7 @@ Streaming of Atom data in multiple chunks/packets, first chunk will contain meta
 <b id="sh1">1:</b> 5 derivation paths with 4 bytes each => 20 bytes.  
 <b id="sh2">2:</b> SHA256 hashing algorighm used => 32 bytes long hash.  
 
-#### Response
+### Response
 
 | Field   | Type      | Content     | Note                     |
 | ------- | --------- | ----------- | ------------------------ |
@@ -173,11 +184,12 @@ Streaming of Atom data in multiple chunks/packets, first chunk will contain meta
 | SW1-SW2 | byte (2)  | Return code | see list of return codes |
 
 
-### INS_GET_PUB_KEY_SECP256K1
+# Get Public Key
+## INS_GET_PUB_KEY_SECP256K1
 (This command might be removed in the future in favour of `INS_GET_ADDR_SECP256K1`)
 
 
-#### Command
+## Command
 
 | Field     | Type          | Content                       | Expected      |
 | --------- | ------------- | ----------------------------- | ------------- |
@@ -192,7 +204,7 @@ Streaming of Atom data in multiple chunks/packets, first chunk will contain meta
 <b id="gpk1">1:</b> 3 derivation paths with 4 bytes each => 12 bytes. We omit the first two paths, and let them be hardcoded to: "44'/536'" 
 
 
-#### Response
+## Response
 
 | Field   | Type      | Content     			| Note                     |
 | ------- | --------- | ----------------------- | ------------------------ |
@@ -200,13 +212,16 @@ Streaming of Atom data in multiple chunks/packets, first chunk will contain meta
 | SW1-SW2 | byte (2)  | Return code 			| see list of return codes |
 
 
-### INS_DECRYPT_DATA
+# Decrypt Data (message)
+## INS_DECRYPT_DATA
 
 Streaming of ECIES encrypted data in multiple chunks/packets, first chunk will contain everything BUT the actual cipher text. After this initial chunk we expect the host machine to stream 1-N chunks where each chunk must be 240 bytes (or less). The size of the chunk MUST be a multiple of 16 (AES block size).
 
 When you are streaming the encrypted cipher text in N chunk from the host machine to the Ledger, you must read the response data from each chunk, because that contains the part of the decrypted message. If you encounter error code `0x6986` (INVALID MAC CODE) then the encrypted message MAC does not match the one from Ledger. 
 
-#### Command
+## Initial packet
+
+### Command
 
 | Field | Type      | Content                            | Expected  |
 | ----- | --------- | ---------------------------------- | --------- |
@@ -228,14 +243,19 @@ When you are streaming the encrypted cipher text in N chunk from the host machin
 
 **First item in the derivation path, data at index 2 (i.e. third component) will be automatically hardened**
 
-*Other Chunks/Packets*
+### Response
+None
+
+## Cipher Text Packets
+
+### Command
 
 | Field   | Type     | Content                                              | Expected |
 | ------- | -------- | ---------------------------------------------------- | -------- |
 | Cipher text chunk | bytes... | Chunk of max 240 bytes  |      ?    |
 
 
-#### Responses
+### Responses
 
 | Field   | Type      | Content     | Note                     |
 | ------- | --------- | ----------- | ------------------------ |

@@ -60,19 +60,11 @@ If you wanna test specific atom, you can select a specific atom with `--inputAto
 python sign_example_atom.py --i vectors/sign_atom/data_no_transfer_burn_action.json
 ```
 
-Have a look
-
 
 You can also run test all atoms with the command:
 
 ```sh
 python sign_example_atom.py --all
-```
-
-You can also skip UI confirmation regarding everything except the actual signing (tried skipping it, results in crash... 🤷‍♂️ ), by passing the `--skipConfirmation` flag. This can of course be combined with the `--i` and/or `--all` flag, like so:
-
-```sh
-python sign_example_atom.py --all --skipConfirmation
 ```
 
 
