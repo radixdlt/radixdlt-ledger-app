@@ -123,13 +123,13 @@ class Transfer(object):
 
 	def __repr__(self) -> str:
 		return """
-"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 Transfer(
     Address b58: {}
     Amount (dec): {} E-18
     Token symbol: {}
 )
-"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 """.format(
 		self.address,
 		self.amount,
