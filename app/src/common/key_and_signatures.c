@@ -10,18 +10,18 @@
 #define KEY_SEED_BYTE_COUNT 32
 
 static void get_key_seed(
-    uint8_t* keySeed, 
+    uint8_t* key_seed, 
     uint32_t *bip32path
 ) {
 
     BEGIN_TRY {
         TRY {
             io_seproxyhal_io_heartbeat();
-            os_perso_derive_node_bip32(CX_CURVE_256K1, bip32path, 5, keySeed, NULL);
+            os_perso_derive_node_bip32(CX_CURVE_256K1, bip32path, 5, key_seed, NULL);
             io_seproxyhal_io_heartbeat();
         }
         CATCH_OTHER(e) {
-            os_memset(keySeed, 0, KEY_SEED_BYTE_COUNT);
+            os_memset(key_seed, 0, KEY_SEED_BYTE_COUNT);
             switch (e) {
                 case EXCEPTION_SECURITY: {
                     PRINTF("FAILED call 'os_perso_derive_node_bip32', error: 'EXCEPTION_SECURITY' (==%d)\n", e);
@@ -97,23 +97,23 @@ void uncompress_public_key(
     os_memcpy(uncompressed_pubkey_res + 1 + FIELD_SCALAR_SIZE, y, FIELD_SCALAR_SIZE);
 }
 
-void compress_public_key(cx_ecfp_public_key_t *publicKey) {
+void compress_public_key(cx_ecfp_public_key_t *public_key) {
     // Uncompressed key has 0x04 + X (32 bytes) + Y (32 bytes).
-    if (publicKey->W_len != 65 || publicKey->W[0] != 0x04) {
+    if (public_key->W_len != 65 || public_key->W[0] != 0x04) {
         PRINTF("compressPubKey: Input public key is incorrect\n");
         THROW(SW_INVALID_PARAM);
     }
 
     // check if Y is even or odd. Assuming big-endian, just check the last byte.
-    if (publicKey->W[64] % 2 == 0) {
+    if (public_key->W[64] % 2 == 0) {
         // Even
-        publicKey->W[0] = 0x02;
+        public_key->W[0] = 0x02;
     } else {
         // Odd
-        publicKey->W[0] = 0x03;
+        public_key->W[0] = 0x03;
     }
 
-    publicKey->W_len = PUBLIC_KEY_COMPRESSEED_BYTE_COUNT;
+    public_key->W_len = PUBLIC_KEY_COMPRESSEED_BYTE_COUNT;
 }
 
 static void format_signature_out(const uint8_t *signature)
@@ -144,7 +144,7 @@ static void format_signature_out(const uint8_t *signature)
 static int ecdsa_sign_hash_and_zero_out_private_key(
     cx_ecfp_private_key_t *privateKey,  // might be NULL if you do 'verify'
     cx_ecfp_public_key_t
-        *publicKey,  // might be NULL if you do 'sign' instead of 'verify'
+        *public_key,  // might be NULL if you do 'sign' instead of 'verify'
     const unsigned char *in,
     unsigned short inlen, volatile unsigned char *out, unsigned short outlen,
     unsigned char use_rfc6979_deterministic_signing) {
@@ -244,30 +244,30 @@ int parse_bip32_path_from_apdu_command(
 
 void derive_radix_key_pair(
     uint32_t *bip32path, 
-    volatile cx_ecfp_public_key_t *publicKey,
-    volatile cx_ecfp_private_key_t *privateKey_nullable
+    volatile cx_ecfp_public_key_t *public_key,
+    volatile cx_ecfp_private_key_t *private_key_nullable
 ) {
 
-    assert (publicKey);
-    volatile cx_ecfp_private_key_t privateKeyLocal;
-    volatile uint8_t keySeed[KEY_SEED_BYTE_COUNT];
+    assert (public_key);
+    volatile cx_ecfp_private_key_t private_key_local;
+    volatile uint8_t key_seed[KEY_SEED_BYTE_COUNT];
     volatile uint16_t error = 0;
 
     BEGIN_TRY {
         TRY {
-            get_key_seed(keySeed, bip32path);
-            cx_ecfp_init_private_key(CX_CURVE_SECP256K1, keySeed, 32, &privateKeyLocal);
-            cx_ecfp_init_public_key(CX_CURVE_SECP256K1, NULL, 0, publicKey);
-            cx_ecfp_generate_pair(CX_CURVE_SECP256K1, publicKey, &privateKeyLocal, 1);
+            get_key_seed(key_seed, bip32path);
+            cx_ecfp_init_private_key(CX_CURVE_SECP256K1, key_seed, 32, &private_key_local);
+            cx_ecfp_init_public_key(CX_CURVE_SECP256K1, NULL, 0, public_key);
+            cx_ecfp_generate_pair(CX_CURVE_SECP256K1, public_key, &private_key_local, 1);
 
-            if (privateKey_nullable) { 
-                os_memcpy(privateKey_nullable, &privateKeyLocal, sizeof(privateKeyLocal));
+            if (private_key_nullable) { 
+                os_memcpy(private_key_nullable, &private_key_local, sizeof(private_key_local));
             }
         }
         CATCH_OTHER(e) { error = e; }
         FINALLY { 
-            explicit_bzero(keySeed, sizeof(KEY_SEED_BYTE_COUNT));
-            explicit_bzero(&privateKeyLocal, sizeof(privateKeyLocal));
+            explicit_bzero(key_seed, sizeof(KEY_SEED_BYTE_COUNT));
+            explicit_bzero(&private_key_local, sizeof(private_key_local));
         }
     }
     END_TRY;
@@ -276,15 +276,15 @@ void derive_radix_key_pair(
         PRINTF("Error? code: %d\n", error);
     }
 
-    compress_public_key(publicKey);
+    compress_public_key(public_key);
  
 }
 
 size_t derive_sign_move_to_global_buffer(uint32_t *bip32path,
                                          const uint8_t *hash) {
-    volatile cx_ecfp_public_key_t publicKey;
+    volatile cx_ecfp_public_key_t public_key;
     volatile cx_ecfp_private_key_t privateKey;
-    derive_radix_key_pair(bip32path, &publicKey, &privateKey);
+    derive_radix_key_pair(bip32path, &public_key, &privateKey);
 
     int over_estimated_DER_sig_length = 80;  // min length is 70.
     volatile uint8_t der_sig[over_estimated_DER_sig_length + 1];
@@ -297,8 +297,8 @@ size_t derive_sign_move_to_global_buffer(uint32_t *bip32path,
         1  // use deterministic signing
     );
 
-    int derSignatureLength = der_sig[1] + 2;
-    if (derSignatureLength != actual_DER_sig_length) {
+    int der_signature_length = der_sig[1] + 2;
+    if (der_signature_length != actual_DER_sig_length) {
         FATAL_ERROR("LENGTH MISMATCH");
     }
 

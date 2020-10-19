@@ -7,7 +7,7 @@
 #include "common_macros.h"
 
 size_t to_string_rri(
-    RadixResourceIdentifier *rri,
+    radix_resource_identifier_t *rri,
     char *output_buffer,
     const size_t size_of_buffer,
     bool skip_address
@@ -16,7 +16,7 @@ size_t to_string_rri(
 }
 
 size_t to_string_rri_null_term_or_not(
-    RadixResourceIdentifier *rri,
+    radix_resource_identifier_t *rri,
     char *output_buffer,
     const size_t size_of_buffer,
     bool skip_address,
@@ -64,7 +64,7 @@ size_t to_string_rri_null_term_or_not(
     }
 }
 
-void printRRI(RadixResourceIdentifier *rri) {
+void print_radix_resource_identifier(radix_resource_identifier_t *rri) {
     const size_t max_length = RADIX_RRI_STRING_LENGTH_MAX;
     char rri_utf8_string[max_length];
     to_string_rri(rri, rri_utf8_string, max_length, true);

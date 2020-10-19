@@ -13,22 +13,22 @@
 typedef struct {
     /* On format: `/:address/:name`, e.g.: `"/JH1P8f3znbyrDj8F4RWpix7hRkgxqHjdW2fNnKpR3v6ufXnknor/XRD"` */
     uint8_t bytes[RADIX_RRI_MAX_BYTE_COUNT];
-} RadixResourceIdentifier;
+} radix_resource_identifier_t;
 
 size_t to_string_rri(
-    RadixResourceIdentifier *rri,
+    radix_resource_identifier_t *rri,
     char *output_buffer,
     const size_t size_of_buffer,
     bool skip_address
 );
 
 size_t to_string_rri_null_term_or_not(
-    RadixResourceIdentifier *rri,
+    radix_resource_identifier_t *rri,
     char *output_buffer,
     const size_t size_of_buffer,
     bool skip_address,
     bool null_terminate);
 
-void printRRI(RadixResourceIdentifier *rri);
+void print_radix_resource_identifier(radix_resource_identifier_t *rri);
 
 #endif

@@ -12,7 +12,7 @@
 #include "pkcs7_padding.h"
 #include "stddef.h"
 
-static decrypt_data_context_t *ctx = &global.decryptDataContext;
+static decrypt_data_context_t *ctx = &global.decrypt_data_context;
 
 static unsigned short ux_visible_element_index = 0;
 
@@ -119,15 +119,15 @@ static void parse_input_of_first_chunk(
    
     // FINISHED PARSING INPUT
     int KEY_SEED_BYTE_COUNT = 32;
-    volatile uint8_t keySeed[KEY_SEED_BYTE_COUNT];
+    volatile uint8_t key_seed[KEY_SEED_BYTE_COUNT];
     volatile uint16_t error = 0;
     BEGIN_TRY {
         TRY {
-            os_perso_derive_node_bip32(CX_CURVE_256K1, bip32_path, 5, keySeed, NULL);
-            cx_ecfp_init_private_key(CX_CURVE_SECP256K1, keySeed, 32, &(ctx->privateKey));
+            os_perso_derive_node_bip32(CX_CURVE_256K1, bip32_path, 5, key_seed, NULL);
+            cx_ecfp_init_private_key(CX_CURVE_SECP256K1, key_seed, 32, &(ctx->privateKey));
         }
         CATCH_OTHER(e) { error = e; }
-        FINALLY { explicit_bzero(keySeed, KEY_SEED_BYTE_COUNT); }
+        FINALLY { explicit_bzero(key_seed, KEY_SEED_BYTE_COUNT); }
     }
     END_TRY;
 
@@ -208,7 +208,7 @@ static void update_decryption_data_state(
 // READs bytes from host machine and decrypts them (located in `G_io_apdu_buffer`) 
 static bool decrypt_part_of_msg() {
     uint16_t bytesLeftToRead = ctx->cipher_text_byte_count - ctx->cipher_number_of_parsed_bytes;
-    uint16_t chunkSize = MIN(MAX_CHUNK_SIZE_AES_MULTIPLE, bytesLeftToRead);
+    uint16_t chunk_size = MIN(MAX_CHUNK_SIZE_AES_MULTIPLE, bytesLeftToRead);
 
     bool is_first_chunk = ctx->cipher_number_of_parsed_bytes == 0;
 
@@ -221,21 +221,21 @@ static bool decrypt_part_of_msg() {
     } else {
         io_exchange(CHANNEL_APDU | IO_ASYNCH_REPLY, 2);
     }
-    // `G_io_apdu_buffer` now contains `chunkSize` relevant bytes
+    // `G_io_apdu_buffer` now contains `chunk_size` relevant bytes
 
-    bool is_last_chunk = (ctx->cipher_number_of_parsed_bytes + chunkSize) >= ctx->cipher_text_byte_count;
-    ctx->cipher_number_of_parsed_bytes += chunkSize;
+    bool is_last_chunk = (ctx->cipher_number_of_parsed_bytes + chunk_size) >= ctx->cipher_text_byte_count;
+    ctx->cipher_number_of_parsed_bytes += chunk_size;
 
-    uint32_t dataOffset = OFFSET_CDATA + 0;
-    update_decryption_data_state(G_io_apdu_buffer + dataOffset, chunkSize, is_last_chunk);
-    os_memcpy(G_io_apdu_buffer, G_io_apdu_buffer + dataOffset, chunkSize);
+    uint32_t data_offset = OFFSET_CDATA + 0;
+    update_decryption_data_state(G_io_apdu_buffer + data_offset, chunk_size, is_last_chunk);
+    os_memcpy(G_io_apdu_buffer, G_io_apdu_buffer + data_offset, chunk_size);
 
     // Sends decrypted chars back to host machine
-    int tx = chunkSize;
+    int tx = chunk_size;
     if (is_last_chunk) {
         tx = pkcs7_padding_data_length(
             G_io_apdu_buffer, 
-            chunkSize,
+            chunk_size,
             AES_BLOCKLEN
         );
     }

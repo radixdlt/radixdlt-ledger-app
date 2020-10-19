@@ -8,8 +8,8 @@ static uint16_t populate_interval(
 ) {
 	
 	uint16_t offset = 0;
-	interval->startsAt = U2BE(bytes, offset); offset += 2;
-    interval->byteCount = U2BE(bytes, offset); offset += 2;
+	interval->start_index_in_atom = U2BE(bytes, offset); offset += 2;
+    interval->byte_count = U2BE(bytes, offset); offset += 2;
     return offset;
 }
 
@@ -34,5 +34,5 @@ void initialize_particle_field_with_bytes(
     );
     field->field_type = field_type;
     field->is_destroyed = false;
-    assert(field->byte_interval.byteCount > 0);
+    assert(field->byte_interval.byte_count > 0);
 }

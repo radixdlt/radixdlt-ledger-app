@@ -10,17 +10,17 @@
 #include "stringify_bip32_path.h"
 #include "ui.h"
 
-static get_public_key_context_t *ctx = &global.getPublicKeyContext;
+static get_public_key_context_t *ctx = &global.get_public_key_context;
 
 static void generate_and_respond_with_compressed_public_key() {
-    cx_ecfp_public_key_t publicKey;
+    cx_ecfp_public_key_t public_key;
 
-    derive_radix_key_pair(ctx->bip32_path, &publicKey,
+    derive_radix_key_pair(ctx->bip32_path, &public_key,
                           NULL  // dont write private key
     );
-    assert(publicKey.W_len == PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
+    assert(public_key.W_len == PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
 
-    os_memmove(G_io_apdu_buffer, publicKey.W,
+    os_memmove(G_io_apdu_buffer, public_key.W,
                PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
 
     io_exchange_with_code(SW_OK, PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);

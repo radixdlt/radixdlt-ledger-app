@@ -17,8 +17,8 @@
 #include "common_macros.h"
 #include "radix_address.h"
 
-static sign_atom_context_t *ctx = &global.signAtomContext;
-static parse_atom_t *parse_state = &global.signAtomContext.parse_state;
+static sign_atom_context_t *ctx = &global.sign_atom_context;
+static parse_atom_t *parse_state = &global.sign_atom_context.parse_state;
 
 static void empty_transfer() {
     explicit_bzero(&parse_state->transfer, sizeof(transfer_t));
@@ -61,7 +61,7 @@ static bool is_transfer_change_back_to_me() {
         parse_state->is_users_public_key_calculated = true;
     }
 
-    bool matching_pub_keys = matchesPublicKey(&parse_state->transfer.address, &parse_state->my_public_key_compressed);
+    bool matching_pub_keys = does_address_contain_public_key(&parse_state->transfer.address, &parse_state->my_public_key_compressed);
     return matching_pub_keys;
 }
 
@@ -173,7 +173,7 @@ void received_particle_field_metadata_bytes_from_host_machine(
         number_of_bytes_received
     );
 
-    assert(parse_state->next_particle_field_to_parse.byte_interval.startsAt == ctx->number_of_atom_bytes_received);
+    assert(parse_state->next_particle_field_to_parse.byte_interval.start_index_in_atom == ctx->number_of_atom_bytes_received);
 }
 
 void reset_parse_state() {

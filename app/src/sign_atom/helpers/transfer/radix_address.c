@@ -7,7 +7,7 @@
 
 // Returns the de-facto length of the address copied over to `output_buffer` (including the null terminator).
 size_t to_string_radix_address(
-    RadixAddress *address,
+    radix_address_t *address,
     char *output_buffer,
     const size_t size_of_buffer
 ) { 
@@ -19,7 +19,7 @@ size_t to_string_radix_address(
 #define ADDRESS_CHECKSUM_BYTE_COUNT 4
 
 int generate_public_address_from_pub_key_and_universe_magic(
-    uint8_t magicByte, uint8_t *compressedPublicKeyBytes,
+    uint8_t magicByte, uint8_t *compressed_public_key_bytes,
     char *output_radix_addr_str, const size_t length_of_output_radix_addr_str) 
 {
     
@@ -29,7 +29,7 @@ int generate_public_address_from_pub_key_and_universe_magic(
     size_t length_unhashed = 1 + PUBLIC_KEY_COMPRESSEED_BYTE_COUNT; // +1 for magic byte
     uint8_t magic_concat_pubkey[length_unhashed + ADDRESS_CHECKSUM_BYTE_COUNT];
     os_memcpy(magic_concat_pubkey, &magicByte, 1);
-    os_memcpy(magic_concat_pubkey + 1, compressedPublicKeyBytes, PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
+    os_memcpy(magic_concat_pubkey + 1, compressed_public_key_bytes, PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
     uint8_t hash_of_mb_concat_pk[HASH256_BYTE_COUNT];
 
     cx_sha256_t hasher;        
@@ -52,29 +52,29 @@ int generate_public_address_from_pub_key_and_universe_magic(
     return convert_byte_buffer_into_base58(magic_concat_pubkey, length_unhashed + ADDRESS_CHECKSUM_BYTE_COUNT, output_radix_addr_str);
 }
 
-bool matchesPublicKey(RadixAddress *address, cx_ecfp_public_key_t *compressedPublicKey) {
-    return matchesPublicKeyBytes(address, compressedPublicKey->W);
+bool does_address_contain_public_key(radix_address_t *address, cx_ecfp_public_key_t *compressed_public_key) {
+    return does_address_contain_public_key_bytes(address, compressed_public_key->W);
 }
 
-bool matchesPublicKeyBytes(RadixAddress *address, uint8_t *compressedPublicKeyBytes)
+bool does_address_contain_public_key_bytes(radix_address_t *address, uint8_t *compressed_public_key_bytes)
 {
     // Might result in false negatives, you need to know that you
     // really are in fact passing in a compressed public key
-    assert(compressedPublicKeyBytes[0] == 0x02 || compressedPublicKeyBytes[0] == 0x03);
+    assert(compressed_public_key_bytes[0] == 0x02 || compressed_public_key_bytes[0] == 0x03);
 
     // 1 "magic" byte prefixes the address
-    const size_t offsetOfPubKeyWithinAddress = 1; 
+    const size_t offset_of_public_key_within_address = 1; 
 
     for (int i = 0; i < PUBLIC_KEY_COMPRESSEED_BYTE_COUNT; ++i)
     {
-        if (compressedPublicKeyBytes[i] != address->bytes[i + offsetOfPubKeyWithinAddress]) {
+        if (compressed_public_key_bytes[i] != address->bytes[i + offset_of_public_key_within_address]) {
             return false;
         }
     }
     return true;
 }
 
-void printRadixAddress(RadixAddress *address) {
+void printRadixAddress(radix_address_t *address) {
     const size_t max_length = RADIX_ADDRESS_BASE58_CHAR_COUNT_MAX + 1;  // +1 for null terminator
     char address_b58[max_length];
     
