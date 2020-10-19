@@ -106,7 +106,7 @@ The base58 encoding of the RadixAddress results in a 51-52 b58 characters long s
 # Sign Atom
 ## `INS_SIGN_ATOM_SECP256K1`
 
-**For full documentation see [`SIGN_ATOM.MD`](app/src/sign_atom/SIGN_ATOM.md)**
+**For full documentation see [`SIGN_ATOM`](app/src/sign_atom/README.md)**
 
 Streaming of Atom data in multiple packets, the first one is a special intial "setup" packet, containing the BIP32 derivation path to the key used to sign as well as the size of the atom in bytes as payload, these two byte strings are **required** to hash and sign the atom. The packet also contains `P1` telling the Ledger App the total number of UP particles in the atom, and `P2` the total number of transferrable tokens particle with spin UP.
 
@@ -144,7 +144,7 @@ If `P1==101` then `P2` contains the identifier for a paritcle field byte interva
 | Field | Type      | Content                            | Expected  |
 | ----- | --------- | ---------------------------------- | --------- |
 | P1    | byte (1)  | PayloadTypeIdentifier   | `100=bytes in atom` or `101=payload is ParticleFieldTypeIdentifier` |
-| P2    | byte (1)  | If P1==100: ParticleFieldTypeIdentifier (see [`SIGN_ATOM.MD`](app/src/sign_atom/SIGN_ATOM.md))| ?  |
+| P2    | byte (1)  | If P1==100: ParticleFieldTypeIdentifier (see [`SIGN_ATOM`](app/src/sign_atom/README.md))| ?  |
 | L  		| byte (1)  | Length of Payload          | ?   |
 | PAYLOAD | byte (L) | Either "raw" atom bytes (P1==100) or 4 bytes particle field byte interval                |  MAX 255 bytes    |
 
