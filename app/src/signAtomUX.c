@@ -102,7 +102,7 @@ static void do_parse_field_from_atom_bytes(
             
                 ask_user_for_confirmation_of_transfer_if_to_other_address();
                 PRINTF("\n\n  ---> Waiting for input from user on Ledger device, needs to review & accept the transfer.\n");
-                
+
                 Transfer deep_copy_transfer;
                 os_memcpy(&deep_copy_transfer, &ux_state->transfer, sizeof(Transfer));
                 print_transfer(&deep_copy_transfer);
@@ -130,6 +130,8 @@ static void do_parse_field_from_atom_bytes(
     }
 }
 
+
+
 void empty_buffer() {
     explicit_bzero(G_io_apdu_buffer, IO_APDU_BUFFER_SIZE);
 }
@@ -138,6 +140,8 @@ void received_atom_bytes_from_host_machine(
     uint8_t *bytes,
     uint16_t number_of_newly_received_atom_bytes
 ) {
+    ui_update_progress_display();
+
     if (finished_parsing_all_particles() || !has_particle_field()) {
         // PRINTF("Skipping parsing field, finished parsing particles: %s, has particle field: %s\n", finished_parsing_all_particles() ? "TRUE" : "FALSE", has_particle_field() ? "TRUE" : "FALSE");
         return;
@@ -161,6 +165,7 @@ void received_particle_field_metadata_bytes_from_host_machine(
     uint16_t number_of_bytes_received
 ) {
     empty_particle_field();
+
     initialize_particle_field_with_bytes(
         &ux_state->next_particle_field_to_parse,
         particle_field_type,
@@ -168,12 +173,6 @@ void received_particle_field_metadata_bytes_from_host_machine(
         number_of_bytes_received
     );
 
-    if (ux_state->next_particle_field_to_parse.byte_interval.startsAt != ctx->number_of_atom_bytes_received) {
-
-        print_next_particle_field_to_parse();
-        PRINTF("\nnumber_of_atom_bytes_received: %d\n", ctx->number_of_atom_bytes_received);
-        FATAL_ERROR("Expected next_particle_field_to_parse.byte_interval.startsAt == ctx->number_of_atom_bytes_received but it is not");
-    }
     assert(ux_state->next_particle_field_to_parse.byte_interval.startsAt == ctx->number_of_atom_bytes_received);
 }
 
@@ -183,4 +182,6 @@ void reset_ux_state() {
     
     empty_particle_field();
     empty_transfer();
+
+    ui_init_progress_display();
 }

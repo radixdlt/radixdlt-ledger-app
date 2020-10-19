@@ -82,9 +82,26 @@ static void prepare_for_displaying_of_hash() {
     G_ui_state.length_lower_line_long = lengthOfHashString;
 }
 
+bool finished_parsing_all_particles();
+
+static bool finished_parsing_whole_atom() {
+    return ctx->number_of_atom_bytes_received == ctx->atom_byte_count && finished_parsing_all_particles();
+}
+
+
+void ui_update_progress_display();
+static void redisplay_progress() {
+    ui_init_progress_display();
+}
+
 static void unblock_ux(int tx) {
     io_exchange_with_code(SW_OK, tx);
-    ui_idle();
+
+    if (finished_parsing_whole_atom()) {
+        ui_idle();
+    } else {
+        redisplay_progress();
+    }
 }
 
 static void continue_sign_atom_flow() {
@@ -134,16 +151,18 @@ static void do_ask_user_for_confirmation_of_signing_hash() {
     display_lines("Sign content", "Confirm?", did_approve_signing_of_hash);
 }
 
+static unsigned short ux_visible_element_index = 0;
+
+static const ux_menu_entry_t ui_hack_as_menu_progress_update[] = {
+	{NULL, NULL, 0, NULL, "Parsing atom", G_ui_state.lower_line_short, 0, 0},
+	UX_MENU_END,
+};
+
+
 bool finished_parsing_all_particles() {
     bool parsed_all_particles = has_identified_all_particles(&ctx->ux_state.up_particles_counter);
     return parsed_all_particles;
 }
-
-
-bool finished_parsing_whole_atom() {
-    return ctx->number_of_atom_bytes_received == ctx->atom_byte_count && finished_parsing_all_particles();
-}
-
 
 void ask_user_to_verify_hash_before_signing() {
     prepare_for_displaying_of_hash();
@@ -159,4 +178,25 @@ void ask_user_for_confirmation_of_transfer_if_to_other_address() {
     callback_t review_tx_callback = flow_is_short ? finished_approving_transfer : prepare_for_approval_of_address;
     display_lines("Review", "transfer", review_tx_callback);
     
+}
+
+void ui_init_progress_display() {
+    UX_MENU_DISPLAY(0, ui_hack_as_menu_progress_update, NULL);
+    ux_visible_element_index = G_ux.stack[0].element_index;
+    ui_update_progress_display();
+}
+
+
+void ui_update_progress_display() {
+    reset_ui();
+
+    size_t percentage = (100 * ctx->number_of_atom_bytes_received / ctx->atom_byte_count);
+
+    snprintf(
+        G_ui_state.lower_line_short, 
+        DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE, 
+        "%02d%% done.", percentage
+    );
+
+    UX_REDISPLAY_IDX(ux_visible_element_index);
 }
