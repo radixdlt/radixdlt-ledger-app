@@ -124,8 +124,11 @@ static void receive_bytes_and_update_hash_and_update_ux() {
         break;
     case PayloadTypeIsParticleFieldMetaData:
         PRINTF("Received payload from host machine - particle field metadata\n");
-        particle_field_type_t particle_field_type = (particle_field_type_t) p2;
+
+        ParticleFieldType particle_field_type = (ParticleFieldType) p2;
+        
         assert(is_valid_particle_field_type(particle_field_type));
+
         received_particle_field_metadata_bytes_from_host_machine(
             particle_field_type,
             data_buffer, 
@@ -163,7 +166,7 @@ void handle_sign_atom(
         p1, // total_number_of_up_particles
         p2 // number_of_up_transferrable_tokens_particles
     );
-    ctx->parse_state.__DEBUG_MODE_skip_short_transfer_reviews = false;
+
 	parse_bip_and_atom_size(data_buffer, data_length);
     parse_atom();
     *flags |= IO_ASYNCH_REPLY; 

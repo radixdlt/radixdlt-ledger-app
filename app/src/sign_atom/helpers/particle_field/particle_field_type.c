@@ -2,7 +2,7 @@
 #include <os.h>
 #include "common_macros.h"
 
-void print_particle_field_type(particle_field_type_t field_type) {
+void print_particle_field_type(ParticleFieldType field_type) {
     switch (field_type)
     {
     case ParticleFieldTypeNoField:
@@ -24,7 +24,7 @@ void print_particle_field_type(particle_field_type_t field_type) {
 }
 
 
-bool is_valid_particle_field_type(particle_field_type_t field_type) {
+bool is_valid_particle_field_type(ParticleFieldType field_type) {
         switch (field_type)
     {
  

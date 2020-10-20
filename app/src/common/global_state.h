@@ -42,8 +42,6 @@ typedef struct {
 
 typedef struct {
 
-	bool __DEBUG_MODE_skip_short_transfer_reviews;
-
 	bool is_users_public_key_calculated;
 	cx_ecfp_public_key_t my_public_key_compressed;
 

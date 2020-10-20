@@ -1,21 +1,21 @@
 #include "dson.h"
 #include "common_macros.h"
 
-cbor_byte_prefix_t cbor_byte_prefix_for_particle_field_type(particle_field_type_t field)
+CBORBytePrefixByteStringType cbor_byte_prefix_for_particle_field_type(ParticleFieldType field)
 {
     switch (field)
     {
     case ParticleFieldTypeAddress:
     {
-        return CBORBytePrefixAddressByteString;
+        return CBORBytePrefixByteStringAddress;
     }
     case ParticleFieldTypeAmount:
     {
-        return CBORBytePrefixUInt256ByteString;
+        return CBORBytePrefixByteStringUInt256;
     }
     case ParticleFieldTypeTokenDefinitionReference:
     {
-        return CBORBytePrefixRRIByteString;
+        return CBORBytePrefixByteStringRadixResourceIdentifier;
     }
     default:
         FATAL_ERROR("Unknown field: %d", field);
@@ -61,11 +61,11 @@ bool parse_serializer_check_if_transferrable_tokens_particle(
 static void parse_particle_field(
     const size_t value_byte_count,
     CborValue *cbor_value,
-    particle_field_type_t field_type,
+    ParticleFieldType field_type,
     uint8_t *output_buffer
 ) {
 
-    cbor_byte_prefix_t cbor_byte_prefix = cbor_byte_prefix_for_particle_field_type(field_type);
+    CBORBytePrefixByteStringType cbor_byte_prefix = cbor_byte_prefix_for_particle_field_type(field_type);
 
     size_t number_of_bytes_read_by_cbor_parser = value_byte_count;
     uint8_t byte_string[value_byte_count];
@@ -94,7 +94,7 @@ static void parse_particle_field(
 }
 
 
-parse_field_result_t parse_field_from_bytes_and_populate_transfer(
+ParseFieldResult parse_field_from_bytes_and_populate_transfer(
     particle_field_t *particle_field,
     uint8_t *bytes,
     transfer_t *transfer

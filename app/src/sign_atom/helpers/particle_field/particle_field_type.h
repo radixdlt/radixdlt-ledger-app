@@ -9,9 +9,9 @@ typedef enum {
     ParticleFieldTypeAmount = 201,
     ParticleFieldTypeSerializer = 202,
     ParticleFieldTypeTokenDefinitionReference = 203,
-} particle_field_type_t;
+} ParticleFieldType;
 
-void print_particle_field_type(particle_field_type_t field_type);
-bool is_valid_particle_field_type(particle_field_type_t field_type);
+void print_particle_field_type(ParticleFieldType field_type);
+bool is_valid_particle_field_type(ParticleFieldType field_type);
 
 #endif

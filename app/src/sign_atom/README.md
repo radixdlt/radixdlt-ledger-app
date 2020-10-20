@@ -18,35 +18,6 @@ In the case of **non**-`TransferrableTokensParticles` (e.g. `MessageParticle`, `
 ## Host machine
 
 ```swift
-func calculateMetaDataAboutRelevantFieldsIn(upParticles: [UpParticle], in atom: Atom) -> [ParticleFieldMetadata] {
-    return upParticles.flatMap { upParticle in
-        if let transferrableTokensParticle = upParticle {
-            return [
-                transferrableTokensParticle.field(type: .address),
-                transferrableTokensParticle.field(type: .amount), 
-                transferrableTokensParticle.field(type: .serialzier), 
-                transferrableTokensParticle.field(type: .tokenDefinitionReference)
-            ].map { field in 
-                byte_interval_t(ofField: field, in: atom) 
-            }
-        } else {
-            return [
-                byte_interval_t(ofField: upParticle.field(type: .serialzier), in: atom) 
-            ]
-        }
-    }
-}
-
-func sendToLedger(p1: Int, p2: Int, payload: [Byte]) -> [Byte] { ... }
-
-func sendToLedger(particleField: particle_field_t) {
-    sendToLedger(
-        p1: PayloadIdentifier.particleField.rawValue, // 101
-        p2: particleField.fieldType, // .address: 200, .amount: 201, .serializer: 202,, .tokenDefRef: 203, 
-        payload: particleField.rawBytes // 4 bytes
-    )
-}
-
 func stream(
     atom: Atom, 
     toLedgerAndSignItWithKeyAtPath bip32_path: BIP32Path
@@ -106,6 +77,199 @@ func stream(
 
     return ECDSASignature(bytes: signatureFromLedger)
 }
+
+func calculateMetaDataAboutRelevantFieldsIn(upParticles: [UpParticle], in atom: Atom) -> [ParticleFieldMetadata] {
+    return upParticles.flatMap { upParticle in
+        if let transferrableTokensParticle = upParticle {
+            return [
+                transferrableTokensParticle.field(type: .address),
+                transferrableTokensParticle.field(type: .amount), 
+                transferrableTokensParticle.field(type: .serialzier), 
+                transferrableTokensParticle.field(type: .tokenDefinitionReference)
+            ].map { field in 
+                byte_interval_t(ofField: field, in: atom) 
+            }
+        } else {
+            return [
+                byte_interval_t(ofField: upParticle.field(type: .serialzier), in: atom) 
+            ]
+        }
+    }
+}
+
+func sendToLedger(p1: Int, p2: Int, payload: [Byte]) -> [Byte] { ... }
+
+func sendToLedger(particleField: particle_field_t) {
+
+    sendToLedger(
+        p1: PayloadIdentifier.particleField.rawValue, // 101
+        p2: particleField.fieldType, // .address: 200, .amount: 201, .serializer: 202,, .tokenDefRef: 203, 
+        payload: particleField.rawBytes // 4 bytes
+    )
+}
+
+```
+
+## Ledger App
+```swift
+func signAtom(
+    p1: Int,
+    p2: Int,
+    dataBuffer: [Byte]
+) {
+    var ctx = SignAtomContext()
+    
+    // Receive and parse inital setup packet
+    let (bip32Path, atomSize) = parseBIP32PathAndAtomSize(
+        totalNumberOfUpParticles: p1,
+        numberOfUpTransferrableTokensParticles: p2,
+        data: dataBuffer
+    )
+    ctx.bip32Path = bip32Path
+    ctx.atomSize = atomSize
+
+
+
+    // Finished with inital packet, tell host to send atom bytes
+    parseAtom(context: ctx) 
+    // execution is blocked here until the whole atom is parsed.
+
+
+    askUserToVerifyHashBeforeSigning()
+    // Execution is blocked until user has accepted / rejected hash+sign
+
+    print("~~~ FINISHED PARSING+SIGNING ATOM ~~~")
+
+}
+
+func parseAtom(context ctx: SignAtomContext) {
+    while ctx.numberOfBytesReceived < ctx.atomByteCount {
+        receivedBytesAndUpdateHashAndDisplay(context: ctx)
+    }
+}
+
+func receivedBytesAndUpdateHashAndDisplay(context ctx: SignAtomContext) {
+    let (p1, p2, dataBuffer) = readBytesFromHostMachine()
+    let payloadType = PayloadType(rawValue: p1)
+    switch payloadType {
+        case .partifleFieldMetaData:
+            ctx.particleField = ParticleFieldMetaData(bytes: dataBuffer)
+
+        case .atomBytes:
+            ctx.numberOfBytesReceived += dataBuffer.count
+
+            ctx.hasher.update(
+                bytes: dataBuffer, 
+                finalize: ctx.numberOfBytesReceived == ctx.atomByteCount
+            )
+
+
+        guard let particleField = ctx.particleField else { 
+            print("Irrelevant atom bytes, nothing to parse or to do.")
+            return 
+        }
+
+        let fieldParsingResult = parseFieldFromAtomBytes(particleField, in: dataBuffer)
+        switch fieldParsingResult {
+            case .finishedParsingTransfer:
+                let askUserToConfirmTransfer = !isTransferChangeBackToHerself(ctx.transfer, deriveAddressFrom: ctx.bip32Path)
+                if askUserToConfirmTransfer {
+                    askUserToConfirmTransferToOtherAddress()
+                    // Execution is blocked until user has accepted / rejected
+                }
+                ctx.transfer = nil
+            case .parsedPartOfTransfer:
+                print("Finished part of transfer")
+                return
+            case .nonTransferDataFound:
+                if !ctx.userHasAcceptedNonTransferData {
+
+                    askUserToConfirmUserData()
+                    // Execution is blocked until user has accepted / rejected
+
+                    // If user rejects, main loop of program exists, so this
+                    // line of code ONLY executes is usere accepts.
+                    ctx.userHasAcceptedNonTransferData = true
+                }
+        }
+    }
+}
+
+func parseFieldFromAtomBytes(
+    _ particleField: ParticleField, 
+    in dataBuffer: [Byte], 
+    context ctx: SignAtomContext
+) -> ParseParticleFieldResult {
+
+    assert(dataBuffer.coount == particleField.byteInterval.count)
+
+    let cborParser = CBORParser(bytes: dataBuffer)
+    let cborValueType = cborParser.typeOfValue
+    let cborValue = cborParser.value
+    let cborLength = cborParser.stringLength
+    
+    let radixValueIdentifier = cborValue.first()
+    
+    let radixValue = cborValue.suffix(cborLength - 1)
+
+    switch particleField.type {
+        case .address:
+            assert(ctx.transfer == nil)
+            assert(cborValueType == .byteString)
+
+            assert(radixValueIdentifier == .addressByteString)
+            
+            ctx.transfer = Transfer()
+            ctx.transfer.address = Address(byteString: radixValue)
+
+            return .parsedPartOfTransfer
+        case .amount:
+            assert(ctx.transfer?.address != nil)
+            assert(ctx.transfer?.amount == nil)
+            assert(cborValueType == .byteString)
+
+            assert(radixValueIdentifier == .amountByteString)
+            
+            ctx.transfer.amount = UInt256(byteString: radixValue)
+            return .parsedPartOfTransfer
+
+        case .serialzier:
+            assert(cborValueType == .textString)
+            let serializer = parseSerializer(radixValue)
+
+            print("Found particle with serializer: \(serializer)")
+            
+            let isSerializerForTransferrableTokensParticle =  serializer == "radix.particle.transferrable_tokens"
+            
+            if isSerializerForTransferrableTokensParticle {
+                assert(!ctx.transfer.hasConfirmedSerializer)
+                ctx.transfer.hasConfirmedSerializer = true
+                return .parsedPartOfTransfer
+            } else {
+                return .nonTransferDataFound
+            }
+
+        case .tokenDefinitionReference:
+            assert(ctx.transfer?.address != nil)
+            assert(ctx.transfer?.amount != nil)
+            assert(ctx.transfer?.hasConfirmedSerializer == true)
+            assert(ctx.transfer?.tokenDefinitionReference == nil)
+
+            assert(cborValueType == .byteString)
+
+            ctx.transfer.tokenDefinitionReference = RadixResourceIdentifier(byteString: radixValue)
+            return .finishedParsingTransfer
+    }
+}
+
+func parseBIP32PathAndAtomSize(
+    totalNumberOfUpParticles: Int, 
+    numberOfUpTransferrableTokensParticles: Int,
+    data: [Byte] // ` BIP32(12 bytes) || AtomSize (2 bytes)`
+) {
+    // ...
+}
+
 ```
 
 ## MetaData

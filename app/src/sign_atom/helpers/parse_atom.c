@@ -82,7 +82,7 @@ static void do_parse_field_from_atom_bytes(
     particle_field_t *particle_field,
     uint8_t *bytes
 ) {
-    parse_field_result_t parse_result = parse_field_from_bytes_and_populate_transfer(
+    ParseFieldResult parse_result = parse_field_from_bytes_and_populate_transfer(
         particle_field,
         bytes,
         &parse_state->transfer
@@ -160,7 +160,7 @@ void print_next_particle_field_to_parse() {
 }
 
 void received_particle_field_metadata_bytes_from_host_machine(
-    particle_field_type_t particle_field_type,
+    ParticleFieldType particle_field_type,
     uint8_t *bytes,
     uint16_t number_of_bytes_received
 ) {

@@ -174,10 +174,7 @@ void ask_user_for_confirmation_of_non_transfer_data() {
 }
 
 void ask_user_for_confirmation_of_transfer_if_to_other_address() {
-    bool flow_is_short = ctx->parse_state.__DEBUG_MODE_skip_short_transfer_reviews;
-    callback_t review_tx_callback = flow_is_short ? finished_approving_transfer : prepare_for_approval_of_address;
-    display_lines("Review", "transfer", review_tx_callback);
-    
+    display_lines("Review", "transfer", prepare_for_approval_of_address);
 }
 
 void ui_init_progress_display() {
