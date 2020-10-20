@@ -178,6 +178,8 @@ func receivedBytesAndUpdateHashAndDisplay(context ctx: SignAtomContext) {
                     // Execution is blocked until user has accepted / rejected
                 }
                 ctx.transfer = nil
+                ctx.particleField = nil
+                return
             case .parsedPartOfTransfer:
                 print("Finished part of transfer")
                 return
@@ -191,6 +193,8 @@ func receivedBytesAndUpdateHashAndDisplay(context ctx: SignAtomContext) {
                     // line of code ONLY executes is usere accepts.
                     ctx.userHasAcceptedNonTransferData = true
                 }
+                ctx.particleField = nil
+                return
         }
     }
 }
