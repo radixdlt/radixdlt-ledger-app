@@ -141,27 +141,28 @@ static void format_signature_out(const uint8_t *signature)
     memmove(G_io_apdu_buffer + offset + 32 - xlength, signature + xoffset, xlength);
 }
 
-static int ecdsa_sign_hash_and_zero_out_private_key(
+static int ecdsa_sign_hash(
     cx_ecfp_private_key_t *privateKey,  // might be NULL if you do 'verify'
     cx_ecfp_public_key_t
         *public_key,  // might be NULL if you do 'sign' instead of 'verify'
     const unsigned char *in,
     unsigned short inlen, volatile unsigned char *out, unsigned short outlen,
-    unsigned char use_rfc6979_deterministic_signing) {
+    unsigned char use_rfc6979_deterministic_signing
+) {
 
     // ⚠️ IMPORTANT GUIDELINE
     // https://ledger.readthedocs.io/en/latest/additional/security_guidelines.html
     // https://ledger.readthedocs.io/en/latest/userspace/troubleshooting.html#error-handling
 
-    io_seproxyhal_io_heartbeat();
+
     volatile int result = 0;
     volatile unsigned int result_info = 0;
     
-    // volatile uint8_t out_tmp[outlen];
     volatile uint16_t error = 0;
 
     BEGIN_TRY {
         TRY {
+                io_seproxyhal_io_heartbeat();
                 result = cx_ecdsa_sign(
                     privateKey,
                     CX_LAST |
@@ -174,14 +175,13 @@ static int ecdsa_sign_hash_and_zero_out_private_key(
       
         }
         CATCH_OTHER(e) { error = e; }
-        FINALLY { explicit_bzero(privateKey, sizeof(privateKey)); }
+        FINALLY { /* Do nothing, but make sure to zero out private key from calling function */  }
     }
     END_TRY;
     if (error) {
         PRINTF("Error? code: %d\n", error);
     }
-    // os_memcpy(out, out_tmp, result);
-    io_seproxyhal_io_heartbeat();
+
     return result;
 }
 
@@ -290,12 +290,15 @@ size_t derive_sign_move_to_global_buffer(uint32_t *bip32path,
     volatile uint8_t der_sig[over_estimated_DER_sig_length + 1];
     int actual_DER_sig_length = 0;
 
-    actual_DER_sig_length = ecdsa_sign_hash_and_zero_out_private_key(
+    actual_DER_sig_length = ecdsa_sign_hash(
         &privateKey,
         NULL,  // pubkey not needed for sign
         hash, 32, der_sig, over_estimated_DER_sig_length,
         1  // use deterministic signing
     );
+
+    // Ultra important step, MUST zero out the private, else sensitive information is leaked.
+    explicit_bzero(&privateKey, sizeof(cx_ecfp_private_key_t));
 
     int der_signature_length = der_sig[1] + 2;
     if (der_signature_length != actual_DER_sig_length) {
