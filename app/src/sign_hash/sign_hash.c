@@ -60,7 +60,7 @@ void handle_sign_hash(
 
     offset_of_data += expected_bip32_byte_count;
 
-    // // Read the hash.
+    // Read the hash.
     os_memmove(ctx->hash, data_buffer + offset_of_data, sizeof(ctx->hash));
 
     ask_user_to_confirm_hash();
