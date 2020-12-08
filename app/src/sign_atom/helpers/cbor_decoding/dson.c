@@ -97,27 +97,28 @@ static void parse_particle_field(
 ParseFieldResult parse_field_from_bytes_and_populate_transfer(
     particle_field_t *particle_field,
     uint8_t *bytes,
-    transfer_t *transfer
+    transfer_t *transfer,
+    CborParser *cbor_parser,
+    CborValue *cbor_value
 ) {
 
-    CborParser cbor_parser;
-    CborValue cbor_value;
+
 
     CborError cbor_error = cbor_parser_init(
         bytes,
         particle_field->byte_interval.byte_count,
         0, // flags
-        &cbor_parser,
-        &cbor_value
+        cbor_parser,
+        cbor_value
     );
 
     if (cbor_error) {
         FATAL_ERROR("Failed to init cbor parser, CBOR eror: '%s'\n", cbor_error_string(cbor_error));
     }
 
-    CborType type = cbor_value_get_type(&cbor_value);
+    CborType type = cbor_value_get_type(cbor_value);
     size_t read_length;
-    cbor_error = cbor_value_calculate_string_length(&cbor_value, &read_length);
+    cbor_error = cbor_value_calculate_string_length(cbor_value, &read_length);
 
     if (cbor_error) {
         FATAL_ERROR("Failed to calculate length of coming cbor value, CBOR error: '%s'\n", cbor_error_string(cbor_error));
@@ -133,7 +134,7 @@ ParseFieldResult parse_field_from_bytes_and_populate_transfer(
 
         parse_particle_field(
             read_length, 
-            &cbor_value, 
+            cbor_value, 
             particle_field->field_type, 
             &transfer->address.bytes
         );
@@ -148,7 +149,7 @@ ParseFieldResult parse_field_from_bytes_and_populate_transfer(
 
         parse_particle_field(
             read_length, 
-            &cbor_value, 
+            cbor_value, 
             particle_field->field_type, 
             &transfer->amount.bytes
         );
@@ -159,7 +160,7 @@ ParseFieldResult parse_field_from_bytes_and_populate_transfer(
         assert(type == CborTextStringType);
         assert(!transfer->has_confirmed_serializer);
         
-        bool is_transferrable_tokens_particle_serializer = parse_serializer_check_if_transferrable_tokens_particle(read_length, &cbor_value);
+        bool is_transferrable_tokens_particle_serializer = parse_serializer_check_if_transferrable_tokens_particle(read_length, cbor_value);
 
         assert(transfer->is_address_set == is_transferrable_tokens_particle_serializer);
         assert(transfer->is_amount_set == is_transferrable_tokens_particle_serializer);
@@ -180,7 +181,7 @@ ParseFieldResult parse_field_from_bytes_and_populate_transfer(
         
         parse_particle_field(
             read_length, 
-            &cbor_value, 
+            cbor_value, 
             particle_field->field_type, 
             transfer->token_definition_reference.bytes
         );

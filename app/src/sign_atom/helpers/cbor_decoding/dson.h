@@ -39,7 +39,9 @@ bool parse_serializer_check_if_transferrable_tokens_particle(
 ParseFieldResult parse_field_from_bytes_and_populate_transfer(
     particle_field_t *particle_field,
     uint8_t *bytes,
-    transfer_t *transfer
+    transfer_t *transfer,
+    CborParser *cbor_parser,
+    CborValue *cbor_value
 );
 
 #endif

@@ -7,6 +7,7 @@
 #include "particles_counter.h"
 #include "particle_field.h"
 #include "common_macros.h"
+#include "cbor.h"
 
 typedef struct {
 	size_t cipher_text_byte_count;
@@ -51,6 +52,10 @@ typedef struct {
 
 	particle_field_t next_particle_field_to_parse; 
 	transfer_t transfer;
+	transfer_t debug_print_transfer; // Only for debug printing, TODO change impl of `print_transfer` to NOT mutate struct, which would remove need for this. This eats up ~300 bytes (which is about ~25% of all available space on Ledger Nano S (?)), so terribly costly variable.
+
+	CborParser cbor_parser;
+    CborValue cbor_value;
 } parse_atom_t;
 
 typedef struct {
