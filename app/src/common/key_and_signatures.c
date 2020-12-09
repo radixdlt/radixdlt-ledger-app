@@ -143,11 +143,10 @@ static void format_signature_out(const uint8_t *signature)
 
 static int ecdsa_sign_hash(
     cx_ecfp_private_key_t *privateKey,  // might be NULL if you do 'verify'
-    cx_ecfp_public_key_t
-        *public_key,  // might be NULL if you do 'sign' instead of 'verify'
-    const unsigned char *in,
-    unsigned short inlen, volatile unsigned char *out, unsigned short outlen,
-    unsigned char use_rfc6979_deterministic_signing
+    cx_ecfp_public_key_t *public_key,  // might be NULL if you do 'sign' instead of 'verify'
+    const unsigned char *in, unsigned short inlen, 
+    volatile unsigned char *out, unsigned short outlen,
+    bool use_rfc6979_deterministic_signing
 ) {
 
     // ⚠️ IMPORTANT GUIDELINE
@@ -175,7 +174,10 @@ static int ecdsa_sign_hash(
       
         }
         CATCH_OTHER(e) { error = e; }
-        FINALLY { /* Do nothing, but make sure to zero out private key from calling function */  }
+        FINALLY {
+            /* Nothing to do, but make sure to zero out private key from calling function */
+        }
+
     }
     END_TRY;
     if (error) {
@@ -288,13 +290,13 @@ size_t derive_sign_move_to_global_buffer(uint32_t *bip32path,
 
     int over_estimated_DER_sig_length = 80;  // min length is 70.
     volatile uint8_t der_sig[over_estimated_DER_sig_length + 1];
-    int actual_DER_sig_length = 0;
 
-    actual_DER_sig_length = ecdsa_sign_hash(
+    int actual_DER_sig_length = ecdsa_sign_hash(
         &privateKey,
         NULL,  // pubkey not needed for sign
-        hash, 32, der_sig, over_estimated_DER_sig_length,
-        1  // use deterministic signing
+        hash, 32, // in 
+        der_sig, over_estimated_DER_sig_length, // out
+        true  // use deterministic signing
     );
 
     // Ultra important step, MUST zero out the private, else sensitive information is leaked.
