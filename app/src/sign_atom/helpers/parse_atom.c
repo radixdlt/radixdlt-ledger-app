@@ -80,12 +80,19 @@ static void ux_block() {
 }
 static void do_parse_field_from_atom_bytes(
     particle_field_t *particle_field,
-    uint8_t *bytes
+    uint8_t *bytes,
+    transfer_t *debug_print_transfer
 ) {
+
+    explicit_bzero(&parse_state->cbor_parser, sizeof(CborParser));
+    explicit_bzero(&parse_state->cbor_value, sizeof(CborValue));
+
     ParseFieldResult parse_result = parse_field_from_bytes_and_populate_transfer(
         particle_field,
         bytes,
-        &parse_state->transfer
+        &parse_state->transfer,
+        &parse_state->cbor_parser,
+        &parse_state->cbor_value
     );
 
     empty_buffer();
@@ -103,9 +110,8 @@ static void do_parse_field_from_atom_bytes(
                 ask_user_for_confirmation_of_transfer_if_to_other_address();
                 PRINTF("\n\n  ---> Waiting for input from user on Ledger device, needs to review & accept the transfer.\n");
 
-                transfer_t deep_copy_transfer;
-                os_memcpy(&deep_copy_transfer, &parse_state->transfer, sizeof(transfer_t));
-                print_transfer(&deep_copy_transfer);
+                os_memcpy(debug_print_transfer, &parse_state->transfer, sizeof(transfer_t));
+                print_transfer(debug_print_transfer);
 
                 ux_block();
             }
@@ -149,7 +155,8 @@ void received_atom_bytes_from_host_machine(
      
     do_parse_field_from_atom_bytes(
         &parse_state->next_particle_field_to_parse,
-        bytes
+        bytes,
+        &parse_state->debug_print_transfer
     );
     parse_state->next_particle_field_to_parse.is_destroyed = true;
   
