@@ -8,7 +8,7 @@ See [SETUP.md](SETUP.md)
 
 For communication specification see [APDU Protocol](APDUSPEC.md).
 
-Signing a transaction (list of user actions), that is represented by an "Atom" on the Radix ledger, requires metadata about said atom in order for the Ledger to be able to sign it. Please refer to [Sign Atom](SIGN_ATOM.md) documentation for details.
+Signing a transaction (list of user actions), that is represented by an "Atom" on the Radix ledger, requires metadata about said atom in order for the Ledger to be able to sign it. Please refer to [Sign Atom](https://github.com/radixdlt/radixdlt-ledger-app/blob/main/app/src/sign_atom/README.md) documentation for details.
 
 # Testing
 See [TEST.md](TEST.md)
