@@ -78,15 +78,15 @@ cmake-build-fuzz/
 /cmake-build-debug/
 /cmake-build-fuzz/
 \.idea
-/app/bin/
-/app/debug/
-/app/obj/
+/bin/
+/debug/
+/obj/
 
 \deps/*
 !\deps/nanos-secure-sdk
 !\deps/tinycbor
 !\deps/tiny-AES-c
 
-app/src/glyphs.c
+/src/glyphs.c
 
-app/src/glyphs.h
+/src/glyphs.h
