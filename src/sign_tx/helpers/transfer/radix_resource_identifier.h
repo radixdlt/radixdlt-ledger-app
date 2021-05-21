@@ -7,11 +7,11 @@
 
 #define RADIX_RRI_MAX_BYTE_COUNT 70
 #define RADIX_RRI_MAX_LENGTH_SYMBOL 14
-#define RADIX_RRI_STRING_LENGTH_MAX (1 + RADIX_ADDRESS_BASE58_CHAR_COUNT_MAX + 1 + RADIX_RRI_MAX_LENGTH_SYMBOL + 1) // +1 for "/" + len(addrB58) +1 for "/" + len(Symbol) + NULL term 
+#define RADIX_RRI_STRING_LENGTH_MAX RADIX_ADDRESS_BECH32_CHAR_COUNT_MAX + 10 // inaccurate... TODO fix this
 
 /* A Radix resource identifier is a human readable index into the Ledger which points to a name state machine */
 typedef struct {
-    /* On format: `/:address/:name`, e.g.: `"/JH1P8f3znbyrDj8F4RWpix7hRkgxqHjdW2fNnKpR3v6ufXnknor/XRD"` */
+    /* e.g.: `"foo_rb1qv9ee5j4qun9frqj2mcg79maqq55n46u5ypn2j0g9c3q32j6y3"` */
     uint8_t bytes[RADIX_RRI_MAX_BYTE_COUNT];
 } radix_resource_identifier_t;
 

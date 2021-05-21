@@ -308,9 +308,19 @@ static void app_exit(void) {
     END_TRY_L(exit);
 }
 
-__attribute__((section(".boot"))) int main(void) {
+#if defined(__APPLE__) && defined(__MACH__)
+ #define BOOT_SECTION __attribute__((section("__BOOT,__boot")))
+#else
+ #define BOOT_SECTION __attribute__((section(".boot")))
+#endif
+
+BOOT_SECTION
+int main(void) {
     // exit critical section
+#if defined(__APPLE__) && defined(__MACH__)
+#else
     __asm volatile("cpsie i");
+#endif
 
     for (;;) {
         UX_INIT();

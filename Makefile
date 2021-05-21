@@ -35,7 +35,7 @@ ICONNAME   = nanox_icon.gif
 else
 ICONNAME   = nanos_icon.gif
 endif
-APPVERSION = 0.1.2
+APPVERSION = 0.1.3
 
 # The --path argument here restricts which BIP32 paths the app is allowed to derive.
 

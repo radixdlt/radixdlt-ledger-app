@@ -4,7 +4,7 @@
 int parse_bip32_path_from_apdu_command(
     uint8_t *data_buffer,
     uint32_t *output_bip32path,
-    uint8_t *output_bip32String, // might be null
+    char *output_bip32String, // might be null
     unsigned short output_bip32_pathString_length
 );
 

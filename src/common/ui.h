@@ -14,9 +14,9 @@
 typedef struct {
 
 	uint8_t lower_line_display_offset;
-	uint8_t lower_line_long[MAX_LENGTH_FULL_STR_DISPLAY]; // the RRI is the longest data we wanna display
+    char lower_line_long[MAX_LENGTH_FULL_STR_DISPLAY]; // the RRI is the longest data we wanna display
 	uint8_t length_lower_line_long;
-	uint8_t lower_line_short[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE + 1]; //+1 for NULL
+    char lower_line_short[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE + 1]; //+1 for NULL
 } ui_state_t;
 
 extern ui_state_t G_ui_state;
@@ -45,10 +45,10 @@ void display_value(
 	const char *title_max_12_chars,
 	callback_t didApproveCallback);
 
-void clear_partialStr();
+void clear_partialStr(void);
 
-void reset_ui();
+void reset_ui(void);
 
-void clear_lower_line_long();
+void clear_lower_line_long(void);
 
 #endif

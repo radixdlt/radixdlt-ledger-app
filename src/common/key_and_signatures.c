@@ -166,7 +166,7 @@ static int ecdsa_sign_hash(
                     CX_LAST |
                         (use_rfc6979_deterministic_signing ? CX_RND_RFC6979
                                                            : CX_RND_TRNG),
-                    CX_SHA256, in, inlen, out, outlen, &result_info);
+                    CX_SHA256, in, inlen, (unsigned char *)out, outlen, (unsigned int *)&result_info);
                 if (result_info & CX_ECCINFO_PARITY_ODD) {
                     out[0] |= 0x01;
                 }
@@ -191,7 +191,7 @@ static int ecdsa_sign_hash(
 int parse_bip32_path_from_apdu_command(
     uint8_t *data_buffer,
     uint32_t *output_bip32path,
-    uint8_t *output_bip32String, // might be null
+    char *output_bip32String, // might be null
     unsigned short output_bip32_pathString_length
 ) {
     uint16_t byte_count_bip_component = 4;
@@ -256,19 +256,19 @@ void derive_radix_key_pair(
 
     BEGIN_TRY {
         TRY {
-            get_key_seed(key_seed, bip32path);
-            cx_ecfp_init_private_key(CX_CURVE_SECP256K1, key_seed, 32, &private_key_local);
-            cx_ecfp_init_public_key(CX_CURVE_SECP256K1, NULL, 0, public_key);
-            cx_ecfp_generate_pair(CX_CURVE_SECP256K1, public_key, &private_key_local, 1);
+            get_key_seed((uint8_t *)key_seed, bip32path);
+            cx_ecfp_init_private_key(CX_CURVE_SECP256K1, (uint8_t *)key_seed, 32, (cx_ecfp_private_key_t *)&private_key_local);
+            cx_ecfp_init_public_key(CX_CURVE_SECP256K1, NULL, 0, (cx_ecfp_public_key_t *)public_key);
+            cx_ecfp_generate_pair(CX_CURVE_SECP256K1,  (cx_ecfp_public_key_t *)public_key, (cx_ecfp_private_key_t *)&private_key_local, 1);
 
             if (private_key_nullable) { 
-                os_memcpy(private_key_nullable, &private_key_local, sizeof(private_key_local));
+                os_memcpy((cx_ecfp_private_key_t *)private_key_nullable, (cx_ecfp_private_key_t *)&private_key_local, sizeof(private_key_local));
             }
         }
         CATCH_OTHER(e) { error = e; }
         FINALLY { 
-            explicit_bzero(key_seed, sizeof(KEY_SEED_BYTE_COUNT));
-            explicit_bzero(&private_key_local, sizeof(private_key_local));
+            explicit_bzero((uint8_t *)key_seed, sizeof(KEY_SEED_BYTE_COUNT));
+            explicit_bzero((cx_ecfp_private_key_t *)&private_key_local, sizeof(private_key_local));
         }
     }
     END_TRY;
@@ -277,7 +277,7 @@ void derive_radix_key_pair(
         PRINTF("Error? code: %d\n", error);
     }
 
-    compress_public_key(public_key);
+    compress_public_key((cx_ecfp_public_key_t *)public_key);
  
 }
 
@@ -291,7 +291,7 @@ size_t derive_sign_move_to_global_buffer(uint32_t *bip32path,
     volatile uint8_t der_sig[over_estimated_DER_sig_length + 1];
 
     int actual_DER_sig_length = ecdsa_sign_hash(
-        &privateKey,
+        (cx_ecfp_private_key_t *)&privateKey,
         NULL,  // pubkey not needed for sign
         hash, 32, // in 
         der_sig, over_estimated_DER_sig_length, // out
@@ -299,14 +299,14 @@ size_t derive_sign_move_to_global_buffer(uint32_t *bip32path,
     );
 
     // Ultra important step, MUST zero out the private, else sensitive information is leaked.
-    explicit_bzero(&privateKey, sizeof(cx_ecfp_private_key_t));
+    explicit_bzero((cx_ecfp_private_key_t *)&privateKey, sizeof(cx_ecfp_private_key_t));
 
     int der_signature_length = der_sig[1] + 2;
     if (der_signature_length != actual_DER_sig_length) {
         FATAL_ERROR("LENGTH MISMATCH");
     }
 
-    format_signature_out(der_sig);
+    format_signature_out((uint8_t *)der_sig);
     
     return ECSDA_SIGNATURE_BYTE_COUNT;
 }

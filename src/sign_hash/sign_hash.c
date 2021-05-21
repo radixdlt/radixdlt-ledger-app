@@ -12,7 +12,7 @@
 static sign_hash_context_t *ctx = &global.sign_hash_context;
 
 static void did_finish_sign_hash_flow() {
-    int tx = derive_sign_move_to_global_buffer(ctx->bip32_path, ctx->hash);
+    size_t tx = derive_sign_move_to_global_buffer(ctx->bip32_path, ctx->hash);
     io_exchange_with_code(SW_OK, tx);
     ui_idle();
 }
@@ -22,8 +22,13 @@ static void proceed_to_final_signature_confirmation() {
 }
 
 static void ask_user_to_confirm_hash() {
-    G_ui_state.length_lower_line_long = hexadecimal_string_from(
-        ctx->hash, HASH256_BYTE_COUNT, G_ui_state.lower_line_long);
+    G_ui_state.length_lower_line_long =
+        hexadecimal_string_from(
+                                ctx->hash,
+                                HASH256_BYTE_COUNT,
+                                G_ui_state.lower_line_long
+                                );
+    
     display_value("Verify Hash", proceed_to_final_signature_confirmation);
 }
 

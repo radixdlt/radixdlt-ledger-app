@@ -240,7 +240,7 @@ static void display(const char *row_1_max_12_chars,
 
     function_pointer = didApproveCallback;
 
-    int length_of_row1 = strlen(row_1_max_12_chars);
+    unsigned long length_of_row1 = strlen(row_1_max_12_chars);
     assert(length_of_row1 <= DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE);
 
     os_memset(title_row_one, 0x00,
@@ -254,7 +254,7 @@ static void display(const char *row_1_max_12_chars,
     ui_fullStr_to_partial();
 
     if (row_2_max_12_chars) {
-        int length_of_row2 = strlen(row_2_max_12_chars);
+        unsigned long length_of_row2 = strlen(row_2_max_12_chars);
         assert(length_of_row2 <= DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE);
         os_memcpy(title_row_two, row_2_max_12_chars, length_of_row2);
         title_row_two[DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE] = '\0';
