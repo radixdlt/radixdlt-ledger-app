@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include <os.h>
 #include <os_io_seproxyhal.h>
 #include "stringify_bip32_path.h"
@@ -18,7 +19,7 @@ static int stringify_bip32_path_single_component(
 	char str[12];
 	SPRINTF(str, "%d", unhardened_bip32_path_component_uint32);
 
-	int length = strlen(str);
+	int length = (int)strlen(str);
 	if (is_hardened) {
 		str[length] = '\'';
 		str[length + 1] = '\0';

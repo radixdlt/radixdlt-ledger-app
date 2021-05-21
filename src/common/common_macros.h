@@ -19,11 +19,6 @@
 
 // MACROS
 #define PLOC() PRINTF("\n%s - %s:%d \n", __FILE__, __func__, __LINE__);
-#define assert(x)      \
-    if (x) {           \
-    } else {           \
-        FATAL_ERROR("Assertion failed\n"); \
-    }
 
 #define FATAL_ERROR(...)     \
     {                        \
@@ -31,6 +26,13 @@
         PRINTF(__VA_ARGS__); \
         THROW(SW_FATAL_ERROR_INCORRECT_IMPLEMENTATION);       \
     }
+
+#define assert(x)      \
+    if (x) {           \
+    } else {           \
+        FATAL_ERROR("Assertion failed\n"); \
+    }
+
 
 
 // exception codes

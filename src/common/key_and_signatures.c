@@ -69,7 +69,6 @@ static uint8_t const secp256k1_b[] = {
 void uncompress_public_key(
     uint8_t *compressed_pubkey,
     const size_t compressed_pubkey_len,
-
     uint8_t *uncompressed_pubkey_res,
     const size_t uncompressed_pubkey_len
 ) {

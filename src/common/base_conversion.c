@@ -99,6 +99,6 @@ uint16_t hexadecimal_string_from(
     char *output_buffer
 ) {
 	uint8_t copy[byte_count];
-	os_memcpy(copy, bytes, byte_count);
+    os_memcpy(copy, bytes, byte_count);
 	return convert_byte_buffer_into_hexadecimal(copy, byte_count, output_buffer);
 }

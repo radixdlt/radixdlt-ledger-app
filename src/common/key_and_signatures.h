@@ -1,4 +1,5 @@
 #include "stdint.h"
+#include <cx.h>
 
 int parse_bip32_path_from_apdu_command(
     uint8_t *data_buffer,
@@ -23,7 +24,6 @@ void compress_public_key(cx_ecfp_public_key_t *public_key);
 void uncompress_public_key(
     uint8_t *compressed_pubkey,
     const size_t compressed_pubkey_len,
-
     uint8_t *uncompressed_pubkey_res,
     const size_t uncompressed_pubkey_len
 );
