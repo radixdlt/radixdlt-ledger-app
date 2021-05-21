@@ -75,7 +75,7 @@ void uncompress_public_key(
     // inspiration: https://bitcoin.stackexchange.com/a/86239/91730
 
     assert(compressed_pubkey_len == PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
-    assert(uncompressed_pubkey_len >= UNPUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
+    assert(uncompressed_pubkey_len >= PUBLIC_KEY_UNCOMPRESSEED_BYTE_COUNT);
 
     uint8_t x[FIELD_SCALAR_SIZE];
 	uint8_t y[FIELD_SCALAR_SIZE];
@@ -245,11 +245,11 @@ int parse_bip32_path_from_apdu_command(
 
 void derive_radix_key_pair(
     uint32_t *bip32path, 
-    volatile cx_ecfp_public_key_t *public_key,
+    volatile cx_ecfp_public_key_t *public_key_nullable,
     volatile cx_ecfp_private_key_t *private_key_nullable
 ) {
 
-    assert (public_key);
+    volatile cx_ecfp_public_key_t *public_key_local;
     volatile cx_ecfp_private_key_t private_key_local;
     volatile uint8_t key_seed[KEY_SEED_BYTE_COUNT];
     volatile uint16_t error = 0;
@@ -258,10 +258,14 @@ void derive_radix_key_pair(
         TRY {
             get_key_seed((uint8_t *)key_seed, bip32path);
             cx_ecfp_init_private_key(CX_CURVE_SECP256K1, (uint8_t *)key_seed, 32, (cx_ecfp_private_key_t *)&private_key_local);
-            cx_ecfp_init_public_key(CX_CURVE_SECP256K1, NULL, 0, (cx_ecfp_public_key_t *)public_key);
-            cx_ecfp_generate_pair(CX_CURVE_SECP256K1,  (cx_ecfp_public_key_t *)public_key, (cx_ecfp_private_key_t *)&private_key_local, 1);
+            cx_ecfp_init_public_key(CX_CURVE_SECP256K1, NULL, 0, (cx_ecfp_public_key_t *)public_key_local);
+            cx_ecfp_generate_pair(CX_CURVE_SECP256K1,  (cx_ecfp_public_key_t *)public_key_local, (cx_ecfp_private_key_t *)&private_key_local, 1);
 
-            if (private_key_nullable) { 
+            if (public_key_nullable) {
+                os_memcpy((cx_ecfp_public_key_t *)public_key_nullable, (cx_ecfp_public_key_t *)&public_key_local, sizeof(public_key_local));
+            }
+            
+            if (private_key_nullable) {
                 os_memcpy((cx_ecfp_private_key_t *)private_key_nullable, (cx_ecfp_private_key_t *)&private_key_local, sizeof(private_key_local));
             }
         }
@@ -277,7 +281,9 @@ void derive_radix_key_pair(
         PRINTF("Error? code: %d\n", error);
     }
 
-    compress_public_key((cx_ecfp_public_key_t *)public_key);
+    if (public_key_nullable) {
+        compress_public_key((cx_ecfp_public_key_t *)public_key_nullable);
+    }
  
 }
 
