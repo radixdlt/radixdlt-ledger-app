@@ -64,20 +64,8 @@ uint16_t convert_byte_buffer_into_decimal(uint8_t *bytes, int length, char *buff
 	return number_of_digits;
 }
 
-// Convert "bytes" of length "length" into digits of base 58 in "buffer", returning the length
-uint16_t convert_byte_buffer_into_base58(uint8_t *bytes, int length, char *buffer) {
-    uint8_t number_of_digits = convert_byte_buffer_into_digits_with_base(bytes, length, buffer, 58);
 
-    static const char base58_digits[] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
-    for (unsigned int digit_index = 0; digit_index < number_of_digits; ++digit_index)
-    {
-        uint8_t base58_digit_index = (uint8_t) buffer[digit_index];
-        buffer[digit_index] = base58_digits[base58_digit_index];
-    }
-    buffer[number_of_digits] = '\0'; // NULL terminate
-    return number_of_digits;
-}
 
 // Convert "bytes" of length "length" into digits of base 16 in "buffer", returning the length
 static uint16_t convert_byte_buffer_into_hexadecimal(uint8_t *bytes, int length, char *buffer) {

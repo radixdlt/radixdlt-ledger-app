@@ -4,6 +4,7 @@
 #include "common_macros.h"
 #include "sha256_hash.h"
 #include <os_io_seproxyhal.h>
+#include "bech32_encode_bytes.h"
 
 // Returns the de-facto length of the address copied over to `output_buffer` (including the null terminator).
 size_t to_string_radix_address(
@@ -12,7 +13,11 @@ size_t to_string_radix_address(
     const size_t size_of_buffer
 ) { 
     assert(size_of_buffer == RADIX_ADDRESS_BECH32_CHAR_COUNT_MAX + 1); // +1 for null
-    return convert_byte_buffer_into_base58(address->bytes, RADIX_ADDRESS_BYTE_COUNT, output_buffer);
+    if (!address_from_network_and_bytes(address->is_mainnet, address->bytes, RADIX_ADDRESS_BYTE_COUNT, 0, output_buffer, size_of_buffer)) {
+        PRINTF("Bech32 encoding of radix address failed.\n");
+        return 0;
+    }
+    return RADIX_ADDRESS_BECH32_CHAR_COUNT_MAX;
 }
 
 

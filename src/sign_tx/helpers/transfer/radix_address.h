@@ -12,6 +12,7 @@
 #define RADIX_ADDRESS_BECH32_CHAR_COUNT_MAX 65
 
 typedef struct {
+    bool is_mainnet;
     uint8_t bytes[RADIX_ADDRESS_BYTE_COUNT];
 } radix_address_t;
 
