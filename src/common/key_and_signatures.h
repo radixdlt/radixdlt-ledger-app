@@ -10,8 +10,15 @@ int parse_bip32_path_from_apdu_command(
 
 // derive_radix_key_pair derives a key pair from a BIP32 path and the Ledger
 // seed. Returns the public key and private key if not NULL.
-void derive_radix_key_pair(uint32_t *bip32path,
-                           volatile cx_ecfp_public_key_t *public_key,
+void derive_radix_key_pair_should_compress(
+    uint32_t *bip32path,
+    volatile cx_ecfp_public_key_t *public_key_nullable,
+    volatile cx_ecfp_private_key_t *private_key_nullable,
+    bool should_compress_pub_key);
+
+void derive_radix_key_pair(
+    uint32_t *bip32path,
+    volatile cx_ecfp_public_key_t *public_key_nullable,
                            volatile cx_ecfp_private_key_t *private_key_nullable);
 
 size_t derive_sign_move_to_global_buffer(

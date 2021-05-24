@@ -165,40 +165,7 @@ static void radix_main(void) {
                 // codes?
                 PRINTF("main.c error: %d\n", e);
 
-                // Cyon: Added this switch to be able to print e.g. `EXCEPTION_SECURITY`
-                switch (e) {
-                    case EXCEPTION: {
-                        PRINTF("error %d is 'EXCEPTION'\n", e);
-                        break;
-                    }
-                    case INVALID_PARAMETER: {
-                        PRINTF("error %d is 'INVALID_PARAMETER'\n", e);
-                        break;
-                    }
-                    case INVALID_STATE: {
-                        PRINTF("error %d is 'INVALID_STATE'\n", e);
-                        break;
-                    }
-                    case EXCEPTION_OVERFLOW: {
-                        PRINTF("error %d is 'EXCEPTION_OVERFLOW'\n", e);
-                        break;
-                    }
-                    case EXCEPTION_SECURITY: {
-                        PRINTF("error %d is 'EXCEPTION_SECURITY'\n", e);
-                        break;
-                    }
-                    case EXCEPTION_CXPORT: {
-                         PRINTF("error %d is 'EXCEPTION_CXPORT'\n", e);
-                        break;
-                    }
-
-                    case EXCEPTION_IO_OVERFLOW: {
-                          PRINTF("error %d is 'EXCEPTION_IO_OVERFLOW'\n", e);
-                        break;
-                    }
-                    default:
-                        break;
-                }
+                print_error_by_code(e);
 
                 // Cyon: I have no what these bit masks do/come from. e.g. `(e & 0x7FF)`, is this documented somewhere? This is inherited from sia app... ( https://github.com/LedgerHQ/app-sia/blob/master/src/main.c )
                 switch (e & 0xF000) {

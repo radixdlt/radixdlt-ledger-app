@@ -3,6 +3,7 @@
 
 
 #include "stdint.h"
+#include "stdbool.h"
 #include <seproxyhal_protocol.h>
 #include <os_io_seproxyhal.h>
 
@@ -70,4 +71,7 @@
 #define PUBLIC_KEY_UNCOMPRESSEED_BYTE_COUNT 65
 #define BIP32_PATH_LEN 12
 
-#endif
+// Returns true if error code was known, else false
+bool print_error_by_code(int error_code);
+
+#endif // COMMONMACROS_H

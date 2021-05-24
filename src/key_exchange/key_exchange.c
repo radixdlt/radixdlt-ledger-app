@@ -15,31 +15,40 @@ static do_key_exchange_context_t *ctx = &global.do_key_exchange_context;
 
 
 static void do_key_change_and_respond_with_point_on_curve() {
+    PRINTF("do_key_change_and_respond_with_point_on_curve\n");
+    PRINTF("public_key_of_other_party AGAIN: '%.*h'\n", PUBLIC_KEY_UNCOMPRESSEED_BYTE_COUNT, ctx->public_key_of_other_party);
+
+    
+    if (cx_ecfp_is_valid_point(
+                           CX_CURVE_SECP256K1,
+                           ctx->public_key_of_other_party,
+                               PUBLIC_KEY_UNCOMPRESSEED_BYTE_COUNT) != 1) {
+        PRINTF("Invalid public key, 'point' not on the curve");
+        THROW(SW_INVALID_PARAM);
+    }
+    PRINTF("public key is valid! proceeding with key derivation...\n");
+    
     cx_ecfp_private_key_t private_key;
 
-    derive_radix_key_pair(
+    derive_radix_key_pair_should_compress(
         ctx->bip32_path,
         NULL,  // dont write public key
-        &private_key
+        &private_key,
+        false
     );
 
-    
-    uint8_t uncompressed_pubkey[PUBLIC_KEY_UNCOMPRESSEED_BYTE_COUNT];
-    
-
-    uncompress_public_key(ctx->public_key_of_other_party, PUBLIC_KEY_COMPRESSEED_BYTE_COUNT, uncompressed_pubkey, PUBLIC_KEY_UNCOMPRESSEED_BYTE_COUNT);
-    
-
+    PRINTF("private key derivation done! proceeding with ECDH...\n");
     
     int actual_size_of_secret = cx_ecdh(
             &private_key,
             CX_ECDH_POINT, // or `CX_ECDH_X`
-            uncompressed_pubkey,
+            ctx->public_key_of_other_party,
             PUBLIC_KEY_UNCOMPRESSEED_BYTE_COUNT,
-            ctx->shared_secret_point,
+            G_io_apdu_buffer,
             PUBLIC_KEY_UNCOMPRESSEED_BYTE_COUNT);
             
-    os_memmove(G_io_apdu_buffer, ctx->shared_secret_point, actual_size_of_secret);
+    
+    PRINTF("ECDH done, length: %d, io_exchange_with_code\n", actual_size_of_secret);
     
     io_exchange_with_code(SW_OK, actual_size_of_secret);
     ui_idle();
@@ -73,7 +82,7 @@ void handle_key_exchange(
     uint16_t expected_data_length_path =
         expected_number_of_bip32_compents * byte_count_bip_component;
     
-    uint16_t expected_lenght_public_key_of_other_party = PUBLIC_KEY_COMPRESSEED_BYTE_COUNT;
+    uint16_t expected_lenght_public_key_of_other_party = PUBLIC_KEY_UNCOMPRESSEED_BYTE_COUNT;
     
     
     uint16_t expected_data_length = expected_data_length_path + expected_lenght_public_key_of_other_party;
@@ -93,7 +102,10 @@ void handle_key_exchange(
         BIP32_PATH_STRING_MAX_LENGTH);
     
     // Copy public key bytes
-    os_memcpy(data_buffer + expected_data_length_path, ctx->public_key_of_other_party, PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
+    os_memmove(ctx->public_key_of_other_party, data_buffer + expected_data_length_path, expected_lenght_public_key_of_other_party);
+    
+    
+    PRINTF("public_key_of_other_party: '%.*h'\n", expected_lenght_public_key_of_other_party, ctx->public_key_of_other_party);
 
     *flags |= IO_ASYNCH_REPLY;
 
