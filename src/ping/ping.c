@@ -14,7 +14,7 @@ void handle_ping(
     volatile unsigned int *flags,
     volatile unsigned int *tx
 ) {
-    PRINTF("Got PING from host machine\n");
+    PRINTF("Handle instruction 'PING' from host machine. ");
     int pingLength = 4;
     uint8_t expected[pingLength+1];
     expected[0] = 'p';

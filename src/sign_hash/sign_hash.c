@@ -40,7 +40,7 @@ void handle_sign_hash(
     volatile unsigned int *flags,
     volatile unsigned int *tx
 ) {
-
+    PRINTF("Handle instruction 'SIGN_HASH' from host machine. ");
     uint16_t expected_number_of_bip32_compents = 3;
     uint16_t byte_count_bip_component = 4;
     uint16_t expected_bip32_byte_count =

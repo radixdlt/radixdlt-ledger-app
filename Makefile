@@ -35,7 +35,8 @@ ICONNAME   = nanox_icon.gif
 else
 ICONNAME   = nanos_icon.gif
 endif
-APPVERSION = 0.1.3
+
+APPVERSION = 0.1.5
 
 # The --path argument here restricts which BIP32 paths the app is allowed to derive.
 
@@ -78,12 +79,19 @@ delete:
 DEFINES += OS_IO_SEPROXYHAL IO_SEPROXYHAL_BUFFER_SIZE_B=256
 DEFINES += HAVE_BAGL HAVE_SPRINTF HAVE_SNPRINTF_FORMAT_U
 
-# For enabling protobuf library to check for stackoverflow.
-# DEFINES += PB_CHECK_STACK_OVERFLOW
-
-DEFINES += HAVE_SPRINTF HAVE_PRINTF PRINTF=screen_printf
+ifdef DBG
+ifeq ($(TARGET_NAME),TARGET_NANOX)
+	DEFINES   += HAVE_PRINTF PRINTF=mcu_usb_printf
+else
+	DEFINES   += HAVE_PRINTF PRINTF=screen_printf
+endif
+DEFINES += HAVE_BOLOS_APP_STACK_CANARY
+else
+DEFINES += PRINTF\(...\)=
+endif
 
 DEFINES += HAVE_IO_USB HAVE_L4_USBLIB IO_USB_MAX_ENDPOINTS=4 IO_HID_EP_LENGTH=64 HAVE_USB_APDU
+
 DEFINES += APPVERSION=\"$(APPVERSION)\"
 
 # U2F

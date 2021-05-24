@@ -180,7 +180,8 @@ static int ecdsa_sign_hash(
     }
     END_TRY;
     if (error) {
-        PRINTF("Error? code: %d\n", error);
+        print_error_by_code(error);
+        return 0;
     }
 
     return result;
@@ -244,7 +245,7 @@ int parse_bip32_path_from_apdu_command(
 }
 
 
-void derive_radix_key_pair_should_compress(
+bool derive_radix_key_pair_should_compress(
     uint32_t *bip32path, 
     volatile cx_ecfp_public_key_t *public_key_nullable,
     volatile cx_ecfp_private_key_t *private_key_nullable,
@@ -255,11 +256,6 @@ void derive_radix_key_pair_should_compress(
     volatile cx_ecfp_private_key_t private_key_local;
     volatile uint8_t key_seed[KEY_SEED_BYTE_COUNT];
     volatile uint16_t error = 0;
-//    bool did_init_private_key = false;
-//    bool did_init_pub_key = false;
-//    bool did_call_generate_key_pair = false;
-//    bool did_copy_over_private_key = false;
-//    bool did_copy_over_publickey_key = false;
 
     BEGIN_TRY {
         TRY {
@@ -267,93 +263,65 @@ void derive_radix_key_pair_should_compress(
             
             cx_ecfp_init_private_key(
                                      CX_CURVE_SECP256K1,
-                                     key_seed,
+                                     (uint8_t *) key_seed,
                                      32,
-                                     &private_key_local
+                                     (cx_ecfp_private_key_t *) &private_key_local
                                      );
-//            did_init_private_key = true;
-            
             cx_ecfp_init_public_key(
                                     CX_CURVE_SECP256K1,
-                                    NULL, 
-                                    0,
-                                    &public_key_local
+                                    NULL, // no `rawkey` bytes, we want to derive a new one with `private_key_local` from `key_seed`
+                                    0, // irrelevant, length of NULL `rawkey` above...
+                                    (cx_ecfp_public_key_t *) &public_key_local
                                     );
-            
-//            did_init_pub_key = true;
             
             cx_ecfp_generate_pair(
                                   CX_CURVE_SECP256K1,
-                                  &public_key_local,
-                                  &private_key_local,
+                                  (cx_ecfp_public_key_t *) &public_key_local,
+                                  (cx_ecfp_private_key_t *) &private_key_local,
                                   1 // if set to non zero, keep the private key value if set.
                                   );
-            
-//            did_call_generate_key_pair = true;
 
             if (public_key_nullable) {
                 os_memcpy(
-                          public_key_nullable,
-                          &public_key_local,
+                          (cx_ecfp_public_key_t *) public_key_nullable,
+                          (cx_ecfp_public_key_t *) &public_key_local,
                           sizeof(public_key_local)
                           );
-//                did_copy_over_publickey_key = true;
             }
             
             if (private_key_nullable) {
                 os_memcpy(
-                          private_key_nullable,
-                          &private_key_local,
+                          (cx_ecfp_private_key_t *) private_key_nullable,
+                          (cx_ecfp_private_key_t *) &private_key_local,
                           sizeof(private_key_local)
                           );
-//                did_copy_over_private_key = true;
             }
         }
         CATCH_OTHER(e) { error = e; }
         FINALLY { 
-            explicit_bzero(key_seed, sizeof(KEY_SEED_BYTE_COUNT));
-            explicit_bzero(&private_key_local, sizeof(private_key_local));
+            explicit_bzero((uint8_t *) key_seed, sizeof(KEY_SEED_BYTE_COUNT));
+            explicit_bzero((cx_ecfp_private_key_t *)&private_key_local, sizeof(private_key_local));
         }
     }
     END_TRY;
     
     if (error) {
-    
-        print_error_by_code(error);PRINTF("ABORT key derivation since failure.");
-        
-//        if (did_init_private_key) {
-//            PRINTF("did_init_private_key IS TRUE");
-//        } else { PRINTF("Did not even init private key...."); }
-//        if (did_init_pub_key) {
-//            PRINTF("did_init_pub_key IS TRUE");
-//        }
-//        if (did_call_generate_key_pair) {
-//            PRINTF("did_call_generate_key_pair IS TRUE");
-//        }
-//        if (did_copy_over_private_key) {
-//            PRINTF("did_copy_over_private_key IS TRUE");
-//        }
-//        if (did_copy_over_publickey_key) {
-//            PRINTF("did_copy_over_publickey_key IS TRUE");
-//        }
-        
-        return;
-    } else {
-        PRINTF("Key derivation succeeded?!");
+        print_error_by_code(error);
+        return false;
     }
-    
 
     if (public_key_nullable && should_compress) {
-        compress_public_key(public_key_nullable);
+        compress_public_key((cx_ecfp_public_key_t *)public_key_nullable);
     }
  
+    return true;
 }
 
-void derive_radix_key_pair(
+bool derive_radix_key_pair(
     uint32_t *bip32path,
     volatile cx_ecfp_public_key_t *public_key_nullable,
     volatile cx_ecfp_private_key_t *private_key_nullable) {
-    derive_radix_key_pair_should_compress(bip32path, public_key_nullable, private_key_nullable, true);
+    return derive_radix_key_pair_should_compress(bip32path, public_key_nullable, private_key_nullable, true);
 }
 
 

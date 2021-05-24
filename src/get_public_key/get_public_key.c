@@ -15,16 +15,22 @@ static get_public_key_context_t *ctx = &global.get_public_key_context;
 static void generate_and_respond_with_compressed_public_key() {
     cx_ecfp_public_key_t public_key;
 
-    derive_radix_key_pair(ctx->bip32_path, &public_key,
+    if (!derive_radix_key_pair(ctx->bip32_path, &public_key,
                           NULL  // dont write private key
-    );
-    assert(public_key.W_len == PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
+                               )) {
+        PRINTF("Failed to derive public key");
+        io_exchange_with_code(SW_INTERNAL_ERROR_ECC, 0);
+    } else {
+        
+        assert(public_key.W_len == PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
 
-    os_memmove(G_io_apdu_buffer, public_key.W,
+        os_memmove(G_io_apdu_buffer, public_key.W,
                PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
 
-    io_exchange_with_code(SW_OK, PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
+        io_exchange_with_code(SW_OK, PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
+    }
     ui_idle();
+    return;
 }
 
 static void generate_publickey_require_confirmation_if_needed(
@@ -52,7 +58,7 @@ void handle_get_public_key(
     volatile unsigned int *flags,
     volatile unsigned int *tx
 ) {
-    PRINTF("Got GET_PUBLIC_KEY from host machine\n");
+    PRINTF("Handle instruction 'GET_PUBLIC_KEY' from host machine\n");
     uint16_t expected_number_of_bip32_compents = 3;
     uint16_t byte_count_bip_component = 4;
     uint16_t expected_data_length =

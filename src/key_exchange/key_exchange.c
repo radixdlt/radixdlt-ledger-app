@@ -15,10 +15,6 @@ static do_key_exchange_context_t *ctx = &global.do_key_exchange_context;
 
 
 static void do_key_change_and_respond_with_point_on_curve() {
-    PRINTF("do_key_change_and_respond_with_point_on_curve\n");
-    PRINTF("public_key_of_other_party AGAIN: '%.*h'\n", PUBLIC_KEY_UNCOMPRESSEED_BYTE_COUNT, ctx->public_key_of_other_party);
-
-    
     if (cx_ecfp_is_valid_point(
                            CX_CURVE_SECP256K1,
                            ctx->public_key_of_other_party,
@@ -26,32 +22,58 @@ static void do_key_change_and_respond_with_point_on_curve() {
         PRINTF("Invalid public key, 'point' not on the curve");
         THROW(SW_INVALID_PARAM);
     }
-    PRINTF("public key is valid! proceeding with key derivation...\n");
     
     cx_ecfp_private_key_t private_key;
 
-    derive_radix_key_pair_should_compress(
+    if (!derive_radix_key_pair_should_compress(
         ctx->bip32_path,
         NULL,  // dont write public key
         &private_key,
         false
-    );
+    )) {
+        PRINTF("Key exchange failed, failed to derive private key.\n");
+        io_exchange_with_code(SW_INTERNAL_ERROR_ECC, 0);
+        ui_idle();
+        return;
+    }
+    
+    int actual_size_of_secret = 0;
+    int error = 0;
+    BEGIN_TRY {
+        TRY {
+                io_seproxyhal_io_heartbeat();
+            actual_size_of_secret = cx_ecdh(
+                    &private_key,
+                    CX_ECDH_POINT, // or `CX_ECDH_X`
+                    ctx->public_key_of_other_party,
+                    PUBLIC_KEY_UNCOMPRESSEED_BYTE_COUNT,
+                    G_io_apdu_buffer,
+                    PUBLIC_KEY_UNCOMPRESSEED_BYTE_COUNT);
+                    
+      
+        }
+        CATCH_OTHER(e) { error = e; }
+        FINALLY {
+            /* Nothing to do, but make sure to zero out private key from calling function */
+        }
 
-    PRINTF("private key derivation done! proceeding with ECDH...\n");
+    }
+    END_TRY;
     
-    int actual_size_of_secret = cx_ecdh(
-            &private_key,
-            CX_ECDH_POINT, // or `CX_ECDH_X`
-            ctx->public_key_of_other_party,
-            PUBLIC_KEY_UNCOMPRESSEED_BYTE_COUNT,
-            G_io_apdu_buffer,
-            PUBLIC_KEY_UNCOMPRESSEED_BYTE_COUNT);
-            
+    // Ultra important step, MUST zero out the private, else sensitive information is leaked.
+    explicit_bzero((cx_ecfp_private_key_t *)&private_key, sizeof(cx_ecfp_private_key_t));
     
-    PRINTF("ECDH done, length: %d, io_exchange_with_code\n", actual_size_of_secret);
     
-    io_exchange_with_code(SW_OK, actual_size_of_secret);
+    if (error) {
+        print_error_by_code(error);
+        PRINTF("Key exchange failed, failed to perform ECDH\n");
+        io_exchange_with_code(SW_INTERNAL_ERROR_ECC, 0);
+    } else {
+        io_exchange_with_code(SW_OK, actual_size_of_secret);
+    }
+    
     ui_idle();
+    return;
 }
 
 
@@ -75,7 +97,7 @@ void handle_key_exchange(
         volatile unsigned int *flags,
         volatile unsigned int *tx
 ) {
-    PRINTF("Got DO_KEY_EXCHANGE from host machine\n");
+    PRINTF("Handle instruction 'DO_KEY_EXCHANGE' from host machine\n");
     
     uint16_t expected_number_of_bip32_compents = 3;
     uint16_t byte_count_bip_component = 4;
@@ -104,8 +126,6 @@ void handle_key_exchange(
     // Copy public key bytes
     os_memmove(ctx->public_key_of_other_party, data_buffer + expected_data_length_path, expected_lenght_public_key_of_other_party);
     
-    
-    PRINTF("public_key_of_other_party: '%.*h'\n", expected_lenght_public_key_of_other_party, ctx->public_key_of_other_party);
 
     *flags |= IO_ASYNCH_REPLY;
 
