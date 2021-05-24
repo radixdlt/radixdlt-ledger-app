@@ -27,6 +27,10 @@ include $(BOLOS_SDK)/Makefile.defines
 APPNAME    = Radix
 APPVERSION = 0.1.9
 
+ifeq ($(TARGET_NAME), TARGET_NANOS)
+APP_STACK_SIZE:=1024
+endif
+
 ifeq ($(TARGET_NAME), TARGET_NANOX)
 ICONNAME   = nanox_icon.gif
 else
