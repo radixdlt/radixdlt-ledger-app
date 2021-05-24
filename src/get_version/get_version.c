@@ -16,7 +16,7 @@ void handle_get_version(
     volatile unsigned int *flags,
     volatile unsigned int *tx
 ) {
-    PRINTF("Handle instruction 'GET_VERSION' from host machine.\n");
+    PRINTF("Handle instruction 'GET_VERSION' from host machine. Answering with: '%.*s'\n", 5, APPVERSION);
 	G_io_apdu_buffer[0] = APPVERSION[0] - '0';
 	G_io_apdu_buffer[1] = APPVERSION[2] - '0';
 	G_io_apdu_buffer[2] = APPVERSION[4] - '0';

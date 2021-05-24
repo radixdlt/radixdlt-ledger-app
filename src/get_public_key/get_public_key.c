@@ -58,7 +58,7 @@ void handle_get_public_key(
     volatile unsigned int *flags,
     volatile unsigned int *tx
 ) {
-    PRINTF("Handle instruction 'GET_PUBLIC_KEY' from host machine\n");
+    PRINTF("Handle instruction 'GET_PUBLIC_KEY' from host machine.\n");
     uint16_t expected_number_of_bip32_compents = 3;
     uint16_t byte_count_bip_component = 4;
     uint16_t expected_data_length =

@@ -4,60 +4,6 @@
 
 **We strongly recommend using Linux as your development environment.**
 
-## Get source
-Apart from cloning, be sure you get all the submodules:
-```
-git submodule update --init --recursive
-```
-
-## Dependencies
-
-#### Ledger Nano S
-
-- This project requires Ledger firmware 1.6
-
-- The current repository keeps track of Ledger's SDK but it is possible to override it by changing the git submodule.
-
-#### Docker CE
-
-- Please install [Docker](https://docs.docker.com/install/)
-
-#### Ubuntu Dependencies
-- Install the following packages:
-   ```
-   sudo apt update && apt-get -y install build-essential git wget cmake \
-  libssl-dev libgmp-dev autoconf libtool
-   ```
-
-#### Other dependencies
-
-- You need Python 3. In most cases, `make deps` will be able to install all additional dependencies:
-
-   ```bash
-   make deps
-   ```
-
-- You also need to install [Conan](https://conan.io/)
-
-   ```bash
-   pip install conan
-   ```
-   
-- Before running the `make` commands below, run:
-
-  `pip install virtualenv`
-  
-  `virtualenv ledger`
-  
-  `source ledger/bin/activate`
-  
-  `pip install ledgerblue`
-  
-- If you want to build using docker, make sure you do -not- have `BOLOS_SDK` env variable set.
-
-> ⚠️ Some IDEs may not use the same python interpreter or virtual enviroment as the one you used when running `pip`.
-If you see conan is not found, check that you installed the package in the same interpreter as the one that launches `cmake`.
-
 # Prepare your development device
 
 > ☣️ **Please do not use a Ledger device with funds for development purposes. Have a second device that is used ONLY for development and testing**
@@ -94,34 +40,23 @@ All our tests expect the device to be configured with a known test mnemonic.
 
 **3 - Add a development certificate**
 
-- Plug your device while pressing the right button
-
-- Your device will show "Recovery" in the screen
-
-- Click both buttons at the same time
-
-- Enter your pin if necessary
-
-- Run `make dev_ca`. The device will receive a development certificate to avoid constant manual confirmations.
-
+[See guide](https://ledger.readthedocs.io/en/latest/userspace/debugging.html#pin-bypass)
 
 # Building the Ledger App
 
 The Makefile will build the firmware in a docker container and leave the binary in the correct directory.
 
-- Build
+### Build
 
-   The following command will build the app firmware inside a container and load to your device:
-   ```
-   make                # Builds the app
-   ```
+The following command will build the app firmware inside a container and load to your device:
 
-- Upload to a device
-   The following command will upload the application to the ledger. _Warning: The application will be deleted before uploading._
-   ```
-   make load          # Builds and loads the app to the device
-   ```
+```sh
+make
+```
 
-# Development (building C++ Code / Tests)
+### Upload to a device
+The following command will upload the application to the ledger. _Warning: The application will be deleted before uploading._
 
-This is useful when you want to make changes to libraries, run unit tests, etc. It will build all common libraries and unit tests.
+```sh
+make load
+```

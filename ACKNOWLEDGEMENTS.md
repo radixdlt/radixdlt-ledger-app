@@ -13,5 +13,3 @@ Ledger apps from other DLT's:
 * [Handshake](https://github.com/handshake-org/ledger-app-hns), MIT License
 * [Sia Ledger app](https://github.com/LedgerHQ/ledger-app-sia/), MIT License
 * [Zilliqa's Ledger app](https://github.com/LedgerHQ/ledger-app-zilliqa) (in turn based on Sia), MIT License
-
-Extra big thanks to Cosmos, which whole development environment we copy pasted, where we can develop on macOS and Linux!
