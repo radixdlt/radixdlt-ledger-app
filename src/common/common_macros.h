@@ -61,9 +61,6 @@
 #define NUMBER_OF_BIP32_COMPONENTS_IN_PATH 5
 #define MAX_CHUNK_SIZE 255 
 
-// The biggest of a value split across chunks might be the `rri`
-#define MAX_ATOM_SLICE_SIZE MAX_CHUNK_SIZE
-
 #define HASH256_BYTE_COUNT 32
 
 #define IV_LEN 16

@@ -93,8 +93,6 @@ static void proceed_to_display_other_pubkey() {
                                 G_ui_state.lower_line_long
                                 );
     
-    PRINTF("G_ui_state.length_lower_line_long: %d\n", G_ui_state.length_lower_line_long);
-    
     display_value("Other pubkey",
                   proceed_to_exchange_confirmation);
 }

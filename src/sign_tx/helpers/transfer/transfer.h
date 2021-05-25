@@ -6,7 +6,7 @@
 #include "token_amount.h"
 
 typedef struct {
-    bool has_confirmed_serializer;
+    bool has_confirmed_action_type;
 
     bool is_address_set;
     radix_address_t address;
