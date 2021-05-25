@@ -25,7 +25,7 @@ bool address_from_network_and_bytes(
     const uint8_t *in,
     size_t in_len,
                          
-    uint8_t pad,
+    bool should_pad,
                          
     char *out,
     size_t out_len
@@ -58,6 +58,10 @@ bool address_from_network_and_bytes(
     size_t tmp_size = 0;
     explicit_bzero(tmp_data, sizeof(tmp_data));
 
+    int pad = 0;
+    if (should_pad) {
+        pad = 1;
+    }
     convert_bits(tmp_data, &tmp_size, 5, in, in_len, 8, pad);
     if (tmp_size >= out_len) {
         PRINTF("bech32 encoding failed, out of bounds.\n");

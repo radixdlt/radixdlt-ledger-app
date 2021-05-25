@@ -12,8 +12,15 @@ size_t to_string_radix_address(
     char *output_buffer,
     const size_t size_of_buffer
 ) { 
-    assert(size_of_buffer == RADIX_ADDRESS_BECH32_CHAR_COUNT_MAX + 1); // +1 for null
-    if (!address_from_network_and_bytes(address->is_mainnet, address->bytes, RADIX_ADDRESS_BYTE_COUNT, 0, output_buffer, size_of_buffer)) {
+    assert(size_of_buffer >= RADIX_ADDRESS_BECH32_CHAR_COUNT_MAX + 1); // +1 for null
+    if (!address_from_network_and_bytes(
+            address->is_mainnet,
+            address->bytes,
+            RADIX_ADDRESS_BYTE_COUNT,
+            true, // should pad
+            output_buffer,
+            size_of_buffer)
+        ) {
         PRINTF("Bech32 encoding of radix address failed.\n");
         return 0;
     }

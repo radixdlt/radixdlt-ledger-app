@@ -18,7 +18,7 @@ bool address_from_network_and_bytes(
     const uint8_t *in,
     size_t in_len,
                          
-    uint8_t pad,
+    bool should_pad,
                          
     char *out,
     size_t out_len);

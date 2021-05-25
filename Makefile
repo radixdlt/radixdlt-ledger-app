@@ -25,7 +25,8 @@ include $(BOLOS_SDK)/Makefile.defines
 #########
 
 APPNAME    = Radix
-APPVERSION = 0.1.9
+# Never let any version number go above 9. Double digit numbers are not supported.
+APPVERSION = 0.2.0
 
 ifeq ($(TARGET_NAME), TARGET_NANOS)
 APP_STACK_SIZE:=1024

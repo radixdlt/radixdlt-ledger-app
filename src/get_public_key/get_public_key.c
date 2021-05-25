@@ -13,16 +13,9 @@
 
 static get_public_key_context_t *ctx = &global.get_public_key_context;
 
-#define RADIX_ACCOUNT_ADDRESS_VERSION_BYTE 0x04
-#define RADIX_ACCOUNT_ADDRESS_VERSION_DATA_LENGTH 1 // one byte
 
-static void did_verify_address() {
-    os_memmove(
-        G_io_apdu_buffer,
-        G_ui_state.lower_line_long,
-        RADIX_ADDRESS_BECH32_CHAR_COUNT_MAX
-    );
-    io_exchange_with_code(SW_OK, RADIX_ADDRESS_BECH32_CHAR_COUNT_MAX);
+static void did_verify_address_respond_with_pubkey() {
+    io_exchange_with_code(SW_OK, PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
     ui_idle();
     return;
 }
@@ -42,35 +35,28 @@ static void generate_and_respond_with_compressed_public_key() {
     }
     assert(public_key.W_len == PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
   
-
+    os_memmove(
+        G_io_apdu_buffer,
+        public_key.W,
+        PUBLIC_KEY_COMPRESSEED_BYTE_COUNT
+    );
         
     if (ctx->display_address) {
         
         clear_lower_line_long();
+        explicit_bzero(ctx->address.bytes, RADIX_ADDRESS_BYTE_COUNT);
         
-        os_memset(ctx->address.bytes, RADIX_ACCOUNT_ADDRESS_VERSION_BYTE, RADIX_ACCOUNT_ADDRESS_VERSION_DATA_LENGTH);
-        os_memcpy(ctx->address.bytes + RADIX_ACCOUNT_ADDRESS_VERSION_DATA_LENGTH, public_key.W, PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
+        os_memset(ctx->address.bytes, RADIX_ADDRESS_VERSION_BYTE, RADIX_ADDRESS_VERSION_DATA_LENGTH);
+        os_memcpy(ctx->address.bytes + RADIX_ADDRESS_VERSION_DATA_LENGTH, public_key.W, PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
         
-        
-        size_t actual_radix_address_length = to_string_radix_address(&ctx->address, G_ui_state.lower_line_long, RADIX_ADDRESS_BECH32_CHAR_COUNT_MAX);
-       
-        if (actual_radix_address_length != RADIX_ADDRESS_BECH32_CHAR_COUNT_MAX) {
-            PRINTF("actual_radix_address_length != radix_address_string_len");
-            io_exchange_with_code(SW_INTERNAL_ERROR_ECC, 0);
-            ui_idle();
-            return;
-        }
-        G_ui_state.length_lower_line_long = actual_radix_address_length;
+        size_t actual_radix_address_length = to_string_radix_address(&ctx->address, G_ui_state.lower_line_long, MAX_LENGTH_FULL_STR_DISPLAY);
 
+        G_ui_state.length_lower_line_long = actual_radix_address_length;
                 
-        display_value("Address", did_verify_address);
+        display_value("Address", did_verify_address_respond_with_pubkey);
     } else {
         
-        os_memmove(
-            G_io_apdu_buffer,
-            public_key.W,
-            PUBLIC_KEY_COMPRESSEED_BYTE_COUNT
-        );
+
         io_exchange_with_code(SW_OK, PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
         ui_idle();
         return;
