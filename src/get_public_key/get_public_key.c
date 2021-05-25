@@ -14,11 +14,20 @@
 static get_public_key_context_t *ctx = &global.get_public_key_context;
 
 
-static void did_verify_address_respond_with_pubkey() {
+static void finished_ui_flow_respond_with_pubkey() {
     io_exchange_with_code(SW_OK, PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
     ui_idle();
     return;
 }
+
+static void did_verify_address() {
+    finished_ui_flow_respond_with_pubkey();
+}
+
+ static void proceed_to_final_address_confirmation() {
+     display_lines("Send pubkey", "Confirm?", did_verify_address);
+ }
+
 
 static void generate_and_respond_with_compressed_public_key() {
     cx_ecfp_public_key_t public_key;
@@ -53,22 +62,26 @@ static void generate_and_respond_with_compressed_public_key() {
 
         G_ui_state.length_lower_line_long = actual_radix_address_length;
                 
-        display_value("Address", did_verify_address_respond_with_pubkey);
+        display_value("Your address", proceed_to_final_address_confirmation);
     } else {
-        
-
-        io_exchange_with_code(SW_OK, PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
-        ui_idle();
-        return;
+        finished_ui_flow_respond_with_pubkey();
     }
 
+}
+
+static void proceed_to_pubkey_generation_confirmation() {
+    display_lines("Generate key", "Confirm?", generate_and_respond_with_compressed_public_key);
 }
 
 static void generate_publickey_require_confirmation_if_needed(
     bool requireConfirmationBeforeGeneration) {
     if (requireConfirmationBeforeGeneration) {
-        display_value("Gen PubKey",
-                      generate_and_respond_with_compressed_public_key);
+        callback_t cb = proceed_to_pubkey_generation_confirmation;
+        if (ctx->display_address) {
+            PRINTF("setting cb = generate_and_respond_with_compressed_public_key\n");
+            cb = generate_and_respond_with_compressed_public_key;
+        }
+        display_value("Key at index", cb);
     } else {
         generate_and_respond_with_compressed_public_key();
     }
