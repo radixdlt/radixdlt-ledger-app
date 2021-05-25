@@ -7,11 +7,17 @@
 #include <os.h>
 #include <os_io_seproxyhal.h>
 #include "key_and_signatures.h"
+#include "common_macros.h"
 
-#define RADIX_ADDRESS_BYTE_COUNT 41 // Network(1) + VersionByte(1) + PubKeyCompr(33) + Checksum(6)
+
+#define RADIX_ADDRESS_VERSION_BYTE 0x04
+#define RADIX_ADDRESS_VERSION_DATA_LENGTH 1 // one byte
+
+#define RADIX_ADDRESS_BYTE_COUNT (PUBLIC_KEY_COMPRESSEED_BYTE_COUNT + RADIX_ADDRESS_VERSION_DATA_LENGTH)
 #define RADIX_ADDRESS_BECH32_CHAR_COUNT_MAX 65
 
 typedef struct {
+    bool is_mainnet;
     uint8_t bytes[RADIX_ADDRESS_BYTE_COUNT];
 } radix_address_t;
 

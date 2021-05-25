@@ -77,11 +77,33 @@ static void do_key_change_and_respond_with_point_on_curve() {
 }
 
 
+
+static void proceed_to_exchange_confirmation() {
+    display_lines("Key exchange", "Confirm?", do_key_change_and_respond_with_point_on_curve);
+}
+
+static void proceed_to_display_other_pubkey() {
+    clear_lower_line_long();
+    
+    
+    G_ui_state.length_lower_line_long =
+        hexadecimal_string_from(
+                                ctx->public_key_of_other_party,
+                                PUBLIC_KEY_UNCOMPRESSEED_BYTE_COUNT,
+                                G_ui_state.lower_line_long
+                                );
+    
+    PRINTF("G_ui_state.length_lower_line_long: %d\n", G_ui_state.length_lower_line_long);
+    
+    display_value("Other pubkey",
+                  proceed_to_exchange_confirmation);
+}
+
 static void generate_sharedkey_require_confirmation_if_needed(
     bool requireConfirmationDoingDiffieHellman) {
     if (requireConfirmationDoingDiffieHellman) {
-        display_value("Exchange key",
-                      do_key_change_and_respond_with_point_on_curve);
+        display_value("Your key at:",
+                      proceed_to_display_other_pubkey);
     } else {
         do_key_change_and_respond_with_point_on_curve();
     }

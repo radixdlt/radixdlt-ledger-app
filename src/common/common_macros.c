@@ -40,6 +40,30 @@ bool print_error_by_code(int e) {
               PRINTF("error %d is 'EXCEPTION_IO_OVERFLOW'\n", e);
             return true;
         }
+        case SW_FATAL_ERROR_INCORRECT_IMPLEMENTATION: {
+            PRINTF("error %d is our custom 'SW_FATAL_ERROR_INCORRECT_IMPLEMENTATION'\n", e);
+          return true;
+        }
+        case SW_INTERNAL_ERROR_ECC: {
+            PRINTF("error %d is our custom 'SW_INTERNAL_ERROR_ECC'\n", e);
+          return true;
+        }
+        case SW_INVALID_INSTRUCTION: {
+            PRINTF("error %d is our custom 'SW_INVALID_INSTRUCTION'\n", e);
+          return true;
+        }
+        case SW_INCORRECT_CLA: {
+            PRINTF("error %d is our custom 'SW_INCORRECT_CLA'\n", e);
+          return true;
+        }
+        case SW_USER_REJECTED: {
+            PRINTF("error %d is our custom 'SW_USER_REJECTED'\n", e);
+          return true;
+        }
+        case SW_INVALID_PARAM: {
+            PRINTF("error %d is our custom 'SW_INVALID_PARAM'\n", e);
+          return true;
+        }
         default: break;
     }
     PRINTF("error %d is not known.\n", e);

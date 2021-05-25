@@ -4,12 +4,13 @@
 #include "stdint.h"
 #include <seproxyhal_protocol.h>
 #include <os_io_seproxyhal.h>
+#include "common_macros.h"
 
 // assuming a font size of 11 (`BAGL_FONT_OPEN_SANS_REGULAR_11px`)
 #define DISPLAY_OPTIMAL_NUMBER_OF_CHARACTERS_PER_LINE 12
 
 // Size of some string used for displaying long text on disaply
-#define MAX_LENGTH_FULL_STR_DISPLAY 103 // "ABCD0123456789E, Full Identifier: /9hTaTtgqxhAGRryeMs5htePmJA53tpjDgJK1FY3H1tLrmiZjv6j/ABCD0123456789E\0"
+#define MAX_LENGTH_FULL_STR_DISPLAY (2 * PUBLIC_KEY_UNCOMPRESSEED_BYTE_COUNT)
 
 typedef struct {
 

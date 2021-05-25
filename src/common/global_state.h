@@ -7,6 +7,8 @@
 
 typedef struct {
 	uint32_t bip32_path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
+    bool display_address;
+    radix_address_t address;
 } get_public_key_context_t;
 
 typedef struct {
