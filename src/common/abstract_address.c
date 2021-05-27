@@ -16,12 +16,14 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "bech32_encode_bytes.h"
+#include "abstract_address.h"
 #include "os.h"
 #include "segwit_addr.h"
 
-bool address_from_network_and_bytes(
-    bool is_mainnet, // else betanet
+bool abstract_address_from_network_and_bytes(
+    char *hrp,
+    size_t hrplen,
+                                    
     const uint8_t *in,
     size_t in_len,
                          
@@ -32,20 +34,11 @@ bool address_from_network_and_bytes(
 ) {
     explicit_bzero(out, out_len);
 
-    if (in_len > MAX_INPUT_SIZE) {
+    if (in_len > MAX_BECH32_DATA_PART_BYTE_COUNT) {
         PRINTF("bech32 encoding failed, out of bounds.\n");
         return false;
     }
-
-    size_t hrplen = 3;
-    char hrp[hrplen];
     
-    if (is_mainnet) {
-        os_memmove(hrp, "rdx", hrplen);
-    } else {
-        // betanet
-        os_memmove(hrp, "brx", hrplen);
-    }
     
     // We set a lower bound to ensure this is safe
     if (out_len < hrplen + (in_len * 2) + 7) { // 7 is 6 bytes checksum and 1 byte delimiter (always "1")
@@ -53,8 +46,7 @@ bool address_from_network_and_bytes(
         return false;
     }
 
-    // Overestimate required size *2==(8/4) instead of *(8/5)
-    uint8_t tmp_data[MAX_INPUT_SIZE * 2];
+    uint8_t tmp_data[MAX_BECH32_DATA_PART_BYTE_COUNT];
     size_t tmp_size = 0;
     explicit_bzero(tmp_data, sizeof(tmp_data));
 

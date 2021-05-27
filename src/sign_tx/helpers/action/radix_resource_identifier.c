@@ -58,7 +58,7 @@ size_t to_string_rri_null_term_or_not(
 
     if (null_terminate) {
         output_buffer[length] = '\0';
-        return length + 1; 
+        return length + 1;
     } else {
         return length;
     }

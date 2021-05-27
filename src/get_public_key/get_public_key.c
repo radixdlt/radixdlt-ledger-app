@@ -9,7 +9,7 @@
 #include "key_and_signatures.h"
 #include "stringify_bip32_path.h"
 #include "ui.h"
-#include "radix_address.h"
+#include "account_address.h"
 
 static get_public_key_context_t *ctx = &global.get_public_key_context;
 
@@ -53,12 +53,12 @@ static void generate_and_respond_with_compressed_public_key() {
     if (ctx->display_address) {
         
         clear_lower_line_long();
-        explicit_bzero(ctx->address.bytes, RADIX_ADDRESS_BYTE_COUNT);
+        explicit_bzero(ctx->address.bytes, ACCOUNT_ADDRESS_BYTE_COUNT);
         
-        os_memset(ctx->address.bytes, RADIX_ADDRESS_VERSION_BYTE, RADIX_ADDRESS_VERSION_DATA_LENGTH);
-        os_memcpy(ctx->address.bytes + RADIX_ADDRESS_VERSION_DATA_LENGTH, public_key.W, PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
+        os_memset(ctx->address.bytes, ACCOUNT_ADDRESS_VERSION_BYTE, ACCOUNT_ADDRESS_VERSION_DATA_LENGTH);
+        os_memcpy(ctx->address.bytes + ACCOUNT_ADDRESS_VERSION_DATA_LENGTH, public_key.W, PUBLIC_KEY_COMPRESSEED_BYTE_COUNT);
         
-        size_t actual_radix_address_length = to_string_radix_address(&ctx->address, G_ui_state.lower_line_long, MAX_LENGTH_FULL_STR_DISPLAY);
+        size_t actual_radix_address_length = to_string_account_address(&ctx->address, G_ui_state.lower_line_long, MAX_LENGTH_FULL_STR_DISPLAY);
 
         G_ui_state.length_lower_line_long = actual_radix_address_length;
                 

@@ -12,6 +12,7 @@
 #include "base_conversion.h"
 #include "parse_tx.h"
 #include "sign_tx_ui.h"
+#include "parse_tx.h"
 #include "common_macros.h"
 
 static sign_tx_context_t *ctx = &global.sign_tx_context;
@@ -54,12 +55,6 @@ static void parse_bip_and_tx_size(
     PRINTF("Finished parsing initial setup-package specifying that the transaction we are about to parse contains #%d bytes and #%d actions and is to be signed with key at BIP32 derivation path: '%s'\n", ctx->tx_byte_count, total_number_of_actions(&ctx->parse_state.actions_counter.in_tx), bip_32_string);
 }
 
-typedef enum {
-    PayloadTypeIsTXBytes = 100,
-    PayloadTypeIsActionFieldMetaData = 101
-} PayloadType;
-
-
 static void update_hash(
     uint8_t* bytes, 
     uint16_t byte_count, 
@@ -89,58 +84,39 @@ static void receive_bytes_and_update_hash_and_update_ux() {
     }
 
     uint8_t p1 = G_io_apdu_buffer[OFFSET_P1];
+    assert(p1 == 2); // 2 indicated it is a "action package" and no the "initial setup package"
     uint8_t p2 = G_io_apdu_buffer[OFFSET_P2];
     uint8_t* data_buffer = G_io_apdu_buffer + OFFSET_CDATA;
     uint16_t number_of_bytes_received = G_io_apdu_buffer[OFFSET_LC];
     G_io_apdu_buffer[OFFSET_LC] = 0;
 
-    PayloadType payloadType = p1;
 
     uint16_t bytes_received_before_this_payload = ctx->number_of_tx_bytes_received;
     uint16_t bytes_received_incl_this_payload = bytes_received_before_this_payload + number_of_bytes_received;
 
-    // Check what kind of payload the bytes represent
-    switch (payloadType)
-    {
-    case PayloadTypeIsTXBytes:
-        ctx->number_of_tx_bytes_received = bytes_received_incl_this_payload;
-        
-        PRINTF("Received tx bytes window: [%d-%d] (#%d), got #%d/#%d of whole tx.\n", bytes_received_before_this_payload, bytes_received_incl_this_payload, number_of_bytes_received, bytes_received_incl_this_payload, ctx->tx_byte_count); 
+    ctx->number_of_tx_bytes_received = bytes_received_incl_this_payload;
 
-        // Update hash
-        bool should_finalize_hash = bytes_received_incl_this_payload == ctx->tx_byte_count;
+    // Update hash
+    bool should_finalize_hash = bytes_received_incl_this_payload == ctx->tx_byte_count;
 
-        update_hash(
-            data_buffer,
-            number_of_bytes_received,
-            should_finalize_hash
-        );
-
-        received_tx_bytes_from_host_machine(
-            data_buffer, 
-            number_of_bytes_received
-        );
+    update_hash(
+        data_buffer,
+        number_of_bytes_received,
+        should_finalize_hash
+    );
     
-        break;
-    case PayloadTypeIsActionFieldMetaData:
-        PRINTF("Received payload from host machine - action field metadata\n");
+    int action_index = p2;
+    
+    
+    PRINTF("Received tx bytes window: [%d-%d] (#%d), got #%d/#%d of whole tx.\n", bytes_received_before_this_payload, bytes_received_incl_this_payload, number_of_bytes_received, bytes_received_incl_this_payload, ctx->tx_byte_count);
+    PRINTF("Received action %d/%d", action_index, ctx->parse_state->actions_to_parse);
 
-        ActionFieldType action_field_type = (ActionFieldType) p2;
-        
-        assert(is_valid_action_field_type(action_field_type));
 
-        received_action_field_metadata_bytes_from_host_machine(
-            action_field_type,
-            data_buffer, 
-            number_of_bytes_received
-        );
-            
-        print_next_action_field_to_parse();PRINTF("\n");
-
-        break;
-    default:
-        FATAL_ERROR("Unrecognized P1 value: %d\n", p1)
-    }
+    received_action_from_host_machine(
+        action_index,
+        data_buffer,
+        number_of_bytes_received
+    );
 }
 
 static void parse_tx() {
@@ -163,11 +139,8 @@ void handle_sign_tx(
     PRINTF("\n\n\n._-=~$#@   START OF SIGN TX   @#$=~-_.\n\n\n");
 
 	initiate_state();
-    init_actions_counter(
-        &ctx->parse_state.actions_counter,
-        p1, // total_number_of_actions
-        p2 // number_of_transferTokensActions
-    );
+    int number_of_actions_to_parse = p2;
+    ctx->parse_state.actions_to_parse = number_of_actions_to_parse;
 
 	parse_bip_and_tx_size(data_buffer, data_length);
     parse_tx();

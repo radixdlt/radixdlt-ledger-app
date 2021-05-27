@@ -41,6 +41,7 @@
 #define SW_FATAL_ERROR_INCORRECT_IMPLEMENTATION 0x6B00
 #define SW_INVALID_PARAM                        0x6B01
 #define SW_INTERNAL_ERROR_ECC                   0x6B02
+#define SW_INTERNAL_ERROR_PARSE_ACTION          0x6B03
 #define SW_INVALID_INSTRUCTION                  0x6D00
 #define SW_INCORRECT_CLA                        0x6E00
 #define SW_OK                                   0x9000

@@ -1,13 +1,12 @@
 #ifndef RADIXRESOURCEIDENTIFIER_H
 #define RADIXRESOURCEIDENTIFIER_H
 
-
 #include <stdint.h>
-#include "radix_address.h"
+#include <stdbool.h>
 
-#define RADIX_RRI_MAX_BYTE_COUNT 70
 #define RADIX_RRI_MAX_LENGTH_SYMBOL 14
-#define RADIX_RRI_STRING_LENGTH_MAX RADIX_ADDRESS_BECH32_CHAR_COUNT_MAX + 10 // inaccurate... TODO fix this
+#define RADIX_RRI_MAX_BYTE_COUNT 70
+#define RADIX_RRI_STRING_LENGTH_MAX 100 // inaccurate... TODO fix this
 
 /* A Radix resource identifier is a human readable index into the Ledger which points to a name state machine */
 typedef struct {
