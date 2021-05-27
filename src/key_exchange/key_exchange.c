@@ -13,6 +13,27 @@
 
 static do_key_exchange_context_t *ctx = &global.do_key_exchange_context;
 
+static void key_exchange_done() {
+    io_exchange_with_code(SW_OK, PUBLIC_KEY_UNCOMPRESSEED_BYTE_COUNT);
+    ui_idle();
+}
+
+
+static void display_shared_secret_if_needed() {
+    if (!ctx->display_shared_key_on_device) {
+        key_exchange_done();
+        return;
+    }
+    
+    G_ui_state.length_lower_line_long =
+        hexadecimal_string_from(
+                                G_io_apdu_buffer,
+                                PUBLIC_KEY_UNCOMPRESSEED_BYTE_COUNT,
+                                G_ui_state.lower_line_long
+                                );
+    
+    display_value("Shared key", key_exchange_done);
+}
 
 static void do_key_change_and_respond_with_point_on_curve() {
     if (cx_ecfp_is_valid_point(
@@ -63,20 +84,19 @@ static void do_key_change_and_respond_with_point_on_curve() {
     // Ultra important step, MUST zero out the private, else sensitive information is leaked.
     explicit_bzero((cx_ecfp_private_key_t *)&private_key, sizeof(cx_ecfp_private_key_t));
     
+    assert(actual_size_of_secret == PUBLIC_KEY_UNCOMPRESSEED_BYTE_COUNT);
     
     if (error) {
         print_error_by_code(error);
         PRINTF("Key exchange failed, failed to perform ECDH\n");
         io_exchange_with_code(SW_INTERNAL_ERROR_ECC, 0);
+        ui_idle();
+        return;
     } else {
-        io_exchange_with_code(SW_OK, actual_size_of_secret);
+        display_shared_secret_if_needed();
     }
-    
-    ui_idle();
-    return;
+
 }
-
-
 
 static void proceed_to_exchange_confirmation() {
     display_lines("Key exchange", "Confirm?", do_key_change_and_respond_with_point_on_curve);
@@ -110,6 +130,7 @@ static void generate_sharedkey_require_confirmation_if_needed(
 }
 
 #define P1_REQUIRE_CONFIRMATION_BEFORE_KEY_EXCHANGE 0x01
+#define P2_DISPLAY_SHARED_KEY 0x01
 
 void handle_key_exchange(
         uint8_t p1,
@@ -147,8 +168,9 @@ void handle_key_exchange(
     
     // Copy public key bytes
     os_memmove(ctx->public_key_of_other_party, data_buffer + expected_data_length_path, expected_lenght_public_key_of_other_party);
-    
 
+    ctx->display_shared_key_on_device = (p2 == P2_DISPLAY_SHARED_KEY);
+    
     *flags |= IO_ASYNCH_REPLY;
 
     generate_sharedkey_require_confirmation_if_needed(

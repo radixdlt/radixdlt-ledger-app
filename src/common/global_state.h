@@ -14,6 +14,7 @@ typedef struct {
 typedef struct {
     uint32_t bip32_path[NUMBER_OF_BIP32_COMPONENTS_IN_PATH];
     uint8_t public_key_of_other_party[PUBLIC_KEY_UNCOMPRESSEED_BYTE_COUNT];
+    bool display_shared_key_on_device;
 } do_key_exchange_context_t;
 
 typedef struct {
